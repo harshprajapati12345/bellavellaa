@@ -51,7 +51,7 @@
           <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Banners</h2>
           <p class="text-sm text-gray-400 mt-0.5">Manage promotional banners across the app</p>
         </div>
-        <a href="../upload.php"
+        <a href="create.php"
           class="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all font-medium text-sm shadow-lg shadow-black/10 self-start sm:self-auto">
           <i data-lucide="plus" class="w-4 h-4"></i> Add Banner
         </a>
@@ -97,7 +97,7 @@
             </div>
             <div class="flex items-center gap-2">
               <label class="toggle-switch"><input type="checkbox" <?php echo $b['status']==='Active'?'checked':''; ?> onchange="toggleBanner(<?php echo $b['id']; ?>, this)"><span class="toggle-slider"></span></label>
-              <a href="../upload.php?id=<?php echo $b['id']; ?>" class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
+              <a href="create.php?id=<?php echo $b['id']; ?>" class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
               </a>
               <a href="delete.php?id=<?php echo $b['id']; ?>" onclick="return confirm('Delete this banner?')" class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
@@ -118,8 +118,7 @@
 <script src="/bellavella/assets/js/app.js"></script>
 <script>
   lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
-  function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
+// Sidebar toggles are handled by app.js
 
   function toggleBanner(id, el) {
     const s = el.checked ? 'Active' : 'Inactive';

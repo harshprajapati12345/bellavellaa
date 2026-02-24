@@ -36,10 +36,10 @@
     $reviews = [
       ['id'=>1,'user'=>'Ananya Kapoor','avatar'=>'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Bridal Glow Package','rating'=>5,'review_type'=>'video','review_text'=>'Absolutely loved the bridal package! My skin was glowing on my big day. Highly recommend this to all brides.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>75,'is_featured'=>1,'status'=>'approved','created_at'=>'2026-02-20 10:30:00'],
       ['id'=>2,'user'=>'Priya Sharma','avatar'=>'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Advanced Hair Treatment','rating'=>4,'review_type'=>'text','review_text'=>'Great service, my hair feels so much healthier now. Will definitely come back for more sessions.','video_path'=>'','points_given'=>0,'is_featured'=>0,'status'=>'approved','created_at'=>'2026-02-19 14:15:00'],
-      ['id'=>3,'user'=>'Rahul Verma','avatar'=>'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Luxury Spa Manicure','rating'=>3,'review_type'=>'video','review_text'=>'Decent experience. The spa was nice but the manicure could have been better.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>50,'is_featured'=>0,'status'=>'pending','created_at'=>'2026-02-18 09:00:00'],
-      ['id'=>4,'user'=>'Sneha Gupta','avatar'=>'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Party Makeup Glam','rating'=>5,'review_type'=>'video','review_text'=>'The makeup artist was incredible! Everyone at the party complimented my look. Absolutely worth it.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>75,'is_featured'=>0,'status'=>'pending','created_at'=>'2026-02-17 16:45:00'],
+      ['id'=>3,'user'=>'Rahul Verma','avatar'=>'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Luxury Spa Manicure','rating'=>3,'review_type'=>'video','review_text'=>'Decent experience. The spa was nice but the manicure could have been better.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>50,'is_featured'=>0,'status'=>'approved','created_at'=>'2026-02-18 09:00:00'],
+      ['id'=>4,'user'=>'Sneha Gupta','avatar'=>'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Party Makeup Glam','rating'=>5,'review_type'=>'video','review_text'=>'The makeup artist was incredible! Everyone at the party complimented my look. Absolutely worth it.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>75,'is_featured'=>0,'status'=>'approved','created_at'=>'2026-02-17 16:45:00'],
       ['id'=>5,'user'=>'Vikram Singh','avatar'=>'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Full Body Polishing','rating'=>2,'review_type'=>'text','review_text'=>'Not satisfied with the service. Expected much better results for the price paid.','video_path'=>'','points_given'=>0,'is_featured'=>0,'status'=>'rejected','created_at'=>'2026-02-16 11:20:00'],
-      ['id'=>6,'user'=>'Kavita Patel','avatar'=>'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Bridal Glow Package','rating'=>4,'review_type'=>'video','review_text'=>'Wonderful experience! The team was professional and the results were amazing.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>0,'is_featured'=>0,'status'=>'pending','created_at'=>'2026-02-15 13:30:00'],
+      ['id'=>6,'user'=>'Kavita Patel','avatar'=>'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Bridal Glow Package','rating'=>4,'review_type'=>'video','review_text'=>'Wonderful experience! The team was professional and the results were amazing.','video_path'=>'https://www.w3schools.com/html/mov_bbb.mp4','points_given'=>0,'is_featured'=>0,'status'=>'approved','created_at'=>'2026-02-15 13:30:00'],
       ['id'=>7,'user'=>'Meera Joshi','avatar'=>'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80','service'=>'Advanced Hair Treatment','rating'=>5,'review_type'=>'text','review_text'=>'Best hair treatment I have ever had. My hair is silky smooth and manageable now.','video_path'=>'','points_given'=>0,'is_featured'=>0,'status'=>'approved','created_at'=>'2026-02-14 08:10:00'],
     ];
 
@@ -224,10 +224,15 @@
                 <!-- Video Preview -->
                 <td class="px-5 py-4 text-center">
                   <?php if ($r['review_type'] === 'video' && !empty($r['video_path'])): ?>
-                    <button onclick="openVideoModal('<?php echo $r['video_path']; ?>')"
-                            class="w-9 h-9 rounded-xl bg-purple-50 text-purple-500 hover:bg-purple-100 hover:text-purple-700 transition-all flex items-center justify-center mx-auto ring-1 ring-purple-100">
-                      <i data-lucide="play" class="w-4 h-4"></i>
-                    </button>
+                    <div class="relative w-16 h-24 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 mx-auto group cursor-pointer"
+                         onclick="openVideoModal('<?php echo $r['video_path']; ?>')">
+                      <video class="w-full h-full object-cover" muted playsinline onmouseover="this.play()" onmouseout="this.pause(); this.currentTime = 0;">
+                        <source src="<?php echo $r['video_path']; ?>" type="video/mp4">
+                      </video>
+                      <div class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:hidden transition-all">
+                        <i data-lucide="play" class="w-4 h-4 text-white fill-white"></i>
+                      </div>
+                    </div>
                   <?php else: ?>
                     <span class="text-gray-300">—</span>
                   <?php endif; ?>
@@ -268,26 +273,28 @@
                 <!-- Actions -->
                 <td class="px-5 py-4">
                   <div class="flex items-center justify-end gap-2">
-                    <?php if ($r['status'] === 'pending'): ?>
-                      <button onclick="handleAction('approve', <?php echo $r['id']; ?>)" title="Approve"
-                              class="w-8 h-8 rounded-lg border border-emerald-200 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center justify-center">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                      </button>
-                      <button onclick="handleAction('reject', <?php echo $r['id']; ?>)" title="Reject"
-                              class="w-8 h-8 rounded-lg border border-red-200 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                      </button>
-                    <?php endif; ?>
                     <?php if ($r['review_type'] === 'video'): ?>
-                      <button onclick="handleAction('feature', <?php echo $r['id']; ?>)" title="Toggle Featured"
-                              class="w-8 h-8 rounded-lg border <?php echo $r['is_featured'] ? 'border-amber-300 bg-amber-50 text-amber-500' : 'border-gray-200 text-gray-400'; ?> hover:bg-amber-50 hover:text-amber-500 hover:border-amber-300 transition-all flex items-center justify-center">
-                        <i data-lucide="award" class="w-3.5 h-3.5"></i>
+                      <!-- Video reviews approved by default, only delete button shown -->
+                      <button onclick="handleAction('delete', <?php echo $r['id']; ?>)" title="Delete"
+                              class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    <?php else: ?>
+                      <?php if ($r['status'] === 'pending'): ?>
+                        <button onclick="handleAction('approve', <?php echo $r['id']; ?>)" title="Approve"
+                                class="w-8 h-8 rounded-lg border border-emerald-200 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center justify-center">
+                          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="handleAction('reject', <?php echo $r['id']; ?>)" title="Reject"
+                                class="w-8 h-8 rounded-lg border border-red-200 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
+                          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                      <?php endif; ?>
+                      <button onclick="handleAction('delete', <?php echo $r['id']; ?>)" title="Delete"
+                              class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                       </button>
                     <?php endif; ?>
-                    <button onclick="handleAction('delete', <?php echo $r['id']; ?>)" title="Delete"
-                            class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
                   </div>
                 </td>
               </tr>

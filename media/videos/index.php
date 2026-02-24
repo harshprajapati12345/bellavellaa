@@ -77,11 +77,11 @@
           <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total</p><p class="text-3xl font-bold text-gray-900"><?php echo $total; ?></p><p class="text-xs text-gray-400 mt-0.5">Videos</p></div>
           <div class="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center flex-shrink-0"><i data-lucide="video" class="w-5 h-5 text-gray-600"></i></div>
         </div>
-        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
+        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_166_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
           <div><p class="text-xs font-semibold text-emerald-500 uppercase tracking-widest mb-1">Published</p><p class="text-3xl font-bold text-gray-900"><?php echo $published; ?></p><p class="text-xs text-gray-400 mt-0.5">Live now</p></div>
           <div class="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-500"></i></div>
         </div>
-        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
+        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_166_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
           <div><p class="text-xs font-semibold text-blue-500 uppercase tracking-widest mb-1">Total Views</p><p class="text-3xl font-bold text-gray-900"><?php echo number_format($totalViews); ?></p><p class="text-xs text-gray-400 mt-0.5">All time</p></div>
           <div class="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0"><i data-lucide="play-circle" class="w-5 h-5 text-blue-500"></i></div>
         </div>
@@ -120,7 +120,7 @@
                 <div class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i><span><?php echo date('d M Y', strtotime($v['uploaded'])); ?></span></div>
               </div>
               <div class="flex items-center gap-1.5">
-                <a href="edit.php?id=<?php echo $v['id']; ?>" class="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
+                <a href="create.php?id=<?php echo $v['id']; ?>" class="w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
                   <i data-lucide="pencil" class="w-3 h-3"></i>
                 </a>
                 <a href="delete.php?id=<?php echo $v['id']; ?>" onclick="return confirm('Delete this video?')" class="w-7 h-7 rounded-lg border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
@@ -148,8 +148,7 @@
 <script src="/bellavella/assets/js/app.js"></script>
 <script>
   lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
-  function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
+// Sidebar toggles are handled by app.js
 
   function filterVideos() {
     const search = document.getElementById('vid-search').value.toLowerCase();

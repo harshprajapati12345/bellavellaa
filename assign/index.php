@@ -324,7 +324,7 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
 
 <script>
   lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
+  // Sidebar toggles are handled by sidebar.php
   function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
 
   // ── Pagination ─────────────────────────────────────────────────────────────

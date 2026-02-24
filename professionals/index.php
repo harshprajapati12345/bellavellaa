@@ -135,7 +135,12 @@
                   <div class="flex items-center gap-3">
                     <img src="<?php echo $pro['avatar']; ?>" class="w-10 h-10 rounded-full object-cover avatar-ring flex-shrink-0" alt="<?php echo $pro['name']; ?>">
                     <div>
-                      <p class="text-sm font-semibold text-gray-900"><?php echo $pro['name']; ?></p>
+                      <div class="flex items-center gap-1.5">
+                        <p class="text-sm font-semibold text-gray-900"><?php echo $pro['name']; ?></p>
+                        <?php if ($pro['verification'] === 'Verified'): ?>
+                          <i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500 fill-blue-50"></i>
+                        <?php endif; ?>
+                      </div>
                       <p class="text-xs text-gray-400"><?php echo $pro['experience']; ?> exp.</p>
                     </div>
                   </div>
@@ -362,8 +367,7 @@
 <script src="/bellavella/assets/js/app.js"></script>
 <script>
   lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
-  function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
+  // Sidebar toggles are handled by sidebar.php
 
   const ROWS_PER_PAGE = 5;
   let currentPage = 1, visibleRows = [], currentTab = 'all';

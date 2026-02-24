@@ -5,22 +5,33 @@
 $pageTitle = 'Add Service';
 $errors = [];
 $success = false;
-$categories = ['Bridal', 'Hair', 'Makeup', 'Nails', 'Skincare', 'Wellness'];
+$categories = [
+    'Bridal',
+    'Spa & Wellness',
+    'Makeup',
+    'Facial',
+    'Hair Care',
+    'Hair Color',
+    'Nail Art',
+    'Grooming',
+    'Skin Care',
+];
+$subcategories = ['Luxe', 'Prime', 'Ayurveda'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name     = trim($_POST['name'] ?? '');
-    $category = trim($_POST['category'] ?? '');
+    $category    = trim($_POST['category'] ?? '');
+    $subcategory = trim($_POST['subcategory'] ?? '');
     $price    = floatval($_POST['price'] ?? 0);
     $duration = intval($_POST['duration'] ?? 0);
     $action   = $_POST['form_action'] ?? 'draft';
 
     if (!$name)      $errors[] = 'Service name is required.';
-    if (!$category)  $errors[] = 'Category is required.';
     if ($price <= 0)  $errors[] = 'Price must be greater than 0.';
-    if ($duration <= 0) $errors[] = 'Duration is required.';
+    // duration is optional
+
 
     if ($action === 'publish') {
-        if (empty($_POST['desc_title'] ?? ''))   $errors[] = 'Description title is required to publish.';
         if (empty($_POST['service_types'][0] ?? '')) $errors[] = 'At least one service type is required to publish.';
     }
     if (empty($errors)) $success = true;
@@ -42,6 +53,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
     .drop-zone.dragover { border-color:#000 !important; background:#fafafa; }
     .sticky-bar { position:sticky; bottom:0; z-index:30; backdrop-filter:blur(12px); background:rgba(255,255,255,0.85); }
+
+    /* ── Phone mockup ─────────────────────────────────────────────────── */
+    .phone-shell {
+      width: 270px;
+      height: 560px;
+      border-radius: 42px;
+      background: #111;
+      padding: 14px 12px;
+      box-shadow: 0 0 0 2px #333, 0 24px 64px rgba(0,0,0,0.45), inset 0 0 0 2px #555;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 22px;
+      background: #111;
+      border-radius: 0 0 14px 14px;
+      z-index: 10;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 30px;
+      background: #fff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .phone-scroll {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+    }
+    .phone-scroll::-webkit-scrollbar { display: none; }
+    /* Status bar */
+    .phone-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #111;
+      flex-shrink: 0;
+      z-index: 5;
+      background: #fff;
+    }
+    /* Hero image — full bleed */
+    .preview-hero {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+      background: #f3f4f6;
+    }
+    .preview-hero-placeholder {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg,#f8f8f8 0%,#ececec 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 11px;
+    }
+    /* Description images — full bleed stacked, no gap */
+    .preview-desc-img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    /* Preview pill / badge */
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .03em;
+      background: #f3f4f6;
+      color: #555;
+    }
+    /* Divider */
+    .preview-divider {
+      height: 1px;
+      background: #f1f1f1;
+      margin: 0 14px;
+    }
+    /* Sticky preview wrapper */
+    .preview-sticky {
+      position: sticky;
+      top: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
   </style>
 </head>
 <body class="antialiased">
@@ -66,7 +180,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if ($errors): ?><div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-2xl text-sm"><ul class="list-disc list-inside"><?php foreach($errors as $e): ?><li><?php echo htmlspecialchars($e); ?></li><?php endforeach; ?></ul></div><?php endif; ?>
 
       <form method="POST" enctype="multipart/form-data" id="serviceForm">
+      <div class="flex flex-col xl:flex-row gap-8 items-start">
 
+        <!-- ━━━ FORM COLUMN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <div class="flex-1 min-w-0">
         <!-- ━━━ SECTION 1 · BASIC DETAILS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
         <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
           <div class="px-8 pt-7 pb-2">
@@ -78,20 +195,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <div class="px-8 pb-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <!-- Left: Name + Category -->
+              <!-- Left: Name + Duration + Category + Subcategory -->
               <div class="space-y-5">
                 <div>
                   <label class="form-label">Service Name <span class="text-red-400">*</span></label>
                   <input type="text" name="name" value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>" placeholder="e.g. Bridal Makeup" class="form-input" required>
                 </div>
                 <div>
-                  <label class="form-label">Category <span class="text-red-400">*</span></label>
-                  <select name="category" class="form-input cursor-pointer" required>
-                    <option value="">Select category</option>
-                    <?php foreach($categories as $cat): ?><option value="<?php echo $cat; ?>" <?php echo (($_POST['category'] ?? '') === $cat) ? 'selected' : ''; ?>><?php echo $cat; ?></option><?php endforeach; ?>
+                  <label class="form-label">Main Category <span class="text-red-400">*</span></label>
+                  <select name="category" class="form-input cursor-pointer">
+                    <option value="">Select Category</option>
+                    <?php foreach($categories as $cat): ?>
+                    <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo (($_POST['category'] ?? '') === $cat) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cat); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Subcategory <span class="text-red-400">*</span></label>
+                  <select name="subcategory" class="form-input cursor-pointer">
+                    <option value="">Select Subcategory</option>
+                    <?php foreach($subcategories as $sub): ?>
+                    <option value="<?php echo htmlspecialchars($sub); ?>" <?php echo (($_POST['subcategory'] ?? '') === $sub) ? 'selected' : ''; ?>><?php echo htmlspecialchars($sub); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label">Duration <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                  <select name="duration" class="form-input cursor-pointer">
+                    <option value="">Select Duration</option>
+                    <?php for($d = 5; $d <= 180; $d += 5): ?>
+                    <option value="<?php echo $d; ?>" <?php echo (intval($_POST['duration'] ?? 0) === $d) ? 'selected' : ''; ?>><?php echo $d; ?> min</option>
+                    <?php endfor; ?>
                   </select>
                 </div>
               </div>
+
+
               <!-- Right: Image Upload -->
               <div>
                 <label class="form-label">Service Image <span class="text-red-400">*</span></label>
@@ -117,7 +256,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
               </div>
             </div>
+
+            <!-- Description -->
+            <div class="mt-6">
+              <label class="form-label">Description</label>
+              <textarea name="description" rows="4" placeholder="Describe this service…" class="form-input resize-none"><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
+            </div>
           </div>
+
         </div>
 
         <!-- ━━━ SECTION 2 · SERVICE PREVIEW ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
@@ -131,17 +277,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <div class="px-8 pb-8 space-y-6">
 
-            <!-- 1. Duration (Global) -->
-            <div>
-              <label class="form-label">Duration <span class="text-red-400">*</span></label>
-              <select name="duration" class="form-input cursor-pointer md:w-1/2" required>
-                <option value="">Select Duration</option>
-                <?php for($d = 10; $d <= 60; $d += 10): ?>
-                <option value="<?php echo $d; ?>" <?php echo (intval($_POST['duration'] ?? 0) === $d) ? 'selected' : ''; ?>><?php echo $d; ?> min</option>
-                <?php endfor; ?>
-              </select>
-              <p class="text-[11px] text-gray-400 mt-1.5 ml-1">This duration applies to all service variations</p>
-            </div>
+
 
             <!-- 2. Service Variations (Dynamic) -->
             <div>
@@ -164,12 +300,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div>
                       <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
-                      <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price" oninput="updateDisplayPrice()">
+                      <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price">
                     </div>
                   </div>
                   <div class="mb-4">
-                    <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Description</label>
-                    <textarea name="service_descs[]" rows="2" placeholder="Brief description of this service type…" class="form-input resize-none"></textarea>
+                    <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Reviews</label>
+                    <input type="number" name="service_reviews[]" placeholder="e.g. 120" min="0" class="form-input">
                   </div>
                   <div class="inline-upload-wrap">
                     <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Image</label>
@@ -195,35 +331,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </button>
             </div>
 
-            <!-- 3. Display Price (Auto-calculated) -->
-            <div>
-              <label class="form-label">Display Price</label>
-              <div class="flex items-center justify-between py-4 px-5 bg-gray-50/80 rounded-2xl border border-gray-100">
-                <div>
-                  <p class="text-sm font-medium text-gray-700" id="displayPriceLabel">Auto-calculated</p>
-                  <p class="text-[11px] text-gray-400 mt-0.5">Based on lowest service price</p>
-                </div>
-                <span class="text-sm font-semibold text-gray-800 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm" id="displayPricePreview">₹ —</span>
-              </div>
-            </div>
-
-            <!-- 4. Rating (Global) -->
-            <div>
-              <label class="form-label">Rating</label>
-              <div class="flex items-center gap-1 mt-1" id="starRating">
-                <?php for($s = 1; $s <= 5; $s++): ?>
-                <button type="button" onclick="setRating(<?php echo $s; ?>)" class="star-btn p-1 transition-transform hover:scale-110" data-star="<?php echo $s; ?>">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                </button>
-                <?php endfor; ?>
-                <input type="hidden" name="rating" id="ratingValue" value="5">
-                <span class="ml-3 text-sm font-semibold text-gray-700" id="ratingText">5.0</span>
-              </div>
-              <p class="text-[11px] text-gray-400 mt-1.5 ml-1">This rating applies to the entire service</p>
-            </div>
 
           </div>
         </div>
+
 
         <!-- ━━━ SECTION 3 · SERVICE DESCRIPTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
         <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
@@ -240,145 +351,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="text" name="desc_title" value="<?php echo htmlspecialchars($_POST['desc_title'] ?? ''); ?>" placeholder="e.g. Premium Bridal Makeup Experience" class="form-input">
             </div>
             <div>
-              <label class="form-label">Description Content</label>
-              <!-- Rich-text toolbar -->
-              <div class="border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="flex items-center gap-1 px-3 py-2 bg-gray-50/80 border-b border-gray-200">
-                  <button type="button" onclick="execCmd('bold')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Bold"><b class="text-sm text-gray-600">B</b></button>
-                  <button type="button" onclick="execCmd('italic')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Italic"><i class="text-sm text-gray-600" style="font-style:italic">I</i></button>
-                  <button type="button" onclick="execCmd('underline')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Underline"><u class="text-sm text-gray-600">U</u></button>
-                  <div class="w-px h-5 bg-gray-200 mx-1"></div>
-                  <button type="button" onclick="execCmd('insertUnorderedList')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Bullet List"><i data-lucide="list" class="w-4 h-4 text-gray-500"></i></button>
-                  <button type="button" onclick="execCmd('insertOrderedList')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Numbered List"><i data-lucide="list-ordered" class="w-4 h-4 text-gray-500"></i></button>
-                  <div class="w-px h-5 bg-gray-200 mx-1"></div>
-                  <button type="button" onclick="execCmd('justifyLeft')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Align Left"><i data-lucide="align-left" class="w-4 h-4 text-gray-500"></i></button>
-                  <button type="button" onclick="execCmd('justifyCenter')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Align Center"><i data-lucide="align-center" class="w-4 h-4 text-gray-500"></i></button>
+              <label class="form-label">Description Images <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+              <div id="descImagesContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <!-- slots added by JS -->
+              </div>
+              <button type="button" onclick="addDescImage()" class="mt-3 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
+                <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 </div>
-                <div id="descEditor" contenteditable="true" class="px-4 py-3 min-h-[160px] text-sm text-gray-800 outline-none focus:ring-0" style="font-family:Inter,sans-serif" data-placeholder="Provide a detailed overview of this service…"></div>
-                <input type="hidden" name="desc_content" id="descContentHidden">
-              </div>
-            </div>
-            <div>
-              <label class="form-label">Description Image</label>
-              <div id="dropZoneDesc" class="drop-zone flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                   onclick="document.getElementById('descImageInput').click()"
-                   ondragover="event.preventDefault(); this.classList.add('dragover')"
-                   ondragleave="this.classList.remove('dragover')"
-                   ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event,'descImageInput','descImgPreview')">
-                <div id="uploadPlaceholderDesc" class="flex flex-col items-center">
-                  <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors">
-                    <i data-lucide="image-plus" class="w-5 h-5 text-gray-400"></i>
-                  </div>
-                  <p class="text-sm text-gray-500">Upload description image</p>
-                  <p class="text-xs text-gray-400 mt-0.5">Optional</p>
-                </div>
-                <input type="file" name="desc_image" id="descImageInput" accept="image/*" class="hidden" onchange="previewImg(this,'descImgPreview','uploadPlaceholderDesc','removeBtnDesc')">
-              </div>
-              <div class="relative mt-3 hidden" id="descImgPreviewWrap">
-                <img id="descImgPreview" class="w-full h-40 object-cover rounded-2xl border border-gray-100" src="" alt="">
-                <button type="button" id="removeBtnDesc" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm" onclick="removeImage('descImageInput','descImgPreview','descImgPreviewWrap','uploadPlaceholderDesc','dropZoneDesc')">
-                  <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-              </div>
+                Add More Image
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- ━━━ SECTION 4 · SERVICE STEPS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">4</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Steps</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8">
-            <div id="stepsContainer" class="space-y-4"></div>
-            <button type="button" onclick="addStep()" class="mt-5 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              </div>
-              Add New Step
+          <!-- ━━━ STICKY ACTION BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+          <div class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-end gap-3 mt-2">
+            <a href="/bellavella/services/" class="btn btn-secondary">Cancel</a>
+            <button type="submit" name="form_action" value="draft" class="btn btn-secondary">
+              <i data-lucide="file-text" class="w-4 h-4"></i> Save as Draft
+            </button>
+            <button type="submit" name="form_action" value="publish" class="btn btn-primary">
+              <i data-lucide="globe" class="w-4 h-4"></i> Publish Service
             </button>
           </div>
-        </div>
+        </div><!-- /form column -->
 
-        <!-- ━━━ SECTION 5 · TRUSTED DESCRIPTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">5</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Trusted Description</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8">
-            <div id="trustedContainer" class="space-y-4"></div>
-            <button type="button" onclick="addTrustedBlock()" class="mt-5 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              </div>
-              Add More
-            </button>
-          </div>
-        </div>
+        <!-- ━━━ PHONE PREVIEW COLUMN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <div class="hidden xl:block preview-sticky">
+          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center">Live Preview</p>
 
-        <!-- ━━━ SECTION 6 · AFTERCARE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">6</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Aftercare</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8 space-y-5">
-            <div>
-              <label class="form-label">Aftercare Title</label>
-              <input type="text" name="aftercare_title" value="<?php echo htmlspecialchars($_POST['aftercare_title'] ?? ''); ?>" placeholder="e.g. Post-Treatment Care Guide" class="form-input">
-            </div>
-            <div>
-              <label class="form-label">Aftercare Content</label>
-              <textarea name="aftercare_content" rows="5" placeholder="Post-service care instructions for the customer…" class="form-input resize-none"><?php echo htmlspecialchars($_POST['aftercare_content'] ?? ''); ?></textarea>
-            </div>
-            <div>
-              <label class="form-label">Aftercare Image <span class="text-gray-400 font-normal text-[10px] tracking-normal normal-case">(Optional)</span></label>
-              <div id="dropZoneAfter" class="drop-zone flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                   onclick="document.getElementById('afterImageInput').click()"
-                   ondragover="event.preventDefault(); this.classList.add('dragover')"
-                   ondragleave="this.classList.remove('dragover')"
-                   ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event,'afterImageInput','afterImgPreview')">
-                <div id="uploadPlaceholderAfter" class="flex flex-col items-center">
-                  <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors">
-                    <i data-lucide="image-plus" class="w-5 h-5 text-gray-400"></i>
-                  </div>
-                  <p class="text-sm text-gray-500">Upload image</p>
+          <!-- Phone shell -->
+          <div class="phone-shell">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+
+              <!-- Status bar -->
+              <div class="phone-status">
+                <span id="pv-time">10:00</span>
+                <div class="flex items-center gap-1">
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="#111"><rect x="0" y="3" width="2" height="5" rx="1"/><rect x="3" y="2" width="2" height="6" rx="1"/><rect x="6" y="1" width="2" height="7" rx="1"/><rect x="9" y="0" width="1" height="8" rx="0.5"/></svg>
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="#111" stroke-width="1.2"><path d="M1 5.5a7.07 7.07 0 0 1 10 0"/><path d="M3.5 7.5a3.54 3.54 0 0 1 5 0"/><circle cx="6" cy="7.5" r="0.8" fill="#111" stroke="none"/></svg>
+                  <svg width="20" height="10" viewBox="0 0 20 10" fill="none"><rect x="0.5" y="0.5" width="17" height="9" rx="2.5" stroke="#111"/><rect x="2" y="2" width="12" height="6" rx="1.5" fill="#111"/><path d="M18.5 3.5v3a1.5 1.5 0 0 0 0-3z" fill="#111"/></svg>
                 </div>
-                <input type="file" name="aftercare_image" id="afterImageInput" accept="image/*" class="hidden" onchange="previewImg(this,'afterImgPreview','uploadPlaceholderAfter','removeBtnAfter')">
-              </div>
-              <div class="relative mt-3 hidden" id="afterImgPreviewWrap">
-                <img id="afterImgPreview" class="w-full h-36 object-cover rounded-2xl border border-gray-100" src="" alt="">
-                <button type="button" id="removeBtnAfter" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm" onclick="removeImage('afterImageInput','afterImgPreview','afterImgPreviewWrap','uploadPlaceholderAfter','dropZoneAfter')">
-                  <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+              </div><!-- /status bar -->
 
-        <!-- ━━━ STICKY ACTION BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-end gap-3 mt-2">
-          <a href="/bellavella/services/" class="btn btn-secondary">Cancel</a>
-          <button type="submit" name="form_action" value="draft" class="btn btn-secondary">
-            <i data-lucide="file-text" class="w-4 h-4"></i> Save as Draft
-          </button>
-          <button type="submit" name="form_action" value="publish" class="btn btn-primary" onclick="document.getElementById('descContentHidden').value = document.getElementById('descEditor').innerHTML;">
-            <i data-lucide="globe" class="w-4 h-4"></i> Publish Service
-          </button>
-        </div>
+              <div class="phone-scroll">
 
+                <!-- Hero image -->
+                <div id="pv-hero-wrap">
+                  <div id="pv-hero-placeholder" class="preview-hero-placeholder">No Image</div>
+                  <img id="pv-hero" class="preview-hero hidden" src="" alt="">
+                </div>
+
+                <!-- Back button overlay / nav bar -->
+                <div style="display:flex;align-items:center;padding:10px 12px 4px;gap:6px;">
+                  <div style="width:22px;height:22px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  </div>
+                  <span style="font-size:11px;font-weight:600;color:#111;" id="pv-navtitle">Service</span>
+                </div>
+
+                <!-- Service name & meta -->
+                <div style="padding:4px 14px 10px;">
+                  <p id="pv-name" style="font-size:15px;font-weight:700;color:#111;line-height:1.3;margin-bottom:6px;">&mdash;</p>
+                  <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+                    <span id="pv-category" class="preview-badge" style="background:#fdf2f8;color:#be185d;">—</span>
+                    <span id="pv-subcategory" class="preview-badge" style="background:#f0fdf4;color:#15803d;display:none;"></span>
+                    <span id="pv-duration" class="preview-badge">— min</span>
+                  </div>
+                  <p id="pv-basic-desc" style="font-size:10px;color:#666;line-height:1.4;margin-top:8px;white-space:pre-wrap;"></p>
+                </div>
+
+                <div class="preview-divider"></div>
+
+                <!-- Service types list -->
+                <div style="padding:10px 14px;">
+                  <p style="font-size:9px;font-weight:700;color:#aaa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Services</p>
+                  <div id="pv-services" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
+                <div class="preview-divider"></div>
+
+                <!-- Description -->
+                <div style="padding:10px 14px;">
+                  <p id="pv-desc-title" style="font-size:12px;font-weight:700;color:#111;margin-bottom:8px;">About this service</p>
+                  <p id="pv-description" style="font-size:10px;color:#666;line-height:1.5;margin-top:4px;white-space:pre-wrap;"></p>
+                </div>
+
+                <!-- Description images: full-bleed stacked, no gap -->
+                <div id="pv-desc-imgs" style="display:flex;flex-direction:column;"></div>
+
+                <div style="height:20px;"></div>
+
+              </div><!-- /phone-scroll -->
+            </div><!-- /phone-screen -->
+          </div><!-- /phone-shell -->
+
+          <p class="text-[10px] text-gray-300 text-center">Updates as you type</p>
+        </div><!-- /preview column -->
+
+      </div><!-- /flex row -->
       </form>
+
+
 
     </div>
   </main>
@@ -476,12 +552,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div>
           <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
-          <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price" oninput="updateDisplayPrice()">
+          <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price">
         </div>
       </div>
       <div class="mb-4">
-        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Description</label>
-        <textarea name="service_descs[]" rows="2" placeholder="Brief description of this service type…" class="form-input resize-none"></textarea>
+        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Reviews</label>
+        <input type="number" name="service_reviews[]" placeholder="e.g. 120" min="0" class="form-input">
       </div>
       <div class="inline-upload-wrap">
         <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Image</label>
@@ -499,7 +575,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     `;
     container.appendChild(div);
-    updateDisplayPrice();
   }
 
   function removeServiceCard(btn) {
@@ -507,7 +582,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (rows.length > 1) {
       btn.closest('.service-type-row').remove();
       renumberServices();
-      updateDisplayPrice();
     }
   }
 
@@ -520,218 +594,336 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   /* ═════════════════════════════════════════════════════════════════════════
-     STAR RATING
+     DESCRIPTION IMAGES (multi-slot grid)
      ═════════════════════════════════════════════════════════════════════════ */
 
-  function setRating(val) {
-    document.getElementById('ratingValue').value = val;
-    document.getElementById('ratingText').textContent = val + '.0';
-    document.querySelectorAll('#starRating .star-btn svg').forEach((svg, i) => {
-      if (i < val) {
-        svg.setAttribute('fill', '#f59e0b');
-        svg.setAttribute('stroke', '#f59e0b');
-      } else {
-        svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', '#d1d5db');
-      }
+  function buildDescSlot() {
+    const slot = document.createElement('div');
+    slot.className = 'desc-img-slot dyn-item relative group';
+    slot.innerHTML = `
+      <label class="desc-upload-label flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        <p class="text-xs text-gray-400 mt-2">Upload image</p>
+        <input type="file" name="desc_images[]" accept="image/*" class="hidden" onchange="previewDescImg(this)">
+      </label>
+      <img class="desc-preview hidden absolute inset-0 w-full h-full object-cover rounded-2xl border border-gray-100" src="" alt="">
+      <button type="button" onclick="removeDescSlot(this)" class="desc-slot-remove hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm z-10">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    `;
+    return slot;
+  }
+
+  function addDescImage() {
+    const container = document.getElementById('descImagesContainer');
+    container.appendChild(buildDescSlot());
+    lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+    updateDescRemoveButtons();
+  }
+
+  function previewDescImg(input) {
+    const slot     = input.closest('.desc-img-slot');
+    const label    = slot.querySelector('.desc-upload-label');
+    const preview  = slot.querySelector('.desc-preview');
+    const removeBtn = slot.querySelector('.desc-slot-remove');
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.classList.remove('hidden');
+      label.classList.add('hidden');
+      removeBtn.classList.remove('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function removeDescSlot(btn) {
+    const container = document.getElementById('descImagesContainer');
+    const slots = container.querySelectorAll('.desc-img-slot');
+    if (slots.length > 1) {
+      btn.closest('.desc-img-slot').remove();
+    } else {
+      // Reset the only slot instead of removing it
+      const slot = btn.closest('.desc-img-slot');
+      slot.querySelector('input[type="file"]').value = '';
+      slot.querySelector('.desc-preview').classList.add('hidden');
+      slot.querySelector('.desc-preview').src = '';
+      slot.querySelector('.desc-upload-label').classList.remove('hidden');
+      btn.classList.add('hidden');
+    }
+    updateDescRemoveButtons();
+  }
+
+  function updateDescRemoveButtons() {
+    const slots = document.querySelectorAll('#descImagesContainer .desc-img-slot');
+    slots.forEach(slot => {
+      const btn = slot.querySelector('.desc-slot-remove');
+      const hasImage = !slot.querySelector('.desc-preview').classList.contains('hidden');
+      if (hasImage) btn.classList.remove('hidden');
     });
   }
-  setRating(5);
+
+  // Init: add one empty slot on load
+  addDescImage();
 
   /* ═════════════════════════════════════════════════════════════════════════
-     DISPLAY PRICE (auto-calc from lowest variation price)
+     LIVE PREVIEW ENGINE
      ═════════════════════════════════════════════════════════════════════════ */
 
-  const displayPrice = document.getElementById('displayPricePreview');
-  const displayLabel = document.getElementById('displayPriceLabel');
+  // ── Clock ─────────────────────────────────────────────────────────────
+  function pvClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const el = document.getElementById('pv-time');
+    if (el) el.textContent = h + ':' + m;
+  }
+  pvClock(); setInterval(pvClock, 10000);
 
-  function updateDisplayPrice() {
-    const priceInputs = document.querySelectorAll('.svc-price');
-    const prices = [];
-    priceInputs.forEach(inp => {
-      const v = parseFloat(inp.value);
-      if (v > 0) prices.push(v);
-    });
+  // ── Name ──────────────────────────────────────────────────────────────
+  function pvUpdateName() {
+    const v = document.querySelector('[name="name"]')?.value.trim();
+    const el = document.getElementById('pv-name');
+    if (el) el.textContent = v || '—';
+    const nav = document.getElementById('pv-navtitle');
+    if (nav) nav.textContent = v || 'Service';
+  }
 
-    if (prices.length === 0) {
-      displayPrice.textContent = '₹ —';
-      displayLabel.textContent = 'Auto-calculated';
+  // ── Category ─────────────────────────────────────────────────────────
+  function pvUpdateCategory() {
+    const sel = document.querySelector('[name="category"]');
+    const v = sel?.options[sel.selectedIndex]?.value || '';
+    const el = document.getElementById('pv-category');
+    if (el) el.textContent = v || '—';
+  }
+
+  // ── Subcategory ───────────────────────────────────────────────────────
+  function pvUpdateSubcategory() {
+    const sel = document.querySelector('[name="subcategory"]');
+    const v = sel?.options[sel.selectedIndex]?.value || '';
+    const el = document.getElementById('pv-subcategory');
+    if (!el) return;
+    if (v) {
+      el.textContent = v;
+      el.style.display = 'inline-flex';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // ── Duration ─────────────────────────────────────────────────────────
+  function pvUpdateDuration() {
+    const sel = document.querySelector('[name="duration"]');
+    const v = sel?.options[sel.selectedIndex]?.value || '';
+    const el = document.getElementById('pv-duration');
+    if (!el) return;
+    if (v) {
+      el.textContent = v + ' min';
+      el.style.display = '';   // show chip
+    } else {
+      el.style.display = 'none'; // hide chip when not set
+    }
+  }
+
+  // ── Description title ────────────────────────────────────────────────
+  function pvUpdateDescTitle() {
+    const v = document.querySelector('[name="desc_title"]')?.value.trim();
+    const el = document.getElementById('pv-desc-title');
+    if (el) el.textContent = v || 'About this service';
+  }
+
+  // ── Description ───────────────────────────────────────────────────────
+  function pvUpdateDescription() {
+    const v = document.querySelector('[name="description"]')?.value.trim();
+    const el1 = document.getElementById('pv-description');
+    const el2 = document.getElementById('pv-basic-desc');
+    if (el1) el1.textContent = v || '';
+    if (el2) el2.textContent = v || '';
+  }
+
+  // ── Service types — 2-col product cards ──────────────────────────────
+  function pvUpdateServices() {
+    const container = document.getElementById('pv-services');
+    if (!container) return;
+
+    const rows   = [...document.querySelectorAll('#serviceTypesContainer .service-type-row')];
+    container.innerHTML = '';
+
+    // Wrapper: 2-column grid
+    if (!rows.length) {
+      container.innerHTML = '<span style="font-size:10px;color:#ccc;">No services added yet</span>';
       return;
     }
 
-    const lowest = Math.min(...prices);
-    if (prices.length === 1) {
-      displayPrice.textContent = `₹${lowest.toLocaleString('en-IN')}`;
-      displayLabel.textContent = 'Auto-calculated';
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+
+    rows.forEach(row => {
+      const name    = row.querySelector('[name="service_types[]"]')?.value.trim() || '—';
+      const price   = row.querySelector('[name="service_prices[]"]')?.value.trim() || '';
+      const reviews = row.querySelector('[name="service_reviews[]"]')?.value.trim() || '';
+      const imgEl = row.querySelector('.inline-img-preview');
+      const imgSrc = (imgEl && !imgEl.classList.contains('hidden')) ? imgEl.src : '';
+
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#fff;border:1px solid #f0f0f0;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 4px rgba(0,0,0,0.06);';
+
+      // Image area
+      const imgArea = document.createElement('div');
+      imgArea.style.cssText = 'width:100%;aspect-ratio:1/1;background:#f7f7f7;overflow:hidden;display:flex;align-items:center;justify-content:center;';
+      if (imgSrc) {
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+        imgArea.appendChild(img);
+      } else {
+        imgArea.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+      }
+      card.appendChild(imgArea);
+
+      // Info area
+      const info = document.createElement('div');
+      info.style.cssText = 'padding:7px 8px 8px;flex:1;display:flex;flex-direction:column;gap:3px;';
+
+      const nameEl = document.createElement('p');
+      nameEl.style.cssText = 'font-size:10px;font-weight:700;color:#111;margin:0;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      nameEl.textContent = name;
+      info.appendChild(nameEl);
+
+      // ── Rating row (★ 4.5 · reviews) ──────────────────────────────────────
+      const ratingRow = document.createElement('div');
+      ratingRow.style.cssText = 'display:flex;align-items:center;gap:3px;margin:1px 0;';
+      const reviewLabel = reviews ? reviews + ' reviews' : 'New';
+      ratingRow.innerHTML = '<span style="color:#f59e0b;font-size:9px;">★</span>'
+        + '<span style="font-size:8.5px;font-weight:600;color:#333;">4.5</span>'
+        + `<span style="font-size:8px;color:#aaa;margin-left:1px;">· ${reviewLabel}</span>`;
+      info.appendChild(ratingRow);
+
+
+      const bottom = document.createElement('div');
+      bottom.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-top:4px;';
+
+      const priceEl = document.createElement('span');
+      priceEl.style.cssText = 'font-size:10px;font-weight:700;color:#111;';
+      priceEl.textContent = price ? '₹' + price : '';
+      bottom.appendChild(priceEl);
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.style.cssText = 'font-size:9px;font-weight:600;color:#9333ea;border:1.5px solid #9333ea;border-radius:6px;padding:2px 8px;background:transparent;cursor:default;';
+      addBtn.textContent = 'Add';
+      bottom.appendChild(addBtn);
+
+      info.appendChild(bottom);
+      card.appendChild(info);
+      grid.appendChild(card);
+    });
+
+    container.appendChild(grid);
+  }
+
+
+  // ── Hero image ────────────────────────────────────────────────────────
+  function pvUpdateHero(src) {
+    const placeholder = document.getElementById('pv-hero-placeholder');
+    const img = document.getElementById('pv-hero');
+    if (!placeholder || !img) return;
+    if (src) {
+      img.src = src;
+      img.classList.remove('hidden');
+      placeholder.style.display = 'none';
     } else {
-      displayPrice.textContent = `Starting From ₹${lowest.toLocaleString('en-IN')}`;
-      displayLabel.textContent = 'Auto-calculated';
+      img.classList.add('hidden');
+      placeholder.style.display = '';
     }
   }
-  updateDisplayPrice();
 
-  const typesObserver = new MutationObserver(updateDisplayPrice);
-  typesObserver.observe(document.getElementById('serviceTypesContainer'), { childList: true, subtree: true });
-
-  /* ═════════════════════════════════════════════════════════════════════════
-     RICH TEXT EDITOR
-     ═════════════════════════════════════════════════════════════════════════ */
-
-  function execCmd(cmd) { document.execCommand(cmd, false, null); }
-
-  const descEditor = document.getElementById('descEditor');
-  descEditor.addEventListener('focus', function() { if (!this.textContent.trim()) this.classList.add('editing'); });
-  descEditor.addEventListener('blur', function() { this.classList.remove('editing'); });
-
-  // Placeholder style
-  const editorStyle = document.createElement('style');
-  editorStyle.textContent = `
-    #descEditor:empty:before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
-  `;
-  document.head.appendChild(editorStyle);
-
-  // Sync on form submit
-  document.getElementById('serviceForm').addEventListener('submit', function() {
-    document.getElementById('descContentHidden').value = descEditor.innerHTML;
-  });
-
-  /* ═════════════════════════════════════════════════════════════════════════
-     SERVICE STEPS (Dynamic)
-     ═════════════════════════════════════════════════════════════════════════ */
-
-  let stepCount = 0;
-
-  function addStep() {
-    stepCount++;
-    const container = document.getElementById('stepsContainer');
-    const div = document.createElement('div');
-    div.className = 'dyn-item rounded-2xl border border-gray-200 p-5 relative step-block';
-    div.innerHTML = `
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2.5">
-          <span class="w-7 h-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold step-num">${stepCount}</span>
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider step-label">Step ${stepCount}</span>
-        </div>
-        <button type="button" onclick="removeStep(this)" class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="space-y-4">
-          <div>
-            <label class="form-label">Step Title</label>
-            <input type="text" name="step_titles[]" placeholder="e.g. Skin Preparation" class="form-input">
-          </div>
-          <div>
-            <label class="form-label">Step Description</label>
-            <textarea name="step_descriptions[]" rows="3" placeholder="Describe this step…" class="form-input resize-none"></textarea>
-          </div>
-        </div>
-        <div class="inline-upload-wrap">
-          <label class="form-label">Step Image</label>
-          <label class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-            <p class="text-xs text-gray-400 mt-2">Upload step image</p>
-            <input type="file" name="step_images[]" accept="image/*" class="hidden" onchange="previewInlineImg(this)">
-          </label>
-          <div class="relative mt-2">
-            <img class="inline-img-preview hidden w-full h-32 object-cover rounded-xl border border-gray-100" src="" alt="">
-            <button type="button" class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm" onclick="removeInlineImg(this)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  }
-
-  function removeStep(btn) {
-    btn.closest('.step-block').remove();
-    renumberSteps();
-  }
-
-  function renumberSteps() {
-    document.querySelectorAll('#stepsContainer .step-block').forEach((block, i) => {
-      const n = i + 1;
-      block.querySelector('.step-num').textContent = n;
-      block.querySelector('.step-label').textContent = `Step ${n}`;
+  // ── Description images ────────────────────────────────────────────────
+  function pvRebuildDescImgs() {
+    const pv = document.getElementById('pv-desc-imgs');
+    if (!pv) return;
+    pv.innerHTML = '';
+    document.querySelectorAll('#descImagesContainer .desc-preview').forEach(imgEl => {
+      if (!imgEl.classList.contains('hidden') && imgEl.src) {
+        const el = document.createElement('img');
+        el.src = imgEl.src;
+        el.className = 'preview-desc-img';
+        // No fixed aspect-ratio — show full image at natural height
+        el.style.cssText = 'width:100%;height:auto;display:block;';
+        pv.appendChild(el);
+      }
     });
-    stepCount = document.querySelectorAll('#stepsContainer .step-block').length;
   }
 
-  /* ═════════════════════════════════════════════════════════════════════════
-     TRUSTED DESCRIPTION (Dynamic)
-     ═════════════════════════════════════════════════════════════════════════ */
+  // ── Patch previewImg to also update hero preview ──────────────────────
+  const _origPreviewImg = previewImg;
+  previewImg = function(input, previewId, placeholderId, removeBtnId) {
+    _origPreviewImg(input, previewId, placeholderId, removeBtnId);
+    if (previewId === 'serviceImgPreview') {
+      if (input.files && input.files[0]) {
+        const r = new FileReader();
+        r.onload = e => pvUpdateHero(e.target.result);
+        r.readAsDataURL(input.files[0]);
+      }
+    }
+  };
 
-  let trustedCount = 0;
+  // Patch removeImage to clear hero preview
+  const _origRemoveImage = removeImage;
+  removeImage = function(inputId, previewId, wrapId, placeholderId, dropZoneId) {
+    _origRemoveImage(inputId, previewId, wrapId, placeholderId, dropZoneId);
+    if (previewId === 'serviceImgPreview') pvUpdateHero(null);
+  };
 
-  function addTrustedBlock() {
-    trustedCount++;
-    const container = document.getElementById('trustedContainer');
-    const div = document.createElement('div');
-    div.className = 'dyn-item rounded-2xl border border-gray-200 p-5 relative trusted-block';
-    div.innerHTML = `
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2.5">
-          <div class="w-2.5 h-2.5 rounded-full bg-gray-900"></div>
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Block ${trustedCount}</span>
-        </div>
-        <button type="button" onclick="removeTrusted(this)" class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label class="form-label">Trusted Title</label>
-          <input type="text" name="trusted_titles[]" placeholder="e.g. Why Choose Our Service" class="form-input">
-        </div>
-        <div>
-          <label class="form-label">Key Points</label>
-          <textarea name="trusted_points[]" rows="3" placeholder="Enter key points (one per line)…" class="form-input resize-none"></textarea>
-        </div>
-        <div class="inline-upload-wrap">
-          <label class="form-label">Image</label>
-          <label class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-            <p class="text-xs text-gray-400 mt-1.5">Upload image</p>
-            <input type="file" name="trusted_images[]" accept="image/*" class="hidden" onchange="previewInlineImg(this)">
-          </label>
-          <div class="relative mt-2">
-            <img class="inline-img-preview hidden w-full h-28 object-cover rounded-xl border border-gray-100" src="" alt="">
-            <button type="button" class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm" onclick="removeInlineImg(this)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  }
+  // ── Patch previewDescImg to also update phone desc images ─────────────
+  const _origPreviewDescImg = previewDescImg;
+  previewDescImg = function(input) {
+    _origPreviewDescImg(input);
+    setTimeout(pvRebuildDescImgs, 50);
+  };
 
-  function removeTrusted(btn) {
-    btn.closest('.trusted-block').remove();
-    renumberTrusted();
-  }
+  // Patch removeDescSlot
+  const _origRemoveDescSlot = removeDescSlot;
+  removeDescSlot = function(btn) {
+    _origRemoveDescSlot(btn);
+    setTimeout(pvRebuildDescImgs, 50);
+  };
 
-  function renumberTrusted() {
-    document.querySelectorAll('#trustedContainer .trusted-block').forEach((block, i) => {
-      block.querySelector('.text-xs.font-semibold').textContent = `Block ${i + 1}`;
-    });
-    trustedCount = document.querySelectorAll('#trustedContainer .trusted-block').length;
-  }
+  // ── Patch previewInlineImg to refresh service cards in preview ─────────
+  const _origPreviewInlineImg = previewInlineImg;
+  previewInlineImg = function(input) {
+    _origPreviewInlineImg(input);
+    setTimeout(pvUpdateServices, 50);
+  };
 
-  /* ═════════════════════════════════════════════════════════════════════════
-     REINIT LUCIDE ICONS (for dynamically added elements)
-     ═════════════════════════════════════════════════════════════════════════ */
+  // Patch removeInlineImg to refresh service cards in preview
+  const _origRemoveInlineImg = removeInlineImg;
+  removeInlineImg = function(btn) {
+    _origRemoveInlineImg(btn);
+    setTimeout(pvUpdateServices, 50);
+  };
 
-  function reInitIcons() {
-    try { lucide.createIcons({ attrs: { 'stroke-width': 1.5 } }); } catch(e) {}
-  }
+  // ── Event listeners ───────────────────────────────────────────────────
+  document.querySelector('[name="name"]')?.addEventListener('input', pvUpdateName);
+  document.querySelector('[name="category"]')?.addEventListener('change', pvUpdateCategory);
+  document.querySelector('[name="subcategory"]')?.addEventListener('change', pvUpdateSubcategory);
+  document.querySelector('[name="duration"]')?.addEventListener('change', pvUpdateDuration);
+  document.querySelector('[name="description"]')?.addEventListener('input', pvUpdateDescription);
+  document.querySelector('[name="desc_title"]')?.addEventListener('input', pvUpdateDescTitle);
 
-  /* ── Add initial step + trusted block ───────────────────────────────── */
-  addStep();
-  addTrustedBlock();
+  // Service variations — delegate input + watch DOM changes (add/remove cards)
+  document.getElementById('serviceTypesContainer')?.addEventListener('input', pvUpdateServices);
+  new MutationObserver(pvUpdateServices)
+    .observe(document.getElementById('serviceTypesContainer') || document.body,
+      { childList: true, subtree: true, attributes: true, attributeFilter: ['src','class'] });
+
+  // Initial render
+  pvUpdateName(); pvUpdateCategory(); pvUpdateSubcategory(); pvUpdateDuration();
+  pvUpdateDescription(); pvUpdateDescTitle(); pvUpdateServices();
+
 </script>
 </body>
 </html>
+
+
+

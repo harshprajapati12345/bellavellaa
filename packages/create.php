@@ -394,8 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   function reInitIcons() { lucide.createIcons({ attrs: { 'stroke-width': 1.5 } }); }
 
   // ── Sidebar toggles ──
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
-  function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
+  // Sidebar toggles are handled by sidebar.php
 
   // ── Image Upload helpers ──
   function previewImg(input, previewId, placeholderId, removeBtnId) {

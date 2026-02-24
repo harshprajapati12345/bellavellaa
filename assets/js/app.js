@@ -25,7 +25,8 @@ function toggleSubmenu(submenuId, chevronId) {
 }
 
 function toggleProfessionals() { toggleSubmenu('professionals-submenu', 'professionals-chevron'); }
-function toggleMedia()         { toggleSubmenu('media-submenu',         'media-chevron'); }
+function toggleMedia() { toggleSubmenu('media-submenu', 'media-chevron'); }
+function toggleCRM() { toggleSubmenu('crm-submenu', 'crm-chevron'); }
 
 /* ── Image Preview ───────────────────────────────────────────────────────── */
 function previewImage(input, previewId = 'img-preview') {

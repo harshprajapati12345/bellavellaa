@@ -326,8 +326,7 @@
 <script src="/bellavella/assets/js/app.js"></script>
 <script>
   lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-  function toggleProfessionals() { document.getElementById('professionals-submenu').classList.toggle('open'); document.getElementById('professionals-chevron').classList.toggle('chevron-rotate'); }
-  function toggleMedia() { document.getElementById('media-submenu').classList.toggle('open'); document.getElementById('media-chevron').classList.toggle('chevron-rotate'); }
+  // Sidebar toggles are handled by sidebar.php
 
   // ── Filters & Pagination ──────────────────────────────────────────────
   const ROWS_PER_PAGE = 5;

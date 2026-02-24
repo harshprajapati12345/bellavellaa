@@ -11,26 +11,12 @@ $service = [
     'name'          => 'Bridal Makeup',
     'category'      => 'Bridal',
     'duration'      => 40,
-    'rating'        => 5,
-    'service_types' => [
-        ['name' => 'Classic Bridal',       'price' => 2999, 'desc' => 'Traditional bridal makeup with premium products for a timeless look.'],
-        ['name' => 'HD Airbrush Bridal',   'price' => 4999, 'desc' => 'High-definition airbrush technique for flawless, camera-ready finish.'],
-        ['name' => 'Reception Look',       'price' => 1999, 'desc' => 'Elegant evening reception makeup designed to last all night.'],
-    ],
     'desc_title'    => 'Premium Bridal Makeup Experience',
-    'desc_content'  => '<p>Our signature bridal makeup service uses premium HD products and airbrush techniques to give you a flawless, long-lasting look for your special day.</p><p>Each session is personalized to match your outfit and jewelry.</p>',
-    'steps' => [
-        ['title'=>'Skin Preparation','description'=>'Deep cleansing and moisturizing to create the perfect canvas for makeup application.'],
-        ['title'=>'Foundation & Base','description'=>'Airbrush foundation matched to your skin tone for a flawless, camera-ready base.'],
-        ['title'=>'Eyes & Lips','description'=>'Custom eye makeup and lip color coordinated with your bridal outfit.'],
+    'status'        => 'active',
+    'image'         => '',
+    'service_types' => [
+        ['name' => 'Full Face Bridal', 'price' => 4500, 'desc' => ''],
     ],
-    'trusted' => [
-        ['title'=>'Why Choose Our Bridal Service','points'=>"Premium imported products\nCertified makeup artists\n12+ hours long-lasting finish"],
-    ],
-    'aftercare_title'   => 'Post-Bridal Makeup Care',
-    'aftercare_content' => "• Avoid touching your face for the first 2 hours.\n• Use blotting papers instead of powder for touch-ups.\n• Remove makeup gently with micellar water at end of day.\n• Apply moisturizer after removal to hydrate skin.",
-    'status'  => 'active',
-    'image'   => '',
 ];
 
 $pageTitle = 'Edit Service';
@@ -43,10 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $service['category']         = trim($_POST['category'] ?? '');
     $service['price']            = floatval($_POST['price'] ?? 0);
     $service['duration']         = intval($_POST['duration'] ?? 0);
-    $service['desc_title']       = trim($_POST['desc_title'] ?? '');
-    $service['desc_content']     = $_POST['desc_content'] ?? '';
-    $service['aftercare_title']  = trim($_POST['aftercare_title'] ?? '');
-    $service['aftercare_content']= trim($_POST['aftercare_content'] ?? '');
     $service['service_types']    = array_filter($_POST['service_types'] ?? []);
     $formAction = $_POST['form_action'] ?? 'draft';
 
@@ -191,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div>
                       <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
-                      <input type="number" name="service_prices[]" value="<?php echo $type['price']; ?>" min="0" step="0.01" class="form-input text-right svc-price" oninput="updateDisplayPrice()">
+                      <input type="number" name="service_prices[]" value="<?php echo $type['price']; ?>" min="0" step="0.01" class="form-input text-right svc-price">
                     </div>
                   </div>
                   <div class="mb-4">
@@ -220,35 +202,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </button>
             </div>
 
-            <!-- 3. Display Price (Auto-calculated) -->
-            <div>
-              <label class="form-label">Display Price</label>
-              <div class="flex items-center justify-between py-4 px-5 bg-gray-50/80 rounded-2xl border border-gray-100">
-                <div>
-                  <p class="text-sm font-medium text-gray-700" id="displayPriceLabel">Auto-calculated</p>
-                  <p class="text-[11px] text-gray-400 mt-0.5">Based on lowest service price</p>
-                </div>
-                <span class="text-sm font-semibold text-gray-800 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm" id="displayPricePreview">₹ —</span>
-              </div>
-            </div>
-
-            <!-- 4. Rating (Global) -->
-            <div>
-              <label class="form-label">Rating</label>
-              <div class="flex items-center gap-1 mt-1" id="starRating">
-                <?php for($s = 1; $s <= 5; $s++): ?>
-                <button type="button" onclick="setRating(<?php echo $s; ?>)" class="star-btn p-1 transition-transform hover:scale-110" data-star="<?php echo $s; ?>">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                </button>
-                <?php endfor; ?>
-                <input type="hidden" name="rating" id="ratingValue" value="<?php echo $service['rating']; ?>">
-                <span class="ml-3 text-sm font-semibold text-gray-700" id="ratingText"><?php echo $service['rating']; ?>.0</span>
-              </div>
-              <p class="text-[11px] text-gray-400 mt-1.5 ml-1">This rating applies to the entire service</p>
-            </div>
 
           </div>
         </div>
+
 
         <!-- ━━━ SECTION 3 · SERVICE DESCRIPTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
         <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
@@ -265,114 +222,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="text" name="desc_title" value="<?php echo htmlspecialchars($service['desc_title']); ?>" class="form-input">
             </div>
             <div>
-              <label class="form-label">Description Content</label>
-              <div class="border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="flex items-center gap-1 px-3 py-2 bg-gray-50/80 border-b border-gray-200">
-                  <button type="button" onclick="execCmd('bold')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Bold"><b class="text-sm text-gray-600">B</b></button>
-                  <button type="button" onclick="execCmd('italic')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Italic"><i class="text-sm text-gray-600" style="font-style:italic">I</i></button>
-                  <button type="button" onclick="execCmd('underline')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Underline"><u class="text-sm text-gray-600">U</u></button>
-                  <div class="w-px h-5 bg-gray-200 mx-1"></div>
-                  <button type="button" onclick="execCmd('insertUnorderedList')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Bullet List"><i data-lucide="list" class="w-4 h-4 text-gray-500"></i></button>
-                  <button type="button" onclick="execCmd('insertOrderedList')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Numbered List"><i data-lucide="list-ordered" class="w-4 h-4 text-gray-500"></i></button>
-                  <div class="w-px h-5 bg-gray-200 mx-1"></div>
-                  <button type="button" onclick="execCmd('justifyLeft')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Align Left"><i data-lucide="align-left" class="w-4 h-4 text-gray-500"></i></button>
-                  <button type="button" onclick="execCmd('justifyCenter')" class="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors" title="Align Center"><i data-lucide="align-center" class="w-4 h-4 text-gray-500"></i></button>
+              <label class="form-label">Description Images <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+              <div id="descImagesContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <!-- slots added by JS -->
+              </div>
+              <button type="button" onclick="addDescImage()" class="mt-3 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
+                <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 </div>
-                <div id="descEditor" contenteditable="true" class="px-4 py-3 min-h-[160px] text-sm text-gray-800 outline-none focus:ring-0" style="font-family:Inter,sans-serif" data-placeholder="Provide a detailed overview of this service…"><?php echo $service['desc_content']; ?></div>
-                <input type="hidden" name="desc_content" id="descContentHidden">
-              </div>
-            </div>
-            <div>
-              <label class="form-label">Description Image</label>
-              <div id="dropZoneDesc" class="drop-zone flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                   onclick="document.getElementById('descImageInput').click()"
-                   ondragover="event.preventDefault(); this.classList.add('dragover')"
-                   ondragleave="this.classList.remove('dragover')"
-                   ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event,'descImageInput','descImgPreview')">
-                <div id="uploadPlaceholderDesc" class="flex flex-col items-center">
-                  <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors"><i data-lucide="image-plus" class="w-5 h-5 text-gray-400"></i></div>
-                  <p class="text-sm text-gray-500">Upload description image</p>
-                  <p class="text-xs text-gray-400 mt-0.5">Optional</p>
-                </div>
-                <input type="file" name="desc_image" id="descImageInput" accept="image/*" class="hidden" onchange="previewImg(this,'descImgPreview','uploadPlaceholderDesc','removeBtnDesc')">
-              </div>
-              <div class="relative mt-3 hidden" id="descImgPreviewWrap">
-                <img id="descImgPreview" class="w-full h-40 object-cover rounded-2xl border border-gray-100" src="" alt="">
-                <button type="button" id="removeBtnDesc" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm" onclick="removeImage('descImageInput','descImgPreview','descImgPreviewWrap','uploadPlaceholderDesc','dropZoneDesc')"><i data-lucide="x" class="w-4 h-4"></i></button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ━━━ SECTION 4 · SERVICE STEPS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">4</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Steps</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8">
-            <div id="stepsContainer" class="space-y-4"></div>
-            <button type="button" onclick="addStep()" class="mt-5 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i></div> Add New Step
-            </button>
-          </div>
-        </div>
-
-        <!-- ━━━ SECTION 5 · TRUSTED DESCRIPTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">5</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Trusted Description</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8">
-            <div id="trustedContainer" class="space-y-4"></div>
-            <button type="button" onclick="addTrustedBlock()" class="mt-5 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors"><i data-lucide="plus" class="w-3.5 h-3.5"></i></div> Add More
-            </button>
-          </div>
-        </div>
-
-        <!-- ━━━ SECTION 6 · AFTERCARE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">6</div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Aftercare</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8 space-y-5">
-            <div>
-              <label class="form-label">Aftercare Title</label>
-              <input type="text" name="aftercare_title" value="<?php echo htmlspecialchars($service['aftercare_title']); ?>" class="form-input">
-            </div>
-            <div>
-              <label class="form-label">Aftercare Content</label>
-              <textarea name="aftercare_content" rows="5" class="form-input resize-none"><?php echo htmlspecialchars($service['aftercare_content']); ?></textarea>
-            </div>
-            <div>
-              <label class="form-label">Aftercare Image <span class="text-gray-400 font-normal text-[10px] tracking-normal normal-case">(Optional)</span></label>
-              <div id="dropZoneAfter" class="drop-zone flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                   onclick="document.getElementById('afterImageInput').click()"
-                   ondragover="event.preventDefault(); this.classList.add('dragover')"
-                   ondragleave="this.classList.remove('dragover')"
-                   ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event,'afterImageInput','afterImgPreview')">
-                <div id="uploadPlaceholderAfter" class="flex flex-col items-center">
-                  <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-gray-200 transition-colors"><i data-lucide="image-plus" class="w-5 h-5 text-gray-400"></i></div>
-                  <p class="text-sm text-gray-500">Upload image</p>
-                </div>
-                <input type="file" name="aftercare_image" id="afterImageInput" accept="image/*" class="hidden" onchange="previewImg(this,'afterImgPreview','uploadPlaceholderAfter','removeBtnAfter')">
-              </div>
-              <div class="relative mt-3 hidden" id="afterImgPreviewWrap">
-                <img id="afterImgPreview" class="w-full h-36 object-cover rounded-2xl border border-gray-100" src="" alt="">
-                <button type="button" id="removeBtnAfter" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm" onclick="removeImage('afterImageInput','afterImgPreview','afterImgPreviewWrap','uploadPlaceholderAfter','dropZoneAfter')"><i data-lucide="x" class="w-4 h-4"></i></button>
-              </div>
+                Add More Image
+              </button>
             </div>
           </div>
         </div>
@@ -383,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="flex gap-3">
             <a href="/bellavella/services/" class="btn btn-secondary">Cancel</a>
             <button type="submit" name="form_action" value="draft" class="btn btn-secondary"><i data-lucide="file-text" class="w-4 h-4"></i> Save as Draft</button>
-            <button type="submit" name="form_action" value="publish" class="btn btn-primary" onclick="document.getElementById('descContentHidden').value = document.getElementById('descEditor').innerHTML;"><i data-lucide="globe" class="w-4 h-4"></i> Publish Service</button>
+            <button type="submit" name="form_action" value="publish" class="btn btn-primary"><i data-lucide="globe" class="w-4 h-4"></i> Publish Service</button>
           </div>
         </div>
 
@@ -460,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div>
           <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
-          <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price" oninput="updateDisplayPrice()">
+          <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price">
         </div>
       </div>
       <div class="mb-4">
@@ -482,7 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
       </div>
     `;
-    c.appendChild(d); updateDisplayPrice();
+    c.appendChild(d);
   }
 
   function removeServiceCard(btn) {
@@ -490,7 +349,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (rows.length > 1) {
       btn.closest('.service-type-row').remove();
       renumberServices();
-      updateDisplayPrice();
     }
   }
 
@@ -502,70 +360,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     svcCount = document.querySelectorAll('#serviceTypesContainer .service-type-row').length;
   }
 
-  /* ── Star Rating ────────────────────────────────────────────────────── */
-  function setRating(val) {
-    document.getElementById('ratingValue').value = val;
-    document.getElementById('ratingText').textContent = val + '.0';
-    document.querySelectorAll('#starRating .star-btn svg').forEach((svg, i) => {
-      svg.setAttribute('fill', i < val ? '#f59e0b' : 'none');
-      svg.setAttribute('stroke', i < val ? '#f59e0b' : '#d1d5db');
+  /* ═════════════════════════════════════════════════════════════════════════
+     DESCRIPTION IMAGES (multi-slot grid)
+     ═════════════════════════════════════════════════════════════════════════ */
+
+  function buildDescSlot() {
+    const slot = document.createElement('div');
+    slot.className = 'desc-img-slot dyn-item relative group';
+    slot.innerHTML = `
+      <label class="desc-upload-label flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        <p class="text-xs text-gray-400 mt-2">Upload image</p>
+        <input type="file" name="desc_images[]" accept="image/*" class="hidden" onchange="previewDescImg(this)">
+      </label>
+      <img class="desc-preview hidden absolute inset-0 w-full h-full object-cover rounded-2xl border border-gray-100" src="" alt="">
+      <button type="button" onclick="removeDescSlot(this)" class="desc-slot-remove hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm z-10">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    `;
+    return slot;
+  }
+
+  function addDescImage() {
+    const container = document.getElementById('descImagesContainer');
+    container.appendChild(buildDescSlot());
+    lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+    updateDescRemoveButtons();
+  }
+
+  function previewDescImg(input) {
+    const slot      = input.closest('.desc-img-slot');
+    const label     = slot.querySelector('.desc-upload-label');
+    const preview   = slot.querySelector('.desc-preview');
+    const removeBtn = slot.querySelector('.desc-slot-remove');
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.classList.remove('hidden');
+      label.classList.add('hidden');
+      removeBtn.classList.remove('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function removeDescSlot(btn) {
+    const container = document.getElementById('descImagesContainer');
+    const slots = container.querySelectorAll('.desc-img-slot');
+    if (slots.length > 1) {
+      btn.closest('.desc-img-slot').remove();
+    } else {
+      const slot = btn.closest('.desc-img-slot');
+      slot.querySelector('input[type="file"]').value = '';
+      slot.querySelector('.desc-preview').classList.add('hidden');
+      slot.querySelector('.desc-preview').src = '';
+      slot.querySelector('.desc-upload-label').classList.remove('hidden');
+      btn.classList.add('hidden');
+    }
+    updateDescRemoveButtons();
+  }
+
+  function updateDescRemoveButtons() {
+    document.querySelectorAll('#descImagesContainer .desc-img-slot').forEach(slot => {
+      const btn = slot.querySelector('.desc-slot-remove');
+      const hasImage = !slot.querySelector('.desc-preview').classList.contains('hidden');
+      if (hasImage) btn.classList.remove('hidden');
     });
   }
-  setRating(<?php echo intval($service['rating']); ?>);
 
-  /* ── Display Price (auto-calc from lowest variation price) ───────── */
-  const displayPrice = document.getElementById('displayPricePreview');
-  const displayLabel = document.getElementById('displayPriceLabel');
-  function updateDisplayPrice() {
-    const priceInputs = document.querySelectorAll('.svc-price');
-    const prices = [];
-    priceInputs.forEach(inp => { const v = parseFloat(inp.value); if (v > 0) prices.push(v); });
-    if (prices.length === 0) { displayPrice.textContent = '₹ —'; displayLabel.textContent = 'Auto-calculated'; return; }
-    const lowest = Math.min(...prices);
-    displayPrice.textContent = prices.length > 1 ? `Starting From ₹${lowest.toLocaleString('en-IN')}` : `₹${lowest.toLocaleString('en-IN')}`;
-    displayLabel.textContent = 'Auto-calculated';
-  }
-  updateDisplayPrice();
-  new MutationObserver(updateDisplayPrice).observe(document.getElementById('serviceTypesContainer'), { childList: true, subtree: true });
+  // Init: add one empty slot on load
+  addDescImage();
 
-  /* ── Rich Text Editor ───────────────────────────────────────────────── */
-  function execCmd(cmd) { document.execCommand(cmd, false, null); }
-  const es = document.createElement('style'); es.textContent = `#descEditor:empty:before{content:attr(data-placeholder);color:#9ca3af;pointer-events:none;}`; document.head.appendChild(es);
-  document.getElementById('serviceForm').addEventListener('submit', () => { document.getElementById('descContentHidden').value = document.getElementById('descEditor').innerHTML; });
-
-  /* ── Service Steps ──────────────────────────────────────────────────── */
-  let stepCount = 0;
-  function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-  function addStep(title='', desc='') {
-    stepCount++;
-    const c = document.getElementById('stepsContainer'), d = document.createElement('div');
-    d.className = 'dyn-item rounded-2xl border border-gray-200 p-5 relative step-block';
-    d.innerHTML = `<div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2.5"><span class="w-7 h-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold step-num">${stepCount}</span><span class="text-xs font-semibold text-gray-500 uppercase tracking-wider step-label">Step ${stepCount}</span></div><button type="button" onclick="removeStep(this)" class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="space-y-4"><div><label class="form-label">Step Title</label><input type="text" name="step_titles[]" value="${escapeHtml(title)}" class="form-input"></div><div><label class="form-label">Step Description</label><textarea name="step_descriptions[]" rows="3" class="form-input resize-none">${escapeHtml(desc)}</textarea></div></div><div class="inline-upload-wrap"><label class="form-label">Step Image</label><label class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><p class="text-xs text-gray-400 mt-2">Upload step image</p><input type="file" name="step_images[]" accept="image/*" class="hidden" onchange="previewInlineImg(this)"></label><div class="relative mt-2"><img class="inline-img-preview hidden w-full h-32 object-cover rounded-xl border border-gray-100" src="" alt=""><button type="button" class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm" onclick="removeInlineImg(this)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div>`;
-    c.appendChild(d);
-  }
-  function removeStep(btn) { btn.closest('.step-block').remove(); renumberSteps(); }
-  function renumberSteps() { document.querySelectorAll('#stepsContainer .step-block').forEach((b,i)=>{ b.querySelector('.step-num').textContent=i+1; b.querySelector('.step-label').textContent=`Step ${i+1}`; }); stepCount=document.querySelectorAll('#stepsContainer .step-block').length; }
-
-  /* ── Trusted Description ────────────────────────────────────────────── */
-  let trustedCount = 0;
-  function addTrustedBlock(title='', points='') {
-    trustedCount++;
-    const c = document.getElementById('trustedContainer'), d = document.createElement('div');
-    d.className = 'dyn-item rounded-2xl border border-gray-200 p-5 relative trusted-block';
-    d.innerHTML = `<div class="flex items-center justify-between mb-4"><div class="flex items-center gap-2.5"><div class="w-2.5 h-2.5 rounded-full bg-gray-900"></div><span class="text-xs font-semibold text-gray-500 uppercase tracking-wider trusted-label">Block ${trustedCount}</span></div><button type="button" onclick="removeTrusted(this)" class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div><div class="space-y-4"><div><label class="form-label">Trusted Title</label><input type="text" name="trusted_titles[]" value="${escapeHtml(title)}" class="form-input"></div><div><label class="form-label">Key Points</label><textarea name="trusted_points[]" rows="3" class="form-input resize-none" placeholder="Enter key points (one per line)…">${escapeHtml(points)}</textarea></div><div class="inline-upload-wrap"><label class="form-label">Image</label><label class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><p class="text-xs text-gray-400 mt-1.5">Upload image</p><input type="file" name="trusted_images[]" accept="image/*" class="hidden" onchange="previewInlineImg(this)"></label><div class="relative mt-2"><img class="inline-img-preview hidden w-full h-28 object-cover rounded-xl border border-gray-100" src="" alt=""><button type="button" class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm" onclick="removeInlineImg(this)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div></div></div>`;
-    c.appendChild(d);
-  }
-  function removeTrusted(btn) { btn.closest('.trusted-block').remove(); renumberTrusted(); }
-  function renumberTrusted() { document.querySelectorAll('#trustedContainer .trusted-block').forEach((b,i)=>{ b.querySelector('.trusted-label').textContent=`Block ${i+1}`; }); trustedCount=document.querySelectorAll('#trustedContainer .trusted-block').length; }
-
-  /* ── Pre-fill from PHP ──────────────────────────────────────────────── */
-  <?php foreach ($service['steps'] as $step): ?>
-  addStep(<?php echo json_encode($step['title']); ?>, <?php echo json_encode($step['description']); ?>);
-  <?php endforeach; ?>
-
-  <?php foreach ($service['trusted'] as $tb): ?>
-  addTrustedBlock(<?php echo json_encode($tb['title']); ?>, <?php echo json_encode($tb['points']); ?>);
-  <?php endforeach; ?>
 </script>
 </body>
 </html>

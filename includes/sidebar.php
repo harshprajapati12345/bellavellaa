@@ -19,10 +19,13 @@ if ($section === 'index.php') $section = 'dashboard';
 
 $proSections = ['professionals'];
 $isProActive = in_array($section, $proSections);
-$mediaSections = ['media'];
-$isMediaActive = in_array($section, $mediaSections);
 $isAssignActive = ($section === 'assign');
 $isReviewsActive = ($section === 'reviews');
+$isServicesActive = ($section === 'services');
+$isHomepageActive = ($section === 'homepage');
+$isMediaMgrActive = ($section === 'media-manager');
+$isMediaActive = ($section === 'media');
+$isCRMActive = ($isHomepageActive || $isMediaMgrActive || $isMediaActive);
 
 // Count pending (unassigned) assign requests for badge
 $_sidebarBookings = [
@@ -36,7 +39,7 @@ $pendingAssignCount = count(array_filter($_sidebarBookings, fn($b) => $b['status
 $pendingVerificationCount = 2; // 2 pending verification requests (from mock data)
 
 // Count pending reviews for badge
-$pendingReviewsCount = 3; // 3 pending reviews (from mock data)
+$pendingReviewsCount = 0; // All video reviews are approved by default
 ?>
 <aside id="sidebar"
       class="w-72 fixed h-screen top-0 left-0 flex flex-col justify-between p-6 z-50 bg-[#F6F6F6] transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-gray-200 lg:border-none shadow-2xl lg:shadow-none">
@@ -81,9 +84,11 @@ $pendingReviewsCount = 3; // 3 pending reviews (from mock data)
             <span class="font-normal text-base text-black">Categories</span>
           </a>
 
+         
+
           <!-- Services -->
           <a href="/bellavella/services/"
-            class="flex items-center gap-3 px-4 py-3 <?php echo $section === 'services' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+            class="flex items-center gap-3 px-4 py-3 <?php echo $isServicesActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
             <i data-lucide="store" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
             <span class="font-normal text-base text-black">Services</span>
           </a>
@@ -96,7 +101,7 @@ $pendingReviewsCount = 3; // 3 pending reviews (from mock data)
                 <i data-lucide="check-square" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
                 <span class="font-normal text-base text-black">Professionals</span>
               </div>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200"
+              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200 <?php echo $isProActive ? 'chevron-rotate' : ''; ?>"
                 id="professionals-chevron"></i>
             </button>
             <!-- Submenu -->
@@ -138,6 +143,13 @@ $pendingReviewsCount = 3; // 3 pending reviews (from mock data)
             <span class="font-normal text-base text-black">Users</span>
           </a>
 
+           <!-- Offers -->
+          <a href="/bellavella/offers/"
+            class="flex items-center gap-3 px-4 py-3 <?php echo $section === 'offers' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+            <i data-lucide="tag" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+            <span class="font-normal text-base text-black">Offers</span>
+          </a>
+
           <!-- Assign -->
           <a href="/bellavella/assign/"
             class="flex items-center justify-between px-4 py-3 <?php echo $isAssignActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
@@ -166,28 +178,44 @@ $pendingReviewsCount = 3; // 3 pending reviews (from mock data)
             <?php endif; ?>
           </a>
 
-          <!-- Media dropdown -->
+          <!-- CRM dropdown -->
           <div class="relative">
-            <button onclick="toggleMedia()" id="media-btn"
-              class="w-full flex items-center justify-between px-4 py-3 <?php echo $isMediaActive ? 'bg-white shadow-sm ring-1 ring-gray-200' : 'hover:bg-white'; ?> rounded-xl text-black transition-all group sidebar-item-hover">
+            <button onclick="toggleCRM()" id="crm-btn"
+              class="w-full flex items-center justify-between px-4 py-3 <?php echo $isCRMActive ? 'bg-white shadow-sm ring-1 ring-gray-200' : 'hover:bg-white'; ?> rounded-xl text-black transition-all group sidebar-item-hover">
               <div class="flex items-center gap-3">
-                <i data-lucide="image" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
-                <span class="font-normal text-base text-black">Media</span>
+                <i data-lucide="briefcase" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+                <span class="font-normal text-base text-black">CRM</span>
               </div>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200"
-                id="media-chevron"></i>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200 <?php echo $isCRMActive ? 'chevron-rotate' : ''; ?>"
+                id="crm-chevron"></i>
             </button>
             <!-- Submenu -->
-            <div id="media-submenu" class="submenu<?php echo $isMediaActive ? ' open' : ''; ?> pl-4 mt-1 space-y-1">
+            <div id="crm-submenu" class="submenu<?php echo $isCRMActive ? ' open' : ''; ?> pl-4 mt-1 space-y-1">
+              <!-- 1. Homepage Sections -->
+              <a href="/bellavella/homepage/"
+                class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'homepage' && ($subSection === '' || $subSection === 'edit.php')) ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="layout-template" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Homepage </span>
+              </a>
+          
+              <!-- 3. Banners -->
               <a href="/bellavella/media/banners/"
                 class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'media' && $subSection === 'banners') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="gallery-horizontal" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">Banners</span>
               </a>
+              <!-- 4. Videos -->
               <a href="/bellavella/media/videos/"
                 class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'media' && $subSection === 'videos') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="video" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">Videos</span>
+              </a>
+
+                  <!-- 2. Media Library -->
+              <a href="/bellavella/media/"
+                class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'media' && $subSection === '') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="library" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Media </span>
               </a>
             </div>
           </div>
@@ -201,7 +229,19 @@ $pendingReviewsCount = 3; // 3 pending reviews (from mock data)
         </nav>
       </div>
 
-    </aside>
+    <script>
+      function toggleSubmenu(submenuId, chevronId) {
+        const submenu = document.getElementById(submenuId);
+        const chevron = document.getElementById(chevronId);
+        if (!submenu) return;
+        submenu.classList.toggle('open');
+        if (chevron) chevron.classList.toggle('chevron-rotate');
+      }
+      function toggleProfessionals() { toggleSubmenu('professionals-submenu', 'professionals-chevron'); }
+      function toggleMedia() { toggleSubmenu('media-submenu', 'media-chevron'); }
+      function toggleCRM() { toggleSubmenu('crm-submenu', 'crm-chevron'); }
+    </script>
+</aside>
 
     <!-- Overlay for mobile -->
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden backdrop-blur-sm transition-opacity opacity-0"></div>
