@@ -54,6 +54,10 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
     .pro-card { transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
     .pro-card:hover { border-color: #d1d5db; background: #f9fafb; }
     .pro-card.selected { border-color: #000; background: #f9fafb; }
+    .pro-checkbox { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #d1d5db; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pro-card.selected .pro-checkbox { background: #000; border-color: #000; }
+    .pro-card.selected .pro-checkbox svg { display: block; }
+    .pro-card:not(.selected) .pro-checkbox svg { display: none; }
   </style>
 </head>
 <body class="antialiased selection:bg-gray-200">
@@ -254,7 +258,10 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
 
   <!-- Professional search -->
   <div class="px-6 pt-5 pb-3 flex-shrink-0">
-    <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Select Professional</p>
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Select Professionals</p>
+      <span id="selected-count" class="hidden text-xs font-semibold bg-black text-white px-2.5 py-0.5 rounded-full"></span>
+    </div>
     <div class="relative">
       <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
       <input id="pro-search" type="text" placeholder="Search professionals…" oninput="filterPros()"
@@ -285,7 +292,7 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
             <span class="text-xs text-gray-400 flex items-center gap-1"><i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i><?php echo $p['rating']; ?></span>
           </div>
         </div>
-        <div class="flex-shrink-0">
+        <div class="flex items-center gap-2.5 flex-shrink-0">
           <?php if($p['available']): ?>
           <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Available
@@ -295,9 +302,9 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
             <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>Busy
           </span>
           <?php endif; ?>
-        </div>
-        <div id="check-<?php echo $p['id']; ?>" class="hidden w-5 h-5 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-          <i data-lucide="check" class="w-3 h-3 text-white"></i>
+          <div class="pro-checkbox">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
         </div>
       </div>
       <?php endforeach; ?>
@@ -309,8 +316,8 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
     <button onclick="closeAssignDrawer()" class="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-100 transition-all">Cancel</button>
     <button id="confirm-assign-btn" onclick="confirmAssign()" disabled
       class="flex-1 py-2.5 rounded-xl bg-black text-white text-sm font-medium hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
-      <i data-lucide="user-check" class="w-4 h-4"></i>
-      <span id="confirm-assign-label">Select a professional</span>
+      <i data-lucide="users" class="w-4 h-4"></i>
+      <span id="confirm-assign-label">Select professionals</span>
     </button>
   </div>
 </div>
@@ -364,7 +371,8 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
   }
 
   // ── Assign Drawer ──────────────────────────────────────────────────────────
-  let currentBooking = null, selectedProId = null, selectedProName = null;
+  let currentBooking = null;
+  let selectedPros = []; // Array of { id, name }
 
   const statusColors = {
     'Unassigned':  'bg-amber-50 text-amber-600',
@@ -375,7 +383,7 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
 
   function openAssignDrawer(booking) {
     currentBooking = booking;
-    selectedProId = null; selectedProName = null;
+    selectedPros = [];
     document.getElementById('d-booking-label').textContent = `Booking #${booking.id}`;
     document.getElementById('d-customer-avatar').src = booking.avatar;
     document.getElementById('d-customer-name').textContent = booking.customer;
@@ -384,9 +392,8 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
     const sb = document.getElementById('d-status-badge');
     sb.textContent = booking.status;
     sb.className = 'text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ' + (statusColors[booking.status] || 'bg-gray-100 text-gray-500');
-    // Reset selection
-    document.querySelectorAll('.pro-card').forEach(c => { c.classList.remove('selected'); });
-    document.querySelectorAll('[id^="check-"]').forEach(c => c.classList.add('hidden'));
+    // Reset all selections
+    document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('pro-search').value = '';
     filterPros();
     updateConfirmBtn();
@@ -403,23 +410,38 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
   }
 
   function selectPro(el, id, name) {
-    document.querySelectorAll('.pro-card').forEach(c => { c.classList.remove('selected'); });
-    document.querySelectorAll('[id^="check-"]').forEach(c => c.classList.add('hidden'));
-    el.classList.add('selected');
-    document.getElementById('check-' + id).classList.remove('hidden');
-    selectedProId = id; selectedProName = name;
+    const idx = selectedPros.findIndex(p => p.id === id);
+    if (idx > -1) {
+      // Deselect
+      selectedPros.splice(idx, 1);
+      el.classList.remove('selected');
+    } else {
+      // Select
+      selectedPros.push({ id, name });
+      el.classList.add('selected');
+    }
     updateConfirmBtn();
   }
 
   function updateConfirmBtn() {
     const btn = document.getElementById('confirm-assign-btn');
     const lbl = document.getElementById('confirm-assign-label');
-    if (selectedProName) {
+    const badge = document.getElementById('selected-count');
+    const count = selectedPros.length;
+
+    if (count > 0) {
       btn.disabled = false;
-      lbl.textContent = `Assign to ${selectedProName}`;
+      badge.textContent = `${count} selected`;
+      badge.classList.remove('hidden');
+      if (count === 1) {
+        lbl.textContent = `Assign ${selectedPros[0].name}`;
+      } else {
+        lbl.textContent = `Assign ${count} Professionals`;
+      }
     } else {
       btn.disabled = true;
-      lbl.textContent = 'Select a professional';
+      lbl.textContent = 'Select professionals';
+      badge.classList.add('hidden');
     }
   }
 
@@ -431,19 +453,28 @@ $completed  = count(array_filter($bookings, fn($b) => $b['status'] === 'Complete
   }
 
   function confirmAssign() {
-    if (!selectedProId || !currentBooking) return;
+    if (selectedPros.length === 0 || !currentBooking) return;
+    const names = selectedPros.map(p => p.name);
+    const namesList = names.length === 1
+      ? `<strong>${names[0]}</strong>`
+      : names.slice(0, -1).map(n => `<strong>${n}</strong>`).join(', ') + ' and <strong>' + names[names.length - 1] + '</strong>';
+    const proCount = names.length === 1 ? 'professional' : `${names.length} professionals`;
+
     Swal.fire({
       title: 'Confirm Assignment',
-      html: `Assign <strong>${selectedProName}</strong> to booking <strong>#${currentBooking.id}</strong> for <strong>${currentBooking.customer}</strong>?`,
+      html: `Assign ${namesList} to booking <strong>#${currentBooking.id}</strong> for <strong>${currentBooking.customer}</strong>?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#000',
       cancelButtonColor: '#9ca3af',
-      confirmButtonText: 'Yes, Assign'
+      confirmButtonText: `Yes, Assign ${proCount}`
     }).then(r => {
       if (r.isConfirmed) {
         closeAssignDrawer();
-        Swal.fire({ title: 'Assigned!', text: `${selectedProName} has been assigned to booking #${currentBooking.id}.`, icon: 'success', confirmButtonColor: '#000', timer: 2200, showConfirmButton: false });
+        const msg = names.length === 1
+          ? `${names[0]} has been assigned to booking #${currentBooking.id}.`
+          : `${names.length} professionals have been assigned to booking #${currentBooking.id}.`;
+        Swal.fire({ title: 'Assigned!', text: msg, icon: 'success', confirmButtonColor: '#000', timer: 2500, showConfirmButton: false });
       }
     });
   }

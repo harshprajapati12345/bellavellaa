@@ -1,3 +1,4 @@
+<script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');</script>
 <?php
 // Detect current section from URL path
 $urlPath = $_SERVER['REQUEST_URI'];
@@ -21,6 +22,21 @@ $isProActive = in_array($section, $proSections);
 $mediaSections = ['media'];
 $isMediaActive = in_array($section, $mediaSections);
 $isAssignActive = ($section === 'assign');
+$isReviewsActive = ($section === 'reviews');
+
+// Count pending (unassigned) assign requests for badge
+$_sidebarBookings = [
+  ['status'=>'Unassigned'],['status'=>'Assigned'],['status'=>'In Progress'],
+  ['status'=>'Completed'],['status'=>'Unassigned'],['status'=>'Assigned'],
+  ['status'=>'Unassigned'],
+];
+$pendingAssignCount = count(array_filter($_sidebarBookings, fn($b) => $b['status'] === 'Unassigned'));
+
+// Count pending verification requests for badge
+$pendingVerificationCount = 2; // 2 pending verification requests (from mock data)
+
+// Count pending reviews for badge
+$pendingReviewsCount = 3; // 3 pending reviews (from mock data)
 ?>
 <aside id="sidebar"
       class="w-72 fixed h-screen top-0 left-0 flex flex-col justify-between p-6 z-50 bg-[#F6F6F6] transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-gray-200 lg:border-none shadow-2xl lg:shadow-none">
@@ -91,9 +107,16 @@ $isAssignActive = ($section === 'assign');
                 <span class="font-normal text-sm text-black">Overview</span>
               </a>
               <a href="/bellavella/professionals/verification/"
-                class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'professionals' && $subSection === 'verification') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
-                <i data-lucide="badge-check" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                <span class="font-normal text-sm text-black">Verification</span>
+                class="flex items-center justify-between px-4 py-2.5 <?php echo ($section === 'professionals' && $subSection === 'verification') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+                <div class="flex items-center gap-3">
+                  <i data-lucide="badge-check" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                  <span class="font-normal text-sm text-black">Verification</span>
+                </div>
+                <?php if ($pendingVerificationCount > 0): ?>
+                <span class="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none shadow-sm">
+                  <?php echo $pendingVerificationCount; ?>
+                </span>
+                <?php endif; ?>
               </a>
               <a href="/bellavella/professionals/orders/"
                 class="flex items-center gap-3 px-4 py-2.5 <?php echo ($section === 'professionals' && $subSection === 'orders') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
@@ -117,9 +140,30 @@ $isAssignActive = ($section === 'assign');
 
           <!-- Assign -->
           <a href="/bellavella/assign/"
-            class="flex items-center gap-3 px-4 py-3 <?php echo $isAssignActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
-            <i data-lucide="clipboard-list" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
-            <span class="font-normal text-base text-black">Assign</span>
+            class="flex items-center justify-between px-4 py-3 <?php echo $isAssignActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+            <div class="flex items-center gap-3">
+              <i data-lucide="clipboard-list" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+              <span class="font-normal text-base text-black">Assign</span>
+            </div>
+            <?php if ($pendingAssignCount > 0): ?>
+            <span class="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none shadow-sm">
+              <?php echo $pendingAssignCount; ?>
+            </span>
+            <?php endif; ?>
+          </a>
+
+          <!-- Reviews -->
+          <a href="/bellavella/reviews/"
+            class="flex items-center justify-between px-4 py-3 <?php echo $isReviewsActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black'; ?> rounded-xl transition-all group sidebar-item-hover">
+            <div class="flex items-center gap-3">
+              <i data-lucide="star" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+              <span class="font-normal text-base text-black">Reviews</span>
+            </div>
+            <?php if ($pendingReviewsCount > 0): ?>
+            <span class="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none shadow-sm">
+              <?php echo $pendingReviewsCount; ?>
+            </span>
+            <?php endif; ?>
           </a>
 
           <!-- Media dropdown -->
