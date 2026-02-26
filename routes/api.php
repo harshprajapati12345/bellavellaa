@@ -65,12 +65,12 @@ Route::prefix('admin')->group(function () {
     });
 
     // Future admin routes ─────────────────────────────────────────
-    // Route::middleware('jwt.admin')->group(function () {
-    //     Route::apiResource('customers',     CustomerController::class);
+    Route::apiResource('customers', \App\Http\Controllers\Api\Admin\CustomerController::class);
+    Route::middleware('jwt.admin')->group(function () {
     //     Route::apiResource('professionals',  ProfessionalController::class);
     //     Route::apiResource('categories',     CategoryController::class);
     //     Route::apiResource('services',       ServiceController::class);
     //     Route::apiResource('bookings',       BookingController::class);
     //     Route::apiResource('orders',         OrderController::class);
-    // });
+    });
 });

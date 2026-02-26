@@ -2,22 +2,22 @@
 
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\PackageController;
-use App\Http\Controllers\ProfessionalController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\OfferController;
-use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\MediaController;
-use App\Http\Controllers\AssignController;
-use App\Http\Controllers\HomepageController;
-use App\Http\Controllers\KitProductController;
-use App\Http\Controllers\KitOrderController;
-use App\Http\Controllers\LeaveRequestController;
-use App\Http\Controllers\SettingController;
+use App\Http\Controllers\adminroutes\DashboardController;
+use App\Http\Controllers\adminroutes\AuthController;
+use App\Http\Controllers\adminroutes\CategoryController;
+use App\Http\Controllers\adminroutes\ServiceController;
+use App\Http\Controllers\adminroutes\PackageController;
+use App\Http\Controllers\adminroutes\ProfessionalController;
+use App\Http\Controllers\adminroutes\UserController;
+use App\Http\Controllers\adminroutes\OfferController;
+use App\Http\Controllers\adminroutes\ReviewController;
+use App\Http\Controllers\adminroutes\MediaController;
+use App\Http\Controllers\adminroutes\AssignController;
+use App\Http\Controllers\adminroutes\HomepageController;
+use App\Http\Controllers\adminroutes\KitProductController;
+use App\Http\Controllers\adminroutes\KitOrderController;
+use App\Http\Controllers\adminroutes\LeaveRequestController;
+use App\Http\Controllers\adminroutes\SettingController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');

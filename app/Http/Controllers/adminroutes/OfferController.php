@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\adminroutes;
 
 use App\Models\Offer;
 use Illuminate\Http\Request;

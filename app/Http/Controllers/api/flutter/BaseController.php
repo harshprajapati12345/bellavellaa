@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\Flutter;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\adminroutes\Controller;
 use Illuminate\Http\JsonResponse;
 
 /**

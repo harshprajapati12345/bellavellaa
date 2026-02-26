@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\adminroutes;
 
 use Illuminate\Http\Request;
 
 use App\Models\Booking;
 use App\Models\Professional;
-use App\Models\User;
+use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Review;
 use Carbon\Carbon;
@@ -21,7 +21,7 @@ class DashboardController extends Controller
             'bookings_today' => Booking::whereDate('date', $today)->count(),
             'revenue_today' => Booking::whereDate('date', $today)->where('status', 'Completed')->sum('price'), // Need price in bookings
             'active_professionals' => Professional::where('status', 'Active')->count(),
-            'total_customers' => User::count() - 1, // Excluding admin
+            'total_customers' => Customer::count(),
             'new_reviews' => Review::whereDate('created_at', '>=', $today->subDays(7))->count(),
             'total_services' => Service::count(),
         ];
