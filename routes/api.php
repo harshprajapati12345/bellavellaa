@@ -67,6 +67,11 @@ Route::prefix('admin')->group(function () {
     // Future admin routes ─────────────────────────────────────────
     Route::middleware('jwt.admin')->group(function () {
         Route::apiResource('customers', \App\Http\Controllers\Api\Admin\CustomerController::class);
-        Route::apiResource('categories', \App\Http\Controllers\Api\Admin\CategoryController::class);
+        Route::apiResource('packages',  \App\Http\Controllers\Api\Admin\PackageController::class);
+        // Route::apiResource('professionals',  ProfessionalController::class);
+        // Route::apiResource('categories',     CategoryController::class);
+        // Route::apiResource('services',       ServiceController::class);
+        // Route::apiResource('bookings',       BookingController::class);
+        // Route::apiResource('orders',         OrderController::class);
     });
 });
