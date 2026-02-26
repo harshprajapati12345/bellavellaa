@@ -80,6 +80,13 @@ Route::prefix('admin')->group(function () {
         // Assignments
         Route::get('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'index']);
         Route::post('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'store']);
+        
+        // CRM & Media
+        Route::apiResource('banners', App\Http\Controllers\Api\Admin\BannerController::class);
+        Route::apiResource('videos', App\Http\Controllers\Api\Admin\VideoController::class);
+        Route::apiResource('media', App\Http\Controllers\Api\Admin\MediaController::class);
+        Route::apiResource('homepage', App\Http\Controllers\Api\Admin\HomepageController::class);
+        Route::post('homepage/reorder', [App\Http\Controllers\Api\Admin\HomepageController::class, 'reorder']);
         // Route::apiResource('professionals',  ProfessionalController::class);
         // Route::apiResource('categories',     CategoryController::class);
         // Route::apiResource('services',       ServiceController::class);
