@@ -18,9 +18,10 @@ return [
     | Authentication Guards
     |--------------------------------------------------------------------------
     |
-    | "admin"  → session-based, for the admin panel (email + password)
-    | "api"    → JWT-based, for the mobile app   (mobile + OTP)
-    |
+     | "admin"      → session-based, for the admin panel (email + password)
+     | "admin-api"  → JWT-based, for admin mobile/API access
+     | "api"        → JWT-based, for customer Flutter app (mobile + OTP)
+     |
     */
 
     'guards' => [
@@ -31,6 +32,11 @@ return [
 
         'admin' => [
             'driver' => 'session',
+            'provider' => 'admins',
+        ],
+
+        'admin-api' => [
+            'driver' => 'jwt',
             'provider' => 'admins',
         ],
 
