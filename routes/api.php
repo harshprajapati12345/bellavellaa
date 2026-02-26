@@ -26,15 +26,15 @@ Route::prefix('flutter')->group(function () {
 
         // Public — no JWT required
         Route::middleware('throttle:otp')->group(function () {
-            Route::post('send-otp',   [FlutterAuthController::class, 'sendOtp']);
+            Route::post('send-otp', [FlutterAuthController::class, 'sendOtp']);
             Route::post('verify-otp', [FlutterAuthController::class, 'verifyOtp']);
         });
 
         // Protected — valid customer JWT required
         Route::middleware('jwt.auth')->group(function () {
-            Route::get('me',        [FlutterAuthController::class, 'me']);
-            Route::post('refresh',  [FlutterAuthController::class, 'refresh']);
-            Route::post('logout',   [FlutterAuthController::class, 'logout']);
+            Route::get('me', [FlutterAuthController::class, 'me']);
+            Route::post('refresh', [FlutterAuthController::class, 'refresh']);
+            Route::post('logout', [FlutterAuthController::class, 'logout']);
         });
     });
 
@@ -58,9 +58,9 @@ Route::prefix('admin')->group(function () {
 
         // Protected — valid admin JWT required
         Route::middleware('jwt.admin')->group(function () {
-            Route::get('me',        [AdminAuthController::class, 'me']);
-            Route::post('refresh',  [AdminAuthController::class, 'refresh']);
-            Route::post('logout',   [AdminAuthController::class, 'logout']);
+            Route::get('me', [AdminAuthController::class, 'me']);
+            Route::post('refresh', [AdminAuthController::class, 'refresh']);
+            Route::post('logout', [AdminAuthController::class, 'logout']);
         });
     });
 
