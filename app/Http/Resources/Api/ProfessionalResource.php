@@ -8,21 +8,26 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class ProfessionalResource extends JsonResource
 {
     /**
-     * Transform the professional into an array.
+     * Transform the resource into an array.
      */
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'name'       => $this->name,
-            'email'      => $this->email,
-            'phone'      => $this->phone,
-            'avatar'     => $this->avatar ? asset('storage/' . $this->avatar) : null,
-            'status'     => $this->status,
-            'services'   => $this->services,
-            'bio'        => $this->bio,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'id'                  => $this->id,
+            'name'                => $this->name,
+            'email'               => $this->email,
+            'phone'               => $this->phone,
+            'avatar'              => $this->avatar ? asset('storage/' . $this->avatar) : null,
+            'category'            => $this->category,
+            'city'                => $this->city,
+            'bio'                 => $this->bio,
+            'experience'          => $this->experience,
+            'rating'              => $this->rating,
+            'verification_status' => $this->verification ?? 'Not Started',
+            'status'              => $this->status,
+            'services'            => $this->services,
+            'created_at'          => $this->created_at?->toIso8601String(),
+            'updated_at'          => $this->updated_at?->toIso8601String(),
         ];
     }
 }
