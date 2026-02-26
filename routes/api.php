@@ -69,6 +69,7 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('customers', \App\Http\Controllers\Api\Admin\CustomerController::class);
         Route::apiResource('packages',  \App\Http\Controllers\Api\Admin\PackageController::class);
         Route::apiResource('services',  \App\Http\Controllers\Api\Admin\ServiceController::class);
+        Route::apiResource('offers',    \App\Http\Controllers\Api\Admin\OfferController::class);
         // Route::apiResource('professionals',  ProfessionalController::class);
         // Route::apiResource('categories',     CategoryController::class);
         // Route::apiResource('services',       ServiceController::class);
