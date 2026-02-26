@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class Customer extends Model
+class Customer extends Authenticatable implements JWTSubject
 {
-    use SoftDeletes, HasApiTokens;
+    use SoftDeletes, Notifiable;
 
     protected $fillable = [
         'name', 'mobile', 'avatar', 'city', 'zip',
@@ -23,6 +24,17 @@ class Customer extends Model
     ];
 
     protected $hidden = [];
+
+    // ── JWT ────────────────────────────────────────────────────────
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [];
+    }
 
     // ── Relationships ──────────────────────────────────────────────
     public function orders(): HasMany { return $this->hasMany(Order::class); }
