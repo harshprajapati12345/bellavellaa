@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Auth;
 
@@ -42,6 +43,13 @@ class JwtAdminAuthenticate
             return response()->json([
                 'success' => false,
                 'message' => 'Token is invalid.',
+                'data'    => null,
+                'errors'  => null,
+            ], 401);
+        } catch (TokenBlacklistedException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token has been blacklisted.',
                 'data'    => null,
                 'errors'  => null,
             ], 401);

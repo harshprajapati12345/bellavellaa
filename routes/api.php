@@ -71,6 +71,15 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('services',  \App\Http\Controllers\Api\Admin\ServiceController::class);
         Route::apiResource('offers',    \App\Http\Controllers\Api\Admin\OfferController::class);
         Route::apiResource('reviews',   \App\Http\Controllers\Api\Admin\ReviewController::class)->except(['store']);
+        
+        // Settings - Bulk update pattern
+        Route::get('settings', [App\Http\Controllers\Api\Admin\SettingController::class, 'index']);
+        Route::get('settings/{key}', [App\Http\Controllers\Api\Admin\SettingController::class, 'show']);
+        Route::post('settings', [App\Http\Controllers\Api\Admin\SettingController::class, 'update']);
+        
+        // Assignments
+        Route::get('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'index']);
+        Route::post('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'store']);
         // Route::apiResource('professionals',  ProfessionalController::class);
         // Route::apiResource('categories',     CategoryController::class);
         // Route::apiResource('services',       ServiceController::class);
