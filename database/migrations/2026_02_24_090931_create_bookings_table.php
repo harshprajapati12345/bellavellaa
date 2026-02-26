@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->string('customer_name')->nullable();
             $table->string('customer_avatar')->nullable();
             $table->string('customer_phone')->nullable();

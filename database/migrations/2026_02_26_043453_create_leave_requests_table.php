@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('end_date');
             $table->text('reason')->nullable();
             $table->enum('status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('approved_by')->nullable()->constrained('admins')->nullOnDelete();
             $table->timestamps();
         });
     }

@@ -8,7 +8,7 @@ class Booking extends Model
 {
     protected $guarded = [];
 
-    public function user() { return $this->belongsTo(User::class); }
+    public function customer() { return $this->belongsTo(Customer::class); }
     public function service() { return $this->belongsTo(Service::class); }
     public function package() { return $this->belongsTo(Package::class); }
     public function professional() { return $this->belongsTo(Professional::class); }
