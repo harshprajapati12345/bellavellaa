@@ -67,9 +67,13 @@ Route::prefix('admin')->group(function () {
     // Future admin routes ─────────────────────────────────────────
     Route::middleware('jwt.admin')->group(function () {
         Route::apiResource('customers', \App\Http\Controllers\Api\Admin\CustomerController::class);
-        Route::apiResource('packages',  \App\Http\Controllers\Api\Admin\PackageController::class);
-        Route::apiResource('services',  \App\Http\Controllers\Api\Admin\ServiceController::class);
-        Route::apiResource('offers',    \App\Http\Controllers\Api\Admin\OfferController::class);
+        Route::apiResource('professionals', \App\Http\Controllers\Api\Admin\ProfessionalController::class);
+        Route::patch('professionals/{professional}/verify', [\App\Http\Controllers\Api\Admin\ProfessionalController::class, 'verify']);
+        Route::patch('professionals/{professional}/status', [\App\Http\Controllers\Api\Admin\ProfessionalController::class, 'toggleStatus']);
+
+        Route::apiResource('packages', \App\Http\Controllers\Api\Admin\PackageController::class);
+        Route::apiResource('services', \App\Http\Controllers\Api\Admin\ServiceController::class);
+        Route::apiResource('offers', \App\Http\Controllers\Api\Admin\OfferController::class);
         // Route::apiResource('professionals',  ProfessionalController::class);
         // Route::apiResource('categories',     CategoryController::class);
         // Route::apiResource('services',       ServiceController::class);

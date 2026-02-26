@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Resources\Api;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class ProfessionalResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'avatar' => $this->avatar,
+            'category' => $this->category,
+            'city' => $this->city,
+            'bio' => $this->bio,
+            'experience' => $this->experience,
+            'rating' => $this->rating,
+            'verification_status' => $this->verification ?? 'Not Started',
+            'status' => $this->status,
+            'joined_at' => $this->created_at->toIso8601String(),
+            'updated_at' => $this->updated_at->toIso8601String(),
+        ];
+    }
+}
