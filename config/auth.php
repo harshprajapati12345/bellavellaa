@@ -20,7 +20,7 @@ return [
     |
      | "admin"      → session-based, for the admin panel (email + password)
      | "admin-api"  → JWT-based, for admin mobile/API access
-     | "api"        → JWT-based, for customer Flutter app (mobile + OTP)
+     | "api"        → JWT-based, for customer mobile app (mobile + OTP)
      |
     */
 

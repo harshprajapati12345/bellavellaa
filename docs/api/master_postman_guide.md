@@ -25,9 +25,9 @@ To test efficiently, create a **Postman Environment** with these variables:
 3. **Usage**: Add Header `Authorization: Bearer {{admin_jwt}}` to all admin requests.
 
 ### 📱 Customer App (OTP)
-1. **Send OTP**: `POST /api/flutter/auth/send-otp`
+1. **Send OTP**: `POST /api/client/auth/send-otp`
    - Body: `{ "mobile": "..." }`
-2. **Verify OTP**: `POST /api/flutter/auth/verify-otp`
+2. **Verify OTP**: `POST /api/client/auth/verify-otp`
    - Body: `{ "mobile": "...", "otp": "..." }`
 3. **Setup**: Copy `access_token` to your `cust_jwt` variable.
 

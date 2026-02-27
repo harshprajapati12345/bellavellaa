@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * Base controller for all Admin API endpoints.
  *
- * Uses the same JSON envelope as Flutter APIs:
+ * Uses the same JSON envelope as Client APIs:
  * {
  *   "success": true|false,
  *   "message": "Human-readable message",

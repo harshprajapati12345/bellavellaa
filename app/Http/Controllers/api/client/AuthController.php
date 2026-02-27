@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Flutter;
+namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Requests\Api\SendOtpRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;

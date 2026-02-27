@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api\Flutter;
+namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\adminroutes\Controller;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Base controller for all Flutter API endpoints.
+ * Base controller for all Client API endpoints.
  *
  * Provides a standardised JSON envelope so every response
- * from the API follows the same shape — makes Flutter parsing
+ * from the API follows the same shape — makes parsing
  * predictable and error-handling consistent.
  *
  * Envelope:

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\Flutter\AuthController as FlutterAuthController;
+use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,30 +11,30 @@ use Illuminate\Support\Facades\Route;
 |
 | All routes are prefixed with /api automatically by Laravel.
 |
-| /api/flutter/*  → Customer mobile app (JWT via OTP)
-| /api/admin/*    → Admin panel API     (JWT via email+password)
+| /api/client   → Customer mobile app (JWT via OTP)
+| /api/admin    → Admin panel API     (JWT via email+password)
 |
 */
 
 // ═══════════════════════════════════════════════════════════════════
-// FLUTTER — Customer Mobile App
+// CLIENT — Customer Mobile App
 // ═══════════════════════════════════════════════════════════════════
 
-Route::prefix('flutter')->group(function () {
+Route::prefix('client')->group(function () {
 
     Route::prefix('auth')->group(function () {
 
         // Public — no JWT required
         Route::middleware('throttle:otp')->group(function () {
-            Route::post('send-otp', [FlutterAuthController::class, 'sendOtp']);
-            Route::post('verify-otp', [FlutterAuthController::class, 'verifyOtp']);
+            Route::post('send-otp', [ClientAuthController::class, 'sendOtp']);
+            Route::post('verify-otp', [ClientAuthController::class, 'verifyOtp']);
         });
 
         // Protected — valid customer JWT required
         Route::middleware('jwt.auth')->group(function () {
-            Route::get('me', [FlutterAuthController::class, 'me']);
-            Route::post('refresh', [FlutterAuthController::class, 'refresh']);
-            Route::post('logout', [FlutterAuthController::class, 'logout']);
+            Route::get('me', [ClientAuthController::class, 'me']);
+            Route::post('refresh', [ClientAuthController::class, 'refresh']);
+            Route::post('logout', [ClientAuthController::class, 'logout']);
         });
     });
 

@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Controls exactly which customer fields are exposed to Flutter.
+ * Controls exactly which customer fields are exposed to the API.
  *
  * Usage:  new CustomerResource($customer)
  * Collection: CustomerResource::collection($customers)
