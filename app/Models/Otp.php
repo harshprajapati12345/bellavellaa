@@ -18,9 +18,9 @@ class Otp extends Model
     ];
 
     /**
-     * Generate a 6-digit OTP for the given mobile number
+     * Generate an OTP for the given mobile number
      */
-    public static function generate(string $mobile, string $purpose = 'login', int $expiryMinutes = 5): self
+    public static function generate(string $mobile, string $purpose = 'login', int $expiryMinutes = 5, int $length = 6): self
     {
         // Invalidate old OTPs for this mobile
         self::where('mobile', $mobile)
@@ -28,9 +28,12 @@ class Otp extends Model
             ->where('verified', false)
             ->delete();
 
+        $min = 0;
+        $max = pow(10, $length) - 1;
+
         return self::create([
             'mobile' => $mobile,
-            'otp' => str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT),
+            'otp' => str_pad(random_int($min, $max), $length, '0', STR_PAD_LEFT),
             'purpose' => $purpose,
             'expires_at' => now()->addMinutes($expiryMinutes),
         ]);

@@ -25,12 +25,12 @@ class AuthController extends BaseController
     /**
      * POST /api/flutter/auth/send-otp
      *
-     * Generates a 6-digit OTP, invalidates any previous unsent OTPs
+     * Generates a 4-digit OTP, invalidates any previous unsent OTPs
      * for the same mobile, and (in production) dispatches it via SMS.
      */
     public function sendOtp(SendOtpRequest $request): JsonResponse
     {
-        $otp = Otp::generate($request->mobile, 'login', 5);
+        $otp = Otp::generate($request->mobile, 'login', 5, 4);
 
         // TODO: integrate SMS gateway
         // SmsService::send($request->mobile, "Your BellaVella OTP is {$otp->otp}");
