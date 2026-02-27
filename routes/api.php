@@ -1,6 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\Client\AddressController;
+use App\Http\Controllers\Api\Client\BookingController;
+use App\Http\Controllers\Api\Client\CategoryController;
+use App\Http\Controllers\Api\Client\HomepageController;
+use App\Http\Controllers\Api\Client\ProfileController;
+use App\Http\Controllers\Api\Client\ReviewController;
+use App\Http\Controllers\Api\Client\CartController;
+use App\Http\Controllers\Api\Client\WalletController;
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
+use App\Http\Controllers\Api\Client\PromotionController;
+use App\Http\Controllers\Api\Client\SlotController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
 
 use Illuminate\Support\Facades\Route;
@@ -23,28 +33,59 @@ use Illuminate\Support\Facades\Route;
 // ═══════════════════════════════════════════════════════════════════
 
 Route::prefix('client')->group(function () {
+    // Public Routes
+    Route::get('homepage', [HomepageController::class, 'index']);
+    Route::get('categories', [CategoryController::class, 'index']);
+    Route::get('categories/{slug}', [CategoryController::class, 'show']);
 
+    // Authentication (No JWT required)
     Route::prefix('auth')->group(function () {
-
-        // Public — no JWT required
         Route::middleware('throttle:otp')->group(function () {
             Route::post('send-otp', [ClientAuthController::class, 'sendOtp']);
             Route::post('verify-otp', [ClientAuthController::class, 'verifyOtp']);
         });
+    });
 
-        // Protected — valid customer JWT required
-        Route::middleware('jwt.auth:api')->group(function () {
+    // Protected Routes (JWT required)
+    Route::middleware('auth:api')->group(function () {
+        // Auth management
+        Route::prefix('auth')->group(function () {
             Route::get('me', [ClientAuthController::class, 'me']);
             Route::post('refresh', [ClientAuthController::class, 'refresh']);
             Route::post('logout', [ClientAuthController::class, 'logout']);
         });
-    });
 
-    // Future customer routes ──────────────────────────────────────
-    // Route::middleware('jwt.auth:api')->group(function () {
-    //     Route::apiResource('profile',  ProfileController::class);
-    //     Route::apiResource('bookings', BookingController::class);
-    // });
+        // Profile & Account
+        Route::get('profile', [ProfileController::class, 'show']);
+        Route::post('profile/update', [ProfileController::class, 'update']);
+
+        // Wallet
+        Route::get('wallet', [WalletController::class, 'index']);
+
+        // Addresses
+        Route::apiResource('addresses', AddressController::class);
+
+        // Bookings
+        Route::get('bookings', [BookingController::class, 'index']);
+        Route::get('bookings/{booking}', [BookingController::class, 'show']);
+        Route::post('bookings/{booking}/cancel', [BookingController::class, 'cancel']);
+
+        // Cart
+        Route::get('cart', [CartController::class, 'index']);
+        Route::post('cart', [CartController::class, 'store']);
+        Route::put('cart/{cart}', [CartController::class, 'update']);
+        Route::delete('cart/{cart}', [CartController::class, 'destroy']);
+        Route::post('cart/clear', [CartController::class, 'clear']);
+        Route::post('cart/checkout', [CartController::class, 'checkout']);
+
+        // Reviews
+        Route::post('reviews', [ReviewController::class, 'store']);
+
+        // Promotions & Slots
+        Route::get('promotions', [PromotionController::class, 'index']);
+        Route::post('promotions/validate', [PromotionController::class, 'validateCode']);
+        Route::get('slots', [SlotController::class, 'index']);
+    });
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -129,20 +170,20 @@ Route::prefix('admin')->group(function () {
     // Future admin routes ─────────────────────────────────────────
     Route::middleware('jwt.admin')->group(function () {
         Route::apiResource('customers', \App\Http\Controllers\Api\Admin\CustomerController::class);
-        Route::apiResource('packages',  \App\Http\Controllers\Api\Admin\PackageController::class);
-        Route::apiResource('services',  \App\Http\Controllers\Api\Admin\ServiceController::class);
-        Route::apiResource('offers',    \App\Http\Controllers\Api\Admin\OfferController::class);
-        Route::apiResource('reviews',   \App\Http\Controllers\Api\Admin\ReviewController::class)->except(['store']);
-        
+        Route::apiResource('packages', \App\Http\Controllers\Api\Admin\PackageController::class);
+        Route::apiResource('services', \App\Http\Controllers\Api\Admin\ServiceController::class);
+        Route::apiResource('offers', \App\Http\Controllers\Api\Admin\OfferController::class);
+        Route::apiResource('reviews', \App\Http\Controllers\Api\Admin\ReviewController::class)->except(['store']);
+
         // Settings - Bulk update pattern
         Route::get('settings', [App\Http\Controllers\Api\Admin\SettingController::class, 'index']);
         Route::get('settings/{key}', [App\Http\Controllers\Api\Admin\SettingController::class, 'show']);
         Route::post('settings', [App\Http\Controllers\Api\Admin\SettingController::class, 'update']);
-        
+
         // Assignments
         Route::get('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'index']);
         Route::post('assignments', [App\Http\Controllers\Api\Admin\AssignmentController::class, 'store']);
-        
+
         // CRM & Media
         Route::apiResource('banners', App\Http\Controllers\Api\Admin\BannerController::class);
         Route::apiResource('videos', App\Http\Controllers\Api\Admin\VideoController::class);
@@ -152,10 +193,19 @@ Route::prefix('admin')->group(function () {
 
         // Professionals Management
         Route::apiResource('professionals', App\Http\Controllers\Api\Admin\ProfessionalController::class);
-        Route::get('professionals-verification', [App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class, 'index']);
-        Route::post('professionals/{id}/verify', [App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class, 'verify']);
+        Route::get('professionals-verification', [
+            App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class,
+            'index'
+        ]);
+        Route::post('professionals/{id}/verify', [
+            App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class,
+            'verify'
+        ]);
         Route::get('professionals/{id}/orders', [App\Http\Controllers\Api\Admin\ProfessionalOrderController::class, 'index']);
-        Route::get('professionals/{id}/history', [App\Http\Controllers\Api\Admin\ProfessionalOrderController::class, 'history']);
+        Route::get('professionals/{id}/history', [
+            App\Http\Controllers\Api\Admin\ProfessionalOrderController::class,
+            'history'
+        ]);
         Route::apiResource('leave-requests', App\Http\Controllers\Api\Admin\LeaveRequestController::class);
 
         // Kit Management
