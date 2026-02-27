@@ -13,18 +13,18 @@ class ServiceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'                => $this->id,
-            'name'              => $this->name,
-            'category'          => $this->category,
-            'price'             => $this->price,
-            'duration'          => $this->duration, // in minutes
-            'status'            => $this->status,
-            'featured'          => (bool) $this->featured,
-            'image'             => $this->image,
-            'description'       => $this->description,
-            'bookings_count'    => $this->bookings,
-            'created_at'        => $this->created_at?->toIso8601String(),
-            'updated_at'        => $this->updated_at?->toIso8601String(),
+            'id' => $this->id,
+            'name' => $this->name,
+            'category' => $this->category,
+            'price' => $this->price,
+            'duration' => $this->duration, // in minutes
+            'status' => $this->status,
+            'featured' => (bool) $this->featured,
+            'image' => $this->image,
+            'description' => $this->description,
+            'bookings_count' => $this->bookings,
+            'average_rating' => $this->average_rating,
+            'total_reviews' => $this->total_reviews,
         ];
     }
 }

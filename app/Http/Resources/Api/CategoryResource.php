@@ -23,8 +23,6 @@ class CategoryResource extends JsonResource
             'color' => $this->color,
             'image' => $this->image ? url($this->image) : null,
             'description' => $this->description,
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
     }
 }

@@ -12,11 +12,21 @@ class Promotion extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'code', 'description', 'type', 'value',
-        'max_discount_paise', 'min_order_paise',
-        'usage_limit', 'per_user_limit', 'times_used',
-        'target_type', 'target_id',
-        'starts_at', 'ends_at', 'is_active',
+        'name',
+        'code',
+        'description',
+        'type',
+        'value',
+        'max_discount_paise',
+        'min_order_paise',
+        'usage_limit',
+        'per_user_limit',
+        'times_used',
+        'target_type',
+        'target_id',
+        'starts_at',
+        'ends_at',
+        'is_active',
     ];
 
     protected $casts = [
@@ -31,17 +41,23 @@ class Promotion extends Model
         'is_active' => 'boolean',
     ];
 
-    public function usages(): HasMany { return $this->hasMany(PromotionUsage::class); }
+    public function usages(): HasMany
+    {
+        return $this->hasMany(PromotionUsage::class);
+    }
 
     // ── Scopes ─────────────────────────────────────────────────────
     public function scopeActive($q)
     {
         return $q->where('is_active', true)
-                  ->where('starts_at', '<=', now())
-                  ->where('ends_at', '>=', now());
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>=', now());
     }
 
-    public function scopeForCode($q, string $code) { return $q->where('code', $code); }
+    public function scopeForCode($q, string $code)
+    {
+        return $q->where('code', $code);
+    }
 
     // ── Validation Helpers ─────────────────────────────────────────
     public function isValid(): bool
@@ -53,14 +69,16 @@ class Promotion extends Model
 
     public function isValidForUser(int $userId): bool
     {
-        if (!$this->isValid()) return false;
-        $userUsages = $this->usages()->where('user_id', $userId)->count();
+        if (!$this->isValid())
+            return false;
+        $userUsages = $this->usages()->where('customer_id', $userId)->count();
         return $userUsages < $this->per_user_limit;
     }
 
     public function calculateDiscount(int $orderTotalPaise): int
     {
-        if ($orderTotalPaise < $this->min_order_paise) return 0;
+        if ($orderTotalPaise < $this->min_order_paise)
+            return 0;
 
         $discount = match ($this->type) {
             'percentage' => (int) ($orderTotalPaise * $this->value / 100),

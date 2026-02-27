@@ -38,5 +38,11 @@ class AppServiceProvider extends ServiceProvider
                 'totalProNotificationCount' => $totalProNotificationCount,
             ]);
         });
+
+        // ── Polymorphic Relation Morph Map ────────────────────────
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
+            'service' => \App\Models\Service::class,
+            'package' => \App\Models\Package::class,
+        ]);
     }
 }

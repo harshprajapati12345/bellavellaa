@@ -67,7 +67,7 @@ class AuthController extends BaseController
         $customer = Customer::firstOrCreate(
             ['mobile' => $request->mobile],
             [
-                'name'   => null,
+                'name' => null,
                 'status' => 'Active',
                 'joined' => now()->toDateString(),
             ]
