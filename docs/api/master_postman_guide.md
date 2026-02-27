@@ -13,6 +13,7 @@ To test efficiently, create a **Postman Environment** with these variables:
 | `host` | Your local or live server URL | `http://127.0.0.1:8000` |
 | `admin_jwt` | JWT Token for Admin APIs | *(Generated after Login)* |
 | `cust_jwt` | JWT Token for Customer APIs | *(Generated after OTP Verify)* |
+| `pro_jwt` | JWT Token for Professional APIs | *(Generated after OTP Verify)* |
 
 ---
 
@@ -30,6 +31,14 @@ To test efficiently, create a **Postman Environment** with these variables:
 2. **Verify OTP**: `POST /api/client/auth/verify-otp`
    - Body: `{ "mobile": "...", "otp": "..." }`
 3. **Setup**: Copy `access_token` to your `cust_jwt` variable.
+
+### 👷 Professional App (OTP)
+1. **Send OTP**: `POST /api/professional/auth/send-otp`
+   - Body: `{ "phone": "..." }`
+2. **Verify OTP**: `POST /api/professional/auth/verify-otp`
+   - Body: `{ "phone": "...", "otp": "..." }`
+3. **Setup**: Copy `access_token` to your `pro_jwt` variable.
+
 
 ---
 
@@ -53,7 +62,16 @@ To test efficiently, create a **Postman Environment** with these variables:
 
 ---
 
-## 📥 4. Global Standards
+## 👷 4. Core Modules (Professional)
+
+### 🛠️ [Professional Guide](file:///c:/xampp/htdocs/bellavella/docs/api/professional/professional_postman_guide.md)
+- `GET /api/professional/dashboard`: Overview stats.
+- `GET /api/professional/bookings/requests`: New job requests.
+- `GET /api/professional/kit/products`: Kit store.
+
+---
+
+## 📥 5. Global Standards
 
 - **Headers**: 
   - `Accept: application/json`

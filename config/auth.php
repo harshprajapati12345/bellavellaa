@@ -44,6 +44,11 @@ return [
             'driver' => 'jwt',
             'provider' => 'customers',
         ],
+
+        'professional-api' => [
+            'driver' => 'jwt',
+            'provider' => 'professionals',
+        ],
     ],
 
     /*
@@ -62,7 +67,13 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\Customer::class,
         ],
+
+        'professionals' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Professional::class,
+        ],
     ],
+
 
     /*
     |--------------------------------------------------------------------------

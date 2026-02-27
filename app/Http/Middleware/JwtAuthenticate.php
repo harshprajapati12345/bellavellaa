@@ -19,15 +19,17 @@ class JwtAuthenticate
      * Ensures a valid JWT is present and returns clean JSON errors
      * instead of redirecting to a login page.
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $guard = null): Response
     {
         try {
-            $user = JWTAuth::parseToken()->authenticate();
+            // Use specified guard or fall back to default
+            $user = auth($guard)->authenticate();
 
             if (!$user) {
                 return response()->json(['message' => 'User not found.'], 401);
             }
         } catch (TokenExpiredException $e) {
+
             return response()->json(['message' => 'Token has expired.'], 401);
         } catch (TokenInvalidException $e) {
             return response()->json(['message' => 'Token is invalid.'], 401);

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
+
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -11,8 +12,9 @@ use Illuminate\Support\Facades\Route;
 |
 | All routes are prefixed with /api automatically by Laravel.
 |
-| /api/client   → Customer mobile app (JWT via OTP)
-| /api/admin    → Admin panel API     (JWT via email+password)
+| /api/client       → Customer mobile app     (JWT via OTP)
+| /api/professional → Professional mobile app   (JWT via OTP)
+| /api/admin        → Admin panel API         (JWT via email+password)
 |
 */
 
@@ -31,7 +33,7 @@ Route::prefix('client')->group(function () {
         });
 
         // Protected — valid customer JWT required
-        Route::middleware('jwt.auth')->group(function () {
+        Route::middleware('jwt.auth:api')->group(function () {
             Route::get('me', [ClientAuthController::class, 'me']);
             Route::post('refresh', [ClientAuthController::class, 'refresh']);
             Route::post('logout', [ClientAuthController::class, 'logout']);
@@ -39,15 +41,75 @@ Route::prefix('client')->group(function () {
     });
 
     // Future customer routes ──────────────────────────────────────
-    // Route::middleware('jwt.auth')->group(function () {
+    // Route::middleware('jwt.auth:api')->group(function () {
     //     Route::apiResource('profile',  ProfileController::class);
     //     Route::apiResource('bookings', BookingController::class);
     // });
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// PROFESSIONALS — Professional Mobile App
+// ═══════════════════════════════════════════════════════════════════
+
+Route::prefix('professionals')->group(function () {
+    Route::prefix('auth')->group(function () {
+        // Public — no JWT required
+        Route::middleware('throttle:otp')->group(function () {
+            Route::post('send-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'sendOtp']);
+            Route::post('verify-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'verifyOtp']);
+            Route::post('signup', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'signup']);
+        });
+
+        // Protected — valid professional JWT required
+        Route::middleware('auth:professional-api')->group(function () {
+            Route::get('me', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'me']);
+            Route::get('status', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'status']);
+            Route::post('refresh', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'refresh']);
+            Route::post('logout', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'logout']);
+        });
+    });
+
+    Route::middleware('auth:professional-api')->group(function () {
+        // Profile
+        Route::get('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'show']);
+        Route::post('profile/update', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'update']);
+
+        // Bookings & Orders
+        Route::get('bookings/requests', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'requests']);
+        Route::get('bookings', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'index']);
+        Route::get('bookings/{booking}', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'show']);
+        Route::post('bookings/{booking}/accept', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'accept']);
+        Route::post('bookings/{booking}/reject', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'reject']);
+        Route::post('bookings/{booking}/status', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'updateStatus']);
+
+        // Dashboard & Schedule
+        Route::get('dashboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'index']);
+        Route::get('schedule', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'schedule']);
+        Route::get('availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'availability']);
+        Route::post('availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'toggleAvailability']);
+
+        // Earnings & Wallet
+        Route::get('earnings', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'index']);
+        Route::get('jobs/history', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'history']);
+        Route::get('wallet', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'wallet']);
+        Route::post('wallet/withdraw', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'withdraw']);
+
+        // Kit Management
+        Route::get('kit-store', [\App\Http\Controllers\Api\Professionals\KitController::class, 'store']);
+        Route::post('kit-orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'order']);
+
+        // Notifications
+        Route::get('notifications', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'index']);
+        Route::post('notifications/read', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'markAsRead']);
+    });
+});
+
+
+
+// ═══════════════════════════════════════════════════════════════════
 // ADMIN — Admin Panel API
 // ═══════════════════════════════════════════════════════════════════
+
 
 Route::prefix('admin')->group(function () {
 
