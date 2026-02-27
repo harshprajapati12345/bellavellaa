@@ -17,5 +17,3 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
-/routes/api.php
-/app/Http/Requests/Api/VerifyOtpRequest.php
