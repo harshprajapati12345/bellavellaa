@@ -18,4 +18,4 @@ yarn-error.log
 /.idea
 /.vscode
 /routes/api.php
-/app\Http\Requests\Api\VerifyOtpRequest.php
+/app/Http/Requests/Api/VerifyOtpRequest.php
