@@ -9,7 +9,7 @@ class ReviewController extends Controller
 {
     public function index()
     {
-        $reviews = Review::with(['user', 'booking.service'])->orderBy('created_at', 'desc')->get();
+        $reviews = Review::with(['customer', 'booking.service'])->orderBy('created_at', 'desc')->get();
         $stats = [
             'total'   => $reviews->count(),
             'video'   => $reviews->where('review_type', 'video')->count(),
@@ -47,10 +47,10 @@ class ReviewController extends Controller
 
     public function show(Review $review)
     {
-        $review->load(['user', 'booking.service']);
+        $review->load(['customer', 'booking.service']);
         return response()->json([
             'id' => $review->id,
-            'user' => $review->user->name ?? 'Anonymous',
+            'user' => $review->customer->name ?? 'Anonymous',
             'service' => $review->booking->service->name ?? 'General',
             'rating' => $review->rating,
             'review_text' => $review->review_text ?? 'No text provided.',
@@ -58,7 +58,7 @@ class ReviewController extends Controller
             'type' => $review->review_type,
             'points' => $review->points_given,
             'created' => $review->created_at->format('d M Y'),
-            'avatar' => $review->user->avatar ? asset('storage/'.$review->user->avatar) : 'https://i.pravatar.cc/80?u='.$review->user_id,
+            'avatar' => $review->customer->avatar ? asset('storage/'.$review->customer->avatar) : 'https://i.pravatar.cc/80?u='.$review->customer_id,
         ]);
     }
 

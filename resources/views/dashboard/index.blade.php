@@ -117,8 +117,8 @@
                 <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td class="py-3.5">
                     <div class="flex items-center gap-3">
-                      <img src="{{ $booking->user->avatar ?? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=64&q=80' }}" class="w-8 h-8 rounded-full object-cover">
-                      <span class="font-medium text-gray-900">{{ $booking->user->name ?? 'Guest' }}</span>
+                      <img src="{{ $booking->customer->avatar ?? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=64&q=80' }}" class="w-8 h-8 rounded-full object-cover">
+                      <span class="font-medium text-gray-900">{{ $booking->customer->name ?? 'Guest' }}</span>
                     </div>
                   </td>
                   <td class="py-3.5 text-gray-600">{{ $booking->service->name ?? 'Service' }}</td>
@@ -176,10 +176,10 @@
           <div class="space-y-5">
             @foreach($recentReviews as $review)
             <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 border border-transparent hover:border-gray-100 transition-all">
-              <img src="{{ $review->user->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode($review->user->name ?? 'User') }}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white shrink-0">
+              <img src="{{ $review->customer->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode($review->customer->name ?? 'Customer') }}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white shrink-0">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between">
-                  <h4 class="text-sm font-semibold text-gray-900">{{ $review->user->name ?? 'Customer' }}</h4>
+                  <h4 class="text-sm font-semibold text-gray-900">{{ $review->customer->name ?? 'Customer' }}</h4>
                   <span class="text-[10px] text-gray-400">{{ $review->created_at->diffForHumans() }}</span>
                 </div>
                 <div class="flex items-center gap-1 mt-0.5">

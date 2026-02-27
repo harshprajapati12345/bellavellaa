@@ -58,7 +58,7 @@
             { name: 'Verification Requests', url: '{{ route("professionals.verification") }}', icon: 'badge-check', category: 'CRM' },
             { name: 'Orders', url: '{{ route("professionals.orders") }}', icon: 'shopping-cart', category: 'CRM' },
             { name: 'History', url: '{{ route("professionals.history") }}', icon: 'history', category: 'CRM' },
-            { name: 'Users / Customers', url: '{{ route("users.index") }}', icon: 'user-circle', category: 'CRM' },
+            { name: 'Customers', url: '{{ route("customers.index") }}', icon: 'user-circle', category: 'CRM' },
             { name: 'Offers & Coupons', url: '{{ route("offers.index") }}', icon: 'tag', category: 'Marketing' },
             { name: 'Assign Tasks', url: '{{ route("assign.index") }}', icon: 'clipboard-list', category: 'Workflow' },
             { name: 'Reviews', url: '{{ route("reviews.index") }}', icon: 'star', category: 'Feedback' },

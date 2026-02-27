@@ -1,19 +1,21 @@
 @extends('layouts.app')
-@php $pageTitle = 'Add User'; @endphp
+@php $pageTitle = 'Add Customer'; @endphp
 
 @section('content')
-    <div class="flex flex-col gap-6">
-      <div class="flex items-center gap-4">
-        <a href="{{ route('users.index') }}" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
-          <i data-lucide="arrow-left" class="w-4 h-4 text-gray-600"></i>
-        </a>
-        <div>
-          <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Add User</h2>
-          <p class="text-sm text-gray-400 mt-0.5">Create a new customer account</p>
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+          <a href="{{ route('customers.index') }}" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4 text-gray-400"></i>
+          </a>
+          <div>
+            <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Add Customer</h2>
+            <p class="text-sm text-gray-400 mt-0.5">Create a new customer account</p>
+          </div>
         </div>
       </div>
 
-      <form action="{{ route('users.store') }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+      <form action="{{ route('customers.store') }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
         @csrf
         <div class="p-8 border-b border-gray-100">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -69,15 +71,15 @@
                </div>
 
                <div class="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-xl">
-                 <div><p class="text-sm font-medium text-gray-900">Active Account</p><p class="text-xs text-gray-400">User can log in</p></div>
+                 <div><p class="text-sm font-medium text-gray-900">Active Account</p><p class="text-xs text-gray-400">Customer can log in</p></div>
                  <label class="toggle-switch"><input type="checkbox" name="status" checked><span class="toggle-slider"></span></label>
                </div>
             </div>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-3 px-8 py-5 bg-gray-50/50">
-          <a href="{{ route('users.index') }}" class="btn-secondary">Cancel</a>
-          <button type="submit" class="bg-black text-white px-8 py-3 rounded-xl hover:bg-gray-800 transition-all font-semibold shadow-lg shadow-black/10">Create User</button>
+        <div class="px-8 py-6 bg-gray-50/50 border-t border-gray-100 flex items-center justify-end gap-3">
+          <a href="{{ route('customers.index') }}" class="btn-secondary">Cancel</a>
+          <button type="submit" class="bg-black text-white px-8 py-3 rounded-xl hover:bg-gray-800 transition-all font-semibold shadow-lg shadow-black/10">Create Customer</button>
         </div>
       </form>
     </div>

@@ -7,59 +7,43 @@ use App\Http\Resources\Api\ProfessionalResource;
 use App\Http\Requests\Api\Admin\StoreProfessionalRequest;
 use App\Http\Requests\Api\Admin\UpdateProfessionalRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProfessionalController extends BaseController
 {
     /**
-     * Display a listing of the professionals.
+     * Display a listing of professionals.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $query = Professional::query();
 
-        if ($search = request('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('city', 'like', "%{$search}%");
-            });
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
         }
 
-        if ($status = request('status')) {
-            $query->where('status', $status);
+        if ($request->has('category')) {
+            $query->where('category', $request->category);
         }
 
-        if ($category = request('category')) {
-            $query->where('category', $category);
-        }
+        $professionals = $query->orderBy('name')->get();
 
-        if ($verification = request('verification')) {
-            $query->where('verification', $verification);
-        }
-
-        $professionals = $query->latest()->paginate(request('per_page', 15));
-
-        return $this->success([
-            'professionals' => ProfessionalResource::collection($professionals),
-            'pagination' => [
-                'total' => $professionals->total(),
-                'count' => $professionals->count(),
-                'per_page' => $professionals->perPage(),
-                'current_page' => $professionals->currentPage(),
-                'total_pages' => $professionals->lastPage(),
-            ]
-        ], 'Professionals retrieved successfully.');
+        return $this->success(ProfessionalResource::collection($professionals), 'Professionals retrieved.');
     }
 
     /**
-     * Store a newly created professional in storage.
+     * Store a newly created professional.
      */
     public function store(StoreProfessionalRequest $request): JsonResponse
     {
-        $professional = Professional::create(array_merge($request->validated(), [
-            'joined' => now(),
-        ]));
+        $data = $request->validated();
+        
+        if ($request->hasFile('avatar_file')) {
+            $path = $request->file('avatar_file')->store('professionals', 'public');
+            $data['avatar'] = asset('storage/' . $path);
+        }
+
+        $professional = Professional::create($data);
 
         return $this->success(new ProfessionalResource($professional), 'Professional created successfully.', 201);
     }
@@ -69,58 +53,32 @@ class ProfessionalController extends BaseController
      */
     public function show(Professional $professional): JsonResponse
     {
-        return $this->success(new ProfessionalResource($professional), 'Professional retrieved successfully.');
+        return $this->success(new ProfessionalResource($professional), 'Professional details retrieved.');
     }
 
     /**
-     * Update the specified professional in storage.
+     * Update the specified professional.
      */
     public function update(UpdateProfessionalRequest $request, Professional $professional): JsonResponse
     {
-        $professional->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('avatar_file')) {
+            $path = $request->file('avatar_file')->store('professionals', 'public');
+            $data['avatar'] = asset('storage/' . $path);
+        }
+
+        $professional->update($data);
 
         return $this->success(new ProfessionalResource($professional), 'Professional updated successfully.');
     }
 
     /**
-     * Remove the specified professional from storage.
+     * Remove the specified professional.
      */
     public function destroy(Professional $professional): JsonResponse
     {
         $professional->delete();
-
         return $this->success(null, 'Professional deleted successfully.');
-    }
-
-    /**
-     * Approve or Reject professional verification.
-     */
-    public function verify(Professional $professional): JsonResponse
-    {
-        request()->validate([
-            'status' => 'required|in:Verified,Rejected',
-        ]);
-
-        $professional->update([
-            'verification' => request('status'),
-        ]);
-
-        return $this->success(new ProfessionalResource($professional), 'Verification status updated.');
-    }
-
-    /**
-     * Toggle professional status (Active/Suspended/Blocked).
-     */
-    public function toggleStatus(Professional $professional): JsonResponse
-    {
-        request()->validate([
-            'status' => 'required|in:Active,Suspended,Blocked',
-        ]);
-
-        $professional->update([
-            'status' => request('status'),
-        ]);
-
-        return $this->success(new ProfessionalResource($professional), 'Professional status updated.');
     }
 }

@@ -26,13 +26,13 @@ class DashboardController extends Controller
             'total_services' => Service::count(),
         ];
 
-        $appointments = Booking::with(['service', 'professional'])
+        $appointments = Booking::with(['service', 'professional', 'customer'])
             ->whereDate('date', Carbon::today())
             ->orderBy('slot', 'asc')
             ->get();
 
-        $recentBookings = Booking::latest()->limit(5)->get();
-        $recentReviews = Review::latest()->limit(3)->get();
+        $recentBookings = Booking::with('customer')->latest()->limit(5)->get();
+        $recentReviews = Review::with('customer')->latest()->limit(3)->get();
 
         return view('dashboard.index', [
             'bookingsToday' => $stats['bookings_today'],

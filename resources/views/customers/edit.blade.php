@@ -1,19 +1,21 @@
 @extends('layouts.app')
-@php $pageTitle = 'Edit User'; @endphp
+@php $pageTitle = 'Edit Customer'; @endphp
 
 @section('content')
-    <div class="flex flex-col gap-6">
-      <div class="flex items-center gap-4">
-        <a href="{{ route('users.index') }}" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
-          <i data-lucide="arrow-left" class="w-4 h-4 text-gray-600"></i>
-        </a>
-        <div>
-          <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Edit User</h2>
-          <p class="text-sm text-gray-400 mt-0.5">Modify account details for {{ $user->name }}</p>
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+          <a href="{{ route('customers.index') }}" class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4 text-gray-400"></i>
+          </a>
+          <div>
+            <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Edit Customer</h2>
+            <p class="text-sm text-gray-400 mt-0.5">Modify account details for {{ $customer->name }}</p>
+          </div>
         </div>
       </div>
 
-      <form action="{{ route('users.update', $user->id) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+      <form action="{{ route('customers.update', $customer->id) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
         @csrf
         @method('PUT')
         <div class="p-8 border-b border-gray-100">
@@ -24,32 +26,32 @@
                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div class="sm:col-span-2">
                      <label class="form-label">Full Name *</label>
-                     <input type="text" name="name" class="form-input" placeholder="e.g. Ananya Kapoor" required value="{{ old('name', $user->name) }}">
+                     <input type="text" name="name" class="form-input" placeholder="e.g. Ananya Kapoor" required value="{{ old('name', $customer->name) }}">
                      @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div>
                      <label class="form-label">Email Address *</label>
-                     <input type="email" name="email" class="form-input" placeholder="e.g. ananya@example.com" required value="{{ old('email', $user->email) }}">
+                     <input type="email" name="email" class="form-input" placeholder="e.g. ananya@example.com" required value="{{ old('email', $customer->email) }}">
                      @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div>
                      <label class="form-label">Phone Number</label>
-                     <input type="tel" name="phone" class="form-input" placeholder="+91 00000 00000" value="{{ old('phone', $user->phone) }}">
+                     <input type="tel" name="phone" class="form-input" placeholder="+91 00000 00000" value="{{ old('phone', $customer->phone) }}">
                      @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div>
                      <label class="form-label">City</label>
-                     <input type="text" name="city" class="form-input" placeholder="e.g. Delhi" value="{{ old('city', $user->city) }}">
+                     <input type="text" name="city" class="form-input" placeholder="e.g. Delhi" value="{{ old('city', $customer->city) }}">
                      @error('city') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div>
                      <label class="form-label">Postal Code</label>
-                     <input type="text" name="zip" class="form-input" placeholder="e.g. 110001" value="{{ old('zip', $user->zip) }}">
+                     <input type="text" name="zip" class="form-input" placeholder="e.g. 110001" value="{{ old('zip', $customer->zip) }}">
                      @error('zip') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                   <div class="sm:col-span-2">
                      <label class="form-label">Address</label>
-                     <textarea name="address" rows="3" class="form-input resize-none" placeholder="Full address...">{{ old('address', $user->address) }}</textarea>
+                     <textarea name="address" rows="3" class="form-input resize-none" placeholder="Full address...">{{ old('address', $customer->address) }}</textarea>
                      @error('address') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                   </div>
                </div>
@@ -62,8 +64,8 @@
                <div>
                   <label class="form-label">Profile Photo</label>
                   <label class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-all overflow-hidden relative">
-                    @if($user->avatar)
-                    <img id="preview" src="{{ $user->avatar }}" class="w-full h-full object-cover rounded-2xl">
+                    @if($customer->avatar)
+                    <img id="preview" src="{{ $customer->avatar }}" class="w-full h-full object-cover rounded-2xl">
                     <div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                       <i data-lucide="camera" class="w-6 h-6 text-white"></i>
                     </div>
@@ -77,15 +79,15 @@
                </div>
 
                <div class="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-xl">
-                 <div><p class="text-sm font-medium text-gray-900">Active Account</p><p class="text-xs text-gray-400">User can log in</p></div>
-                 <label class="toggle-switch"><input type="checkbox" name="status" {{ $user->status === 'Active' ? 'checked' : '' }}><span class="toggle-slider"></span></label>
+                 <div><p class="text-sm font-medium text-gray-900">Active Account</p><p class="text-xs text-gray-400">Customer can log in</p></div>
+                 <label class="toggle-switch"><input type="checkbox" name="status" {{ $customer->status === 'Active' ? 'checked' : '' }}><span class="toggle-slider"></span></label>
                </div>
             </div>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-3 px-8 py-5 bg-gray-50/50">
-          <a href="{{ route('users.index') }}" class="btn-secondary">Cancel</a>
-          <button type="submit" class="bg-black text-white px-8 py-3 rounded-xl hover:bg-gray-800 transition-all font-semibold shadow-lg shadow-black/10">Update User</button>
+        <div class="px-8 py-6 bg-gray-50/50 border-t border-gray-100 flex items-center justify-end gap-3">
+          <a href="{{ route('customers.index') }}" class="btn-secondary">Cancel</a>
+          <button type="submit" class="bg-black text-white px-8 py-3 rounded-xl hover:bg-gray-800 transition-all font-semibold shadow-lg shadow-black/10">Update Customer</button>
         </div>
       </form>
     </div>

@@ -67,7 +67,7 @@ $filtered = $reviews->filter(function($r) use ($filter) {
           <table class="w-full min-w-[1100px]" id="reviewsTable">
             <thead>
               <tr class="border-b border-gray-100 bg-gray-50/80">
-                <th class="px-5 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">User</th>
+                <th class="px-5 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Customer</th>
                 <th class="px-5 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Service</th>
                 <th class="px-5 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Rating</th>
                 <th class="px-5 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Type</th>
@@ -86,8 +86,8 @@ $filtered = $reviews->filter(function($r) use ($filter) {
               @endphp
               <tr class="table-row border-b border-gray-50" id="review-row-{{ $r->id }}" 
                   data-id="{{ $r->id }}" 
-                  data-user-name="{{ $r->user_name ?? $r->user ?? 'User' }}"
-                  data-user-avatar="{{ $r->user_avatar ?? $r->avatar ?? 'https://i.pravatar.cc/80?img='.($r->id % 50) }}"
+                  data-customer-name="{{ $r->customer->name ?? $r->customer_name ?? 'Customer' }}"
+                  data-customer-avatar="{{ $r->customer->avatar ?? $r->customer_avatar ?? 'https://i.pravatar.cc/80?img='.($r->id % 50) }}"
                   data-date="{{ $r->created_at ? \Carbon\Carbon::parse($r->created_at)->format('d M Y') : '—' }}"
                   data-service="{{ $r->service_name ?? $r->service ?? '—' }}"
                   data-type="{{ $r->review_type }}" 
@@ -99,9 +99,9 @@ $filtered = $reviews->filter(function($r) use ($filter) {
                   data-points="{{ $r->points_given ?? 0 }}">
                 <td class="px-5 py-4">
                   <div class="flex items-center gap-3">
-                    <img src="{{ $r->user_avatar ?? $r->avatar ?? 'https://i.pravatar.cc/80?img='.($r->id % 50) }}" class="w-10 h-10 rounded-full object-cover border border-gray-100" alt="">
+                    <img src="{{ $r->customer->avatar ?? $r->customer_avatar ?? 'https://i.pravatar.cc/80?img='.($r->id % 50) }}" class="w-10 h-10 rounded-full object-cover border border-gray-100" alt="">
                     <div>
-                      <p class="text-sm font-semibold text-gray-900">{{ $r->user_name ?? $r->user ?? 'User' }}</p>
+                      <p class="text-sm font-semibold text-gray-900">{{ $r->customer->name ?? $r->customer_name ?? 'Customer' }}</p>
                       <p class="text-xs text-gray-400">{{ $r->created_at ? \Carbon\Carbon::parse($r->created_at)->format('d M Y') : '—' }}</p>
                     </div>
                   </div>
@@ -148,12 +148,12 @@ $filtered = $reviews->filter(function($r) use ($filter) {
                 </td>
                 <td class="px-5 py-4 text-center">
                   @if(($r->points_given ?? 0) > 0)
-                  <button onclick="givePoints({{ $r->id }}, '{{ addslashes($r->user_name ?? $r->user ?? '') }}', '{{ addslashes($r->service_name ?? $r->service ?? '') }}', {{ $r->points_given }})"
+                  <button onclick="givePoints({{ $r->id }}, '{{ addslashes($r->customer->name ?? $r->customer_name ?? '') }}', '{{ addslashes($r->service_name ?? $r->service ?? '') }}', {{ $r->points_given }})"
                           class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer group">
                     <i data-lucide="zap" class="w-3 h-3"></i><span class="points-value">{{ $r->points_given }}</span><i data-lucide="pencil" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"></i>
                   </button>
                   @else
-                  <button onclick="givePoints({{ $r->id }}, '{{ addslashes($r->user_name ?? $r->user ?? '') }}', '{{ addslashes($r->service_name ?? $r->service ?? '') }}', 0)"
+                  <button onclick="givePoints({{ $r->id }}, '{{ addslashes($r->customer->name ?? $r->customer_name ?? '') }}', '{{ addslashes($r->service_name ?? $r->service ?? '') }}', 0)"
                           class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all cursor-pointer">
                     <i data-lucide="gift" class="w-3 h-3"></i> Give Points
                   </button>
@@ -316,8 +316,8 @@ $filtered = $reviews->filter(function($r) use ($filter) {
   function filterTable() { const term = document.getElementById('searchReviews').value.toLowerCase(); document.querySelectorAll('#reviewsTable tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(term) ? '' : 'none'); }
 
   /* Give Points modal */
-  function givePoints(id, userName, serviceName, currentPts) {
-    Swal.fire({ title: '<span style="font-size:1.1rem">Award Points</span>', html: '<div style="text-align:left;margin-bottom:12px"><p style="font-size:13px;color:#6b7280;margin-bottom:4px"><strong>' + userName + '</strong> — ' + serviceName + '</p>' + (currentPts > 0 ? '<p style="font-size:12px;color:#10b981">Current: ' + currentPts + ' pts</p>' : '') + '</div>', input: 'number', inputValue: currentPts, inputAttributes: { min: 0, max: 1000, step: 5 }, inputLabel: 'Enter points to award', showCancelButton: true, confirmButtonText: 'Save Points', confirmButtonColor: '#000', cancelButtonColor: '#9ca3af', inputValidator: (v) => { if (v === '' || v === null) return 'Please enter a number'; if (parseInt(v) < 0) return 'Points cannot be negative'; if (parseInt(v) > 1000) return 'Maximum 1000 points'; } })
+  function givePoints(id, customerName, serviceName, currentPts) {
+    Swal.fire({ title: '<span style="font-size:1.1rem">Award Points</span>', html: '<div style="text-align:left;margin-bottom:12px"><p style="font-size:13px;color:#6b7280;margin-bottom:4px"><strong>' + customerName + '</strong> — ' + serviceName + '</p>' + (currentPts > 0 ? '<p style="font-size:12px;color:#10b981">Current: ' + currentPts + ' pts</p>' : '') + '</div>', input: 'number', inputValue: currentPts, inputAttributes: { min: 0, max: 1000, step: 5 }, inputLabel: 'Enter points to award', showCancelButton: true, confirmButtonText: 'Save Points', confirmButtonColor: '#000', cancelButtonColor: '#9ca3af', inputValidator: (v) => { if (v === '' || v === null) return 'Please enter a number'; if (parseInt(v) < 0) return 'Points cannot be negative'; if (parseInt(v) > 1000) return 'Maximum 1000 points'; } })
     .then(r => {
       if (!r.isConfirmed) return;
       const pts = parseInt(r.value) || 0;
@@ -345,12 +345,12 @@ $filtered = $reviews->filter(function($r) use ($filter) {
   /* Update points display */
   function updatePointsInRow(row, pts) {
     const pointsCell = row.querySelector('td:nth-child(7)'), id = row.dataset.id;
-    const userName = row.querySelector('td:nth-child(1) .font-semibold')?.textContent || '';
+    const customerName = row.querySelector('td:nth-child(1) .font-semibold')?.textContent || '';
     const serviceName = row.querySelector('td:nth-child(2)')?.textContent?.trim() || '';
     if (pts > 0) {
-      pointsCell.innerHTML = `<button onclick="givePoints(${id}, '${userName.replace(/'/g,"\\'")}', '${serviceName.replace(/'/g,"\\'")}', ${pts})" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer group"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span class="points-value">${pts}</span><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>`;
+      pointsCell.innerHTML = `<button onclick="givePoints(${id}, '${customerName.replace(/'/g,"\\'")}', '${serviceName.replace(/'/g,"\\'")}', ${pts})" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors cursor-pointer group"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span class="points-value">${pts}</span><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>`;
     } else {
-      pointsCell.innerHTML = `<button onclick="givePoints(${id}, '${userName.replace(/'/g,"\\'")}', '${serviceName.replace(/'/g,"\\'")}', 0)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Give Points</button>`;
+      pointsCell.innerHTML = `<button onclick="givePoints(${id}, '${customerName.replace(/'/g,"\\'")}', '${serviceName.replace(/'/g,"\\'")}', 0)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 hover:bg-black hover:text-white transition-all cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Give Points</button>`;
     }
   }
 </script>

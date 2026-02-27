@@ -125,50 +125,72 @@ class ProfessionalController extends Controller
     {
         $professional = Professional::findOrFail($id);
         
-        // Mocking additional fields if they don't exist in DB yet to match legacy UI
         $req = [
             'id' => $professional->id,
             'name' => $professional->name,
-            'avatar' => $professional->avatar ?: 'https://i.pravatar.cc/150?u='.$professional->id,
-            'email' => $professional->email ?? 'anjali.m@example.com',
-            'phone' => $professional->phone ?? '+91 98765 43210',
-            'aadhaar' => $professional->aadhaar ?? 'XXXX XXXX 4321',
-            'pan' => $professional->pan ?? 'ABCDE1234F',
+            'avatar' => $professional->avatar ? ($professional->avatar) : 'https://i.pravatar.cc/150?u='.$professional->id,
+            'email' => $professional->email ?? '—',
+            'phone' => $professional->phone ?? '—',
+            'aadhaar' => $professional->aadhaar ?? '—',
+            'pan' => $professional->pan ?? '—',
             'submitted' => $professional->updated_at->format('Y-m-d H:i:s'),
             'status' => $professional->verification ?: 'Pending',
-            'aadhaar_front' => 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80',
-            'aadhaar_back' => 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=600&q=80',
-            'pan_img' => 'https://images.unsplash.com/photo-1554224155-1a8a10e29e4c?auto=format&fit=crop&w=600&q=80',
-            'selfie' => $professional->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'
+            'aadhaar_front' => $professional->aadhaar_front ?? 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80',
+            'aadhaar_back' => $professional->aadhaar_back ?? 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=600&q=80',
+            'pan_img' => $professional->pan_img ?? 'https://images.unsplash.com/photo-1554224155-1a8a10e29e4c?auto=format&fit=crop&w=600&q=80',
+            'selfie' => $professional->avatar ? ($professional->avatar) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'
         ];
 
         return view('professionals.verification.review', compact('req', 'professional'));
     }
 
+    public function approveVerification($id)
+    {
+        $professional = Professional::findOrFail($id);
+        $professional->update(['verification' => 'Verified']);
+        return redirect()->route('professionals.verification')->with('success', 'Professional verified successfully!');
+    }
+
+    public function rejectVerification(Request $request, $id)
+    {
+        $professional = Professional::findOrFail($id);
+        $professional->update(['verification' => 'Rejected']);
+        // Here you would typically save the reason from $request->reason to a notification or field
+        return redirect()->route('professionals.verification')->with('error', 'Professional verification rejected.');
+    }
+
+    public function requestVerificationChanges(Request $request, $id)
+    {
+        $professional = Professional::findOrFail($id);
+        $professional->update(['verification' => 'Pending']);
+        // Trigger notification to user to re-upload
+        return redirect()->route('professionals.verification')->with('info', 'Change request sent to professional.');
+    }
+
     public function orders()
     {
         // Using real bookings with patient/professional details
-        $orders = \App\Models\Booking::with(['user', 'professional'])
+        $orders = \App\Models\Booking::with(['customer', 'professional'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($b) {
                 return [
                     'id' => 'ORD-' . (1000 + $b->id),
-                    'customer' => $b->user->name ?? 'Unknown',
-                    'customer_phone' => $b->user->phone ?? '—',
+                    'customer' => $b->customer->name ?? 'Unknown',
+                    'customer_phone' => $b->customer->phone ?? '—',
                     'professional' => $b->professional->name ?? '—',
                     'service' => $b->service_name ?? '—',
                     'date' => $b->date,
-                    'time' => $b->time,
-                    'amount' => $b->total_price ?? 0,
+                    'time' => $b->slot,
+                    'amount' => $b->price ?? 0,
                     'commission' => $b->commission ?? 0,
-                    'pro_earning' => ($b->total_price ?? 0) - ($b->commission ?? 0),
+                    'pro_earning' => ($b->price ?? 0) - ($b->commission ?? 0),
                     'order_status' => $b->status,
                     'payment_status' => $b->payment_status ?? 'Pending',
                     'address' => $b->address ?? '—',
                     'payment_method' => $b->payment_method ?? '—',
                 ];
-            });
+            })->all();
 
         return view('professionals.orders.index', compact('orders'));
     }
@@ -197,7 +219,7 @@ class ProfessionalController extends Controller
                     'monthly' => [0,0,0,0,0,0,0,0,0,0,0,0], // Real charts would need complex grouping
                     'reviews' => [],
                 ];
-            });
+            })->all();
 
         return view('professionals.history.index', compact('history'));
     }

@@ -87,10 +87,19 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('media', App\Http\Controllers\Api\Admin\MediaController::class);
         Route::apiResource('homepage', App\Http\Controllers\Api\Admin\HomepageController::class);
         Route::post('homepage/reorder', [App\Http\Controllers\Api\Admin\HomepageController::class, 'reorder']);
-        // Route::apiResource('professionals',  ProfessionalController::class);
-        // Route::apiResource('categories',     CategoryController::class);
-        // Route::apiResource('services',       ServiceController::class);
-        // Route::apiResource('bookings',       BookingController::class);
-        // Route::apiResource('orders',         OrderController::class);
+
+        // Professionals Management
+        Route::apiResource('professionals', App\Http\Controllers\Api\Admin\ProfessionalController::class);
+        Route::get('professionals-verification', [App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class, 'index']);
+        Route::post('professionals/{id}/verify', [App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class, 'verify']);
+        Route::get('professionals/{id}/orders', [App\Http\Controllers\Api\Admin\ProfessionalOrderController::class, 'index']);
+        Route::get('professionals/{id}/history', [App\Http\Controllers\Api\Admin\ProfessionalOrderController::class, 'history']);
+        Route::apiResource('leave-requests', App\Http\Controllers\Api\Admin\LeaveRequestController::class);
+
+        // Kit Management
+        Route::prefix('kit')->group(function () {
+            Route::apiResource('products', App\Http\Controllers\Api\Admin\KitProductController::class);
+            Route::apiResource('orders', App\Http\Controllers\Api\Admin\KitOrderController::class);
+        });
     });
 });

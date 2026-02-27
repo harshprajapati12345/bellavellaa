@@ -8,7 +8,7 @@ use App\Http\Controllers\adminroutes\CategoryController;
 use App\Http\Controllers\adminroutes\ServiceController;
 use App\Http\Controllers\adminroutes\PackageController;
 use App\Http\Controllers\adminroutes\ProfessionalController;
-use App\Http\Controllers\adminroutes\UserController;
+use App\Http\Controllers\adminroutes\CustomerController;
 use App\Http\Controllers\adminroutes\OfferController;
 use App\Http\Controllers\adminroutes\ReviewController;
 use App\Http\Controllers\adminroutes\MediaController;
@@ -40,6 +40,9 @@ Route::middleware(['auth:admin'])->group(function () {
     // Professionals Sub-routes
     Route::get('professionals/verification', [ProfessionalController::class, 'verification'])->name('professionals.verification');
     Route::get('professionals/verification/{id}/review', [ProfessionalController::class, 'verificationReview'])->name('professionals.verification.review');
+    Route::post('professionals/verification/{id}/approve', [ProfessionalController::class, 'approveVerification'])->name('professionals.verification.approve');
+    Route::post('professionals/verification/{id}/reject', [ProfessionalController::class, 'rejectVerification'])->name('professionals.verification.reject');
+    Route::post('professionals/verification/{id}/request-changes', [ProfessionalController::class, 'requestVerificationChanges'])->name('professionals.verification.request-changes');
     Route::get('professionals/orders', [ProfessionalController::class, 'orders'])->name('professionals.orders');
     Route::get('professionals/history', [ProfessionalController::class, 'history'])->name('professionals.history');
 
@@ -63,8 +66,8 @@ Route::middleware(['auth:admin'])->group(function () {
     // Professionals Resource (Should be AFTER sub-routes)
     Route::resource('professionals', ProfessionalController::class);
 
-    Route::resource('users', UserController::class);
-    Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::resource('customers', CustomerController::class);
+    Route::patch('customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])->name('customers.toggle-status');
     Route::resource('offers', OfferController::class);
     Route::resource('reviews', ReviewController::class);
     Route::post('reviews/{review}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');

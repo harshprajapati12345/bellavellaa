@@ -7,7 +7,7 @@ elseif (str_starts_with($routeName, 'categories')) $section = 'categories';
 elseif (str_starts_with($routeName, 'services')) $section = 'services';
 elseif (str_starts_with($routeName, 'packages')) $section = 'packages';
 elseif (str_starts_with($routeName, 'professionals')) $section = 'professionals';
-elseif (str_starts_with($routeName, 'users')) $section = 'users';
+elseif (str_starts_with($routeName, 'customers')) $section = 'customers';
 elseif (str_starts_with($routeName, 'offers')) $section = 'offers';
 elseif (str_starts_with($routeName, 'assign')) $section = 'assign';
 elseif (str_starts_with($routeName, 'reviews')) $section = 'reviews';
@@ -171,11 +171,11 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
           </div>
 
 
-          <!-- Users -->
-          <a href="{{ route('users.index') }}"
-            class="flex items-center gap-3 px-4 py-3 {{ $section === 'users' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+          <!-- Customers -->
+          <a href="{{ route('customers.index') }}"
+            class="flex items-center gap-3 px-4 py-3 {{ $section === 'customers' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
             <i data-lucide="circle-user-round" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
-            <span class="font-normal text-base text-black">Users</span>
+            <span class="font-normal text-base text-black">Customers</span>
           </a>
 
           <!-- Offers -->

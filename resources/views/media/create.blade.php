@@ -94,7 +94,7 @@
               <div class="w-full py-3 px-4 bg-gray-50 rounded-xl flex items-center justify-between">
                 <div>
                   <p class="text-sm font-medium text-gray-900">Active</p>
-                  <p class="text-xs text-gray-400">Visible to users</p>
+                  <p class="text-xs text-gray-400">Visible to customers</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" name="status" class="sr-only peer" {{ old('status', true) ? 'checked' : '' }}>

@@ -228,8 +228,12 @@ $status = $req['status'];
       confirmButtonText: 'Yes, Approve'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({ title: 'Application Approved!', icon: 'success', confirmButtonColor: '#000' })
-          .then(() => { window.location.href = "{{ route('professionals.verification') }}"; });
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('professionals.verification.approve', $req['id']) }}";
+        form.innerHTML = `@csrf`;
+        document.body.appendChild(form);
+        form.submit();
       }
     });
   }
@@ -244,8 +248,12 @@ $status = $req['status'];
       confirmButtonText: 'Confirm Rejection'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({ title: 'Rejected', text: 'Application has been moved to rejected.', icon: 'error', confirmButtonColor: '#000' })
-          .then(() => { window.location.href = "{{ route('professionals.verification') }}"; });
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('professionals.verification.reject', $req['id']) }}";
+        form.innerHTML = `@csrf <input type="hidden" name="reason" value="${result.value}">`;
+        document.body.appendChild(form);
+        form.submit();
       }
     });
   }
@@ -260,7 +268,12 @@ $status = $req['status'];
       confirmButtonText: 'Yes, Send Request'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({ title: 'Request Sent', text: 'Notification has been sent to the professional.', icon: 'success', confirmButtonColor: '#000' });
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('professionals.verification.request-changes', $req['id']) }}";
+        form.innerHTML = `@csrf`;
+        document.body.appendChild(form);
+        form.submit();
       }
     });
   }
