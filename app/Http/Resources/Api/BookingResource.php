@@ -13,19 +13,19 @@ class BookingResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'              => $this->id,
-            'customer'        => new CustomerResource($this->whenLoaded('customer')),
-            'service'         => new ServiceResource($this->whenLoaded('service')),
-            'package'         => new PackageResource($this->whenLoaded('package')),
-            'professional'    => new ProfessionalResource($this->whenLoaded('professional')),
-            'booking_date'    => $this->booking_date,
-            'booking_time'    => $this->booking_time,
-            'status'          => $this->status,
-            'total_amount'    => $this->total_amount,
-            'address'         => $this->address,
-            'notes'           => $this->notes,
-            'created_at'      => $this->created_at?->toIso8601String(),
-            'updated_at'      => $this->updated_at?->toIso8601String(),
+            'id' => $this->id,
+            'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'service' => new ServiceResource($this->whenLoaded('service')),
+            'package' => new PackageResource($this->whenLoaded('package')),
+            'professional' => new ProfessionalResource($this->whenLoaded('professional')),
+            'booking_date' => $this->date,
+            'booking_time' => $this->slot,
+            'status' => $this->status,
+            'total_amount' => $this->price,
+            'address' => $this->address,
+            'notes' => $this->notes,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

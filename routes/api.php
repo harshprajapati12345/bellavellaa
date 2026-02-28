@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Client\WalletController;
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Client\PromotionController;
 use App\Http\Controllers\Api\Client\SlotController;
+use App\Http\Controllers\Api\Client\NotificationController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
 
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,8 @@ Route::prefix('client')->group(function () {
 
         // Wallet
         Route::get('wallet', [WalletController::class, 'index']);
+        Route::post('wallet/deposit', [WalletController::class, 'deposit']);
+        Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
 
         // Addresses
         Route::apiResource('addresses', AddressController::class);
@@ -69,6 +72,13 @@ Route::prefix('client')->group(function () {
         Route::get('bookings', [BookingController::class, 'index']);
         Route::get('bookings/{booking}', [BookingController::class, 'show']);
         Route::post('bookings/{booking}/cancel', [BookingController::class, 'cancel']);
+        Route::post('bookings/{booking}/reschedule', [BookingController::class, 'reschedule']);
+
+        // Notifications
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
 
         // Cart
         Route::get('cart', [CartController::class, 'index']);

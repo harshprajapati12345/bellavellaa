@@ -22,6 +22,15 @@ class AddressController extends BaseController
         return $this->success(AddressResource::collection($addresses), 'Addresses retrieved successfully.');
     }
 
+    public function show(Address $address): JsonResponse
+    {
+        if ($address->customer_id !== $this->guard()->id()) {
+            return $this->error('Unauthorized.', 403);
+        }
+
+        return $this->success(new AddressResource($address), 'Address retrieved successfully.');
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

@@ -159,6 +159,7 @@ class CartController extends BaseController
                 'order_number' => 'ORD-' . strtoupper(Str::random(8)),
                 'customer_id' => $customer->id,
                 'address' => $validated['address'],
+                'city' => $customer->city ?? 'Mumbai', // Added city for capacity tracking
                 'scheduled_date' => $validated['scheduled_date'],
                 'scheduled_slot' => $validated['scheduled_slot'],
                 'subtotal_paise' => $subtotalPaise,
@@ -181,6 +182,25 @@ class CartController extends BaseController
                     'unit_price_paise' => ($cart->item->price ?? 0) * 100,
                     'total_price_paise' => ($cart->quantity * ($cart->item->price ?? 0)) * 100,
                 ]);
+
+                // Create a Booking for each cart item
+                for ($i = 0; $i < $cart->quantity; $i++) {
+                    \App\Models\Booking::create([
+                        'order_id' => $order->id,
+                        'customer_id' => $customer->id,
+                        'customer_name' => $customer->name,
+                        'customer_phone' => $customer->mobile,
+                        'city' => $customer->city ?? 'Mumbai',
+                        'service_id' => $cart->item_type === 'service' ? $cart->item_id : null,
+                        'service_name' => $cart->item_type === 'service' ? $cart->item->name : null,
+                        'package_id' => $cart->item_type === 'package' ? $cart->item_id : null,
+                        'package_name' => $cart->item_type === 'package' ? $cart->item->name : null,
+                        'date' => $order->scheduled_date,
+                        'slot' => $order->scheduled_slot,
+                        'status' => 'Pending',
+                        'price' => $cart->item->price ?? 0,
+                    ]);
+                }
             }
 
             // Clear cart
