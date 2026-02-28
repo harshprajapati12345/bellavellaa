@@ -214,7 +214,7 @@ function renderSidebarData(type, data) {
           ${renderField('Date', data.created, 'calendar')}
           <div class="pt-4 mt-4 border-t border-gray-100">
               <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Review Message</p>
-              <p class="text-sm text-gray-600 leading-relaxed italic">"${data.review_text}"</p>
+              <p class="text-sm text-gray-600 leading-relaxed italic">"${data.comment}"</p>
           </div>
       </div>
     `;

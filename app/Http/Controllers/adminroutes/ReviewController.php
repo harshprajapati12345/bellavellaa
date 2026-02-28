@@ -11,10 +11,10 @@ class ReviewController extends Controller
     {
         $reviews = Review::with(['customer', 'booking.service'])->orderBy('created_at', 'desc')->get();
         $stats = [
-            'total'   => $reviews->count(),
-            'video'   => $reviews->where('review_type', 'video')->count(),
+            'total' => $reviews->count(),
+            'video' => $reviews->where('review_type', 'video')->count(),
             'pending' => $reviews->where('status', 'Pending')->count(),
-            'points'  => $reviews->sum('points_given'),
+            'points' => $reviews->sum('points_given'),
         ];
 
         return view('reviews.index', compact('reviews', 'stats'));
@@ -22,8 +22,17 @@ class ReviewController extends Controller
 
     public function approve(Review $review)
     {
-        $review->update(['status' => 'Approved']);
-        return back()->with('success', 'Review approved successfully!');
+        $payload = ['status' => 'Approved'];
+
+        // Automate points for video reviews only
+        if ($review->review_type === 'video') {
+            $payload['points_given'] = \App\Models\Setting::get('review_points_amount', 50);
+        } else {
+            $payload['points_given'] = 0; // No points for text reviews
+        }
+
+        $review->update($payload);
+        return back()->with('success', 'Review approved successfully!' . ($review->review_type === 'video' ? ' Reward points awarded.' : ''));
     }
 
     public function reject(Review $review)
@@ -40,9 +49,14 @@ class ReviewController extends Controller
 
     public function awardPoints(Request $request, Review $review)
     {
-        $request->validate(['points' => 'required|integer|min:0']);
-        $review->update(['points_given' => $request->points]);
-        return back()->with('success', 'Points awarded successfully!');
+        $points = $request->input('points', \App\Models\Setting::get('review_points_amount', 50));
+        $review->update(['points_given' => $points]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Points awarded successfully!',
+            'points' => $points
+        ]);
     }
 
     public function show(Review $review)
@@ -53,12 +67,12 @@ class ReviewController extends Controller
             'user' => $review->customer->name ?? 'Anonymous',
             'service' => $review->booking->service->name ?? 'General',
             'rating' => $review->rating,
-            'review_text' => $review->review_text ?? 'No text provided.',
+            'comment' => $review->comment ?? 'No text provided.',
             'status' => $review->status,
             'type' => $review->review_type,
             'points' => $review->points_given,
             'created' => $review->created_at->format('d M Y'),
-            'avatar' => $review->customer->avatar ? asset('storage/'.$review->customer->avatar) : 'https://i.pravatar.cc/80?u='.$review->customer_id,
+            'avatar' => $review->customer->avatar ? asset('storage/' . $review->customer->avatar) : 'https://i.pravatar.cc/80?u=' . $review->customer_id,
         ]);
     }
 
