@@ -29,7 +29,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth:admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     Route::resource('categories', CategoryController::class);
     Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
     Route::resource('services', ServiceController::class);
@@ -81,7 +81,8 @@ Route::middleware(['auth:admin'])->group(function () {
 
     Route::get('/assign', [AssignController::class, 'index'])->name('assign.index');
     Route::post('/assign/update', [AssignController::class, 'update'])->name('assign.update');
-    
+    Route::post('/assign/auto', [AssignController::class, 'autoAssign'])->name('assign.auto');
+
     // Settings
     Route::post('settings/update', [SettingController::class, 'update'])->name('settings.update');
     Route::resource('settings', SettingController::class)->except(['update']);
