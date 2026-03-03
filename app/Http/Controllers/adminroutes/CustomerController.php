@@ -25,7 +25,7 @@ class CustomerController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:customers',
-            'phone' => 'nullable|string|max:20',
+            'mobile' => 'nullable|string|max:10',
             'city' => 'nullable|string|max:100',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
@@ -33,11 +33,10 @@ class CustomerController extends Controller
         $customer = new Customer();
         $customer->name = $request->name;
         $customer->email = $request->email;
-        $customer->phone = $request->phone;
+        $customer->mobile = $request->mobile;
         $customer->city = $request->city;
         $customer->address = $request->address;
         $customer->zip = $request->zip;
-        $customer->password = Hash::make('password'); // Default password
         $customer->status = $request->has('status') ? 'Active' : 'Inactive';
 
         if ($request->hasFile('avatar')) {
@@ -57,7 +56,7 @@ class CustomerController extends Controller
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'email' => $customer->email,
-                'phone' => $customer->phone ?? '—',
+                'mobile' => $customer->mobile ?? '—',
                 'city' => $customer->city ?? '—',
                 'status' => $customer->status,
                 'avatar' => $customer->avatar ?? 'https://i.pravatar.cc/80?u=' . $customer->id,
@@ -79,14 +78,14 @@ class CustomerController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:customers,email,' . $customer->id,
-            'phone' => 'nullable|string|max:20',
+            'mobile' => 'nullable|string|max:10',
             'city' => 'nullable|string|max:100',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $customer->name = $request->name;
         $customer->email = $request->email;
-        $customer->phone = $request->phone;
+        $customer->mobile = $request->mobile;
         $customer->city = $request->city;
         $customer->address = $request->address;
         $customer->zip = $request->zip;

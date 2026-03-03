@@ -133,7 +133,7 @@ function openSidebar(type, id) {
 function renderSidebarData(type, data) {
   let html = '';
 
-  if (type === 'users') {
+  if (type === 'customers' || type === 'users') {
     html = `
       <div class="flex flex-col items-center text-center p-6 bg-gray-50 rounded-3xl mb-6">
           <img src="${data.avatar}" class="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-lg mb-4">
@@ -142,7 +142,7 @@ function renderSidebarData(type, data) {
       </div>
       <div class="grid grid-cols-1 gap-4">
           ${renderField('Email', data.email, 'mail')}
-          ${renderField('Phone', data.phone, 'phone')}
+          ${renderField('Mobile', data.mobile, 'phone')}
           ${renderField('City', data.city, 'map-pin')}
           ${renderField('Joined', data.joined, 'calendar')}
           ${renderField('Total Bookings', data.bookings_count, 'calendar-check')}

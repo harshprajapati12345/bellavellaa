@@ -51,9 +51,12 @@
             </div>
           </div>
           <div class="space-y-5">
-            <div><label class="block text-sm font-medium text-gray-700">Image</label><input type="file" name="image"
-                class="hidden" onchange="previewImage(this)" accept="image/*">
-              class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Image</label>
+              <input type="file" name="image" id="offer-image" accept="image/*"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all"
+                onchange="previewImage(this, 'offer-img-preview')">
+              <img id="offer-img-preview" src="" alt="Preview" class="hidden mt-3 h-32 rounded-xl object-cover border border-gray-100">
             </div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea
                 name="description" rows="4"

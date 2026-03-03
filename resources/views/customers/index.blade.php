@@ -58,7 +58,7 @@
                     </div>
                   </td>
                   <td class="px-5 py-4">
-                    <span class="text-sm text-gray-600">{{ $customer->phone ?? '—' }}</span>
+                    <span class="text-sm text-gray-600">{{ $customer->mobile ?? '—' }}</span>
                   </td>
                   <td class="px-5 py-4">
                     <span class="text-sm text-gray-600">{{ $customer->city ?? '—' }}</span>

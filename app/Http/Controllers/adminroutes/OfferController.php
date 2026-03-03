@@ -48,15 +48,17 @@ class OfferController extends Controller
     public function show(Offer $offer)
     {
         return response()->json([
-            'id' => $offer->id,
-            'name' => $offer->name,
+            'id'          => $offer->id,
+            'title'       => $offer->name,
+            'image'       => $offer->image ? asset('storage/' . $offer->image) : asset('assets/images/placeholder.png'),
+            'name'        => $offer->name,
             'description' => strip_tags($offer->description ?? 'No description available.'),
-            'discount' => ($offer->discount_type === 'percentage' ? $offer->discount_value . '%' : '₹' . $offer->discount_value) . ' OFF',
-            'code' => $offer->code ?? 'NO CODE',
-            'usage' => $offer->usage_count ?? 0,
-            'valid_from' => $offer->valid_from ? \Carbon\Carbon::parse($offer->valid_from)->format('d M Y') : '—',
+            'discount'    => ($offer->discount_type === 'percentage' ? $offer->discount_value . '%' : '₹' . $offer->discount_value) . ' OFF',
+            'code'        => $offer->code ?? 'NO CODE',
+            'usage'       => $offer->usage_count ?? 0,
+            'valid_from'  => $offer->valid_from ? \Carbon\Carbon::parse($offer->valid_from)->format('d M Y') : '—',
             'valid_until' => $offer->valid_until ? \Carbon\Carbon::parse($offer->valid_until)->format('d M Y') : '—',
-            'status' => $offer->status,
+            'status'      => $offer->status,
         ]);
     }
 

@@ -41,9 +41,9 @@
               </div>
               <div>
                 <label class="form-label">Phone Number</label>
-                <input type="tel" name="phone" class="form-input" placeholder="+91 00000 00000"
-                  value="{{ old('phone', $customer->phone) }}">
-                @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                <input type="tel" name="mobile" class="form-input" placeholder="+91 00000 00000"
+                  value="{{ old('mobile', $customer->mobile) }}">
+                @error('mobile') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
               </div>
               <div>
                 <label class="form-label">City</label>
