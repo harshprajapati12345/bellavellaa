@@ -234,6 +234,11 @@
                       data-id="{{ $r->id }}" data-type="reviews" title="View">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     </button>
+                    <a href="{{ route('reviews.edit', $r->id) }}"
+                      class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-black transition-all flex items-center justify-center"
+                      title="Edit">
+                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </a>
                     <button onclick="handleAction('feature', {{ $r->id }})" title="Toggle Featured"
                       class="w-8 h-8 rounded-lg border {{ ($r->is_featured ?? false) ? 'border-amber-300 bg-amber-50 text-amber-500' : 'border-gray-200 text-gray-400' }} hover:bg-amber-50 hover:text-amber-500 hover:border-amber-300 transition-all flex items-center justify-center">
                       <i data-lucide="award" class="w-3.5 h-3.5"></i>

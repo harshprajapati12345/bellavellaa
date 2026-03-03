@@ -160,11 +160,9 @@
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex items-center justify-end gap-1.5">
-                    <button type="button" title="View Booking"
-                      class="view-drawer-btn w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-black transition-all flex items-center justify-center"
-                      data-title="Booking #{{ $b->id }} - {{ $b->customer_name ?? $b->customer }}"
-                      data-description="Service: {{ $b->service_name ?? $b->service }} {{ $b->package ? '(Package: ' . $b->package . ')' : '' }}\nCity: {{ $b->city ?? '—' }}\nSlot: {{ $b->slot ?? '—' }}"
-                      data-created="{{ $b->date ? \Carbon\Carbon::parse($b->date)->format('d M Y') : '—' }}">
+                    <button type="button" title="View Details"
+                      class="view-btn w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-black transition-all flex items-center justify-center"
+                      data-type="assign" data-id="{{ $b->id }}">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     </button>
                     @if($b->status === 'Unassigned' || $b->status === 'Assigned')
@@ -216,17 +214,11 @@
 
   </div>
 
-  </div>
-  </div>
-
-  </div>
-  </div>
-
   <!-- ── ASSIGN PROFESSIONAL DRAWER ────────────────────────────────────────── -->
-  <div id="drawer-backdrop" class="fixed inset-0 z-50 hidden bg-black/30 backdrop-blur-sm" onclick="closeAssignDrawer()">
+  <div id="drawer-backdrop" class="fixed inset-0 z-[100] hidden bg-black/30 backdrop-blur-sm transition-opacity duration-300" onclick="closeAssignDrawer()">
   </div>
   <div id="drawer-panel"
-    class="drawer-panel closed fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+    class="drawer-panel closed fixed top-0 right-0 h-full w-full max-w-md bg-white z-[110] shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
 
     <div class="px-6 pt-6 pb-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
       <div>
@@ -316,6 +308,10 @@
 
     .table-row:hover {
       background: #fafafa;
+    }
+
+     .drawer-panel {
+      transition: transform 0.3s ease-in-out;
     }
 
     .drawer-panel.closed {

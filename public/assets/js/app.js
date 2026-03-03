@@ -307,6 +307,22 @@ function renderSidebarData(type, data) {
           ${renderField('Status', data.status, 'check-circle')}
       </div>
     `;
+  } else if (type === 'assign') {
+    html = `
+      <div class="flex flex-col items-center text-center p-6 bg-gray-50 rounded-3xl mb-6">
+          <img src="${data.customer_avatar || 'https://i.pravatar.cc/64?img=' + (data.id % 50)}" class="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-lg mb-4">
+          <h4 class="text-lg font-bold text-gray-900">${data.customer_name}</h4>
+          <span class="px-3 py-1 bg-black text-white text-[10px] font-bold rounded-full uppercase tracking-widest mt-2">${data.status}</span>
+      </div>
+      <div class="grid grid-cols-1 gap-4">
+          ${renderField('Service', data.service_name + (data.package_name ? ' (' + data.package_name + ')' : ''), 'scissors')}
+          ${renderField('Professional', data.professional_name, 'user')}
+          ${renderField('Date & Slot', data.date + ' @ ' + data.slot, 'calendar')}
+          ${renderField('City', data.city, 'map-pin')}
+          ${renderField('Price', '₹' + data.price, 'indian-rupee')}
+          ${renderField('Payment', data.payment_status, 'credit-card')}
+      </div>
+    `;
   }
 
   sidebarData.innerHTML = html;

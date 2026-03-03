@@ -80,6 +80,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::resource('media', MediaController::class);
 
     Route::get('/assign', [AssignController::class, 'index'])->name('assign.index');
+    Route::get('/assign/{id}', [AssignController::class, 'show'])->name('assign.show');
     Route::post('/assign/update', [AssignController::class, 'update'])->name('assign.update');
     Route::post('/assign/auto', [AssignController::class, 'autoAssign'])->name('assign.auto');
 

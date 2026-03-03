@@ -76,6 +76,29 @@ class ReviewController extends Controller
         ]);
     }
 
+    public function edit(Review $review)
+    {
+        return view('reviews.edit', compact('review'));
+    }
+
+    public function update(Request $request, Review $review)
+    {
+        $request->validate([
+            'customer_name' => 'required|string|max:255',
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string',
+        ]);
+
+        $review->update([
+            'customer_name' => $request->customer_name,
+            'rating'        => $request->rating,
+            'comment'       => $request->comment,
+            'status'        => $request->has('status') ? 'Approved' : 'Pending',
+        ]);
+
+        return redirect()->route('reviews.index')->with('success', 'Review updated successfully!');
+    }
+
     public function destroy(Review $review)
     {
         $review->delete();

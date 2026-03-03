@@ -11,12 +11,11 @@
       <div class="px-8 pt-7 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="space-y-5">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label><input type="text" name="customer_name" value="{{ old('customer_name', $review->customer_name) }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all" required></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Service</label><input type="text" name="service_name" value="{{ old('service_name', $review->service_name) }}" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all"></div>
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Rating</label><select name="rating" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all cursor-pointer">@for($i=5;$i>=1;$i--)<option value="{{ $i }}" {{ $review->rating == $i ? 'selected' : '' }}>{{ $i }} ★</option>@endfor</select></div>
         </div>
         <div class="space-y-5">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Comment</label><textarea name="comment" rows="5" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all resize-none">{{ old('comment', $review->comment) }}</textarea></div>
-          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="status" {{ $review->status === 'Published' ? 'checked' : '' }} class="w-4 h-4 accent-black"><span class="text-sm text-gray-700">Published</span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="status" {{ $review->status === 'Approved' ? 'checked' : '' }} class="w-4 h-4 accent-black"><span class="text-sm text-gray-700">Published / Approved</span></label>
         </div>
       </div>
     </div>

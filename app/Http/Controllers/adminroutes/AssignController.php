@@ -72,4 +72,26 @@ class AssignController extends Controller
             'professional_name' => $professional->name
         ]);
     }
+
+    public function show($id)
+    {
+        $booking = Booking::with(['customer', 'service', 'package', 'professional'])->findOrFail($id);
+
+        return response()->json([
+            'id'                  => $booking->id,
+            'status'              => $booking->status,
+            'city'                => $booking->city ?? '—',
+            'date'                => $booking->date ? \Carbon\Carbon::parse($booking->date)->format('d M Y') : '—',
+            'slot'                => $booking->slot ?? '—',
+            'customer_name'       => $booking->customer->name ?? $booking->customer_name ?? 'Guest',
+            'customer_avatar'     => $booking->customer->avatar ?? null,
+            'customer_phone'      => $booking->customer->phone ?? '—',
+            'service_name'        => $booking->service->name ?? $booking->service_name ?? '—',
+            'package_name'        => $booking->package->name ?? $booking->package_name ?? null,
+            'professional_name'   => $booking->professional->name ?? $booking->professional_name ?? 'Not Assigned',
+            'professional_avatar' => $booking->professional->avatar ?? null,
+            'price'               => $booking->total_amount ?? $booking->service->price ?? '0.00',
+            'payment_status'      => $booking->payment_status ?? 'Pending',
+        ]);
+    }
 }
