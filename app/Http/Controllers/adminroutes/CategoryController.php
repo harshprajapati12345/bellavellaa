@@ -12,19 +12,24 @@ class CategoryController extends Controller
     {
         $categories = Category::withCount(['services', 'bookings'])->get();
 
-        $totalCats     = $categories->count();
-        $totalSvcs     = $categories->sum('services_count');
+        $totalCats = $categories->count();
+        $totalSvcs = $categories->sum('services_count');
         $totalBookings = $categories->sum('bookings_count');
-        $totalActive   = $categories->where('status', 'Active')->count();
-        $topCategory   = $categories->sortByDesc('bookings_count')->first();
+        $totalActive = $categories->where('status', 'Active')->count();
+        $topCategory = $categories->sortByDesc('bookings_count')->first();
 
         return view('categories.index', compact(
-            'categories', 'totalCats', 'totalSvcs', 'totalBookings', 'totalActive', 'topCategory'
+            'categories',
+            'totalCats',
+            'totalSvcs',
+            'totalBookings',
+            'totalActive',
+            'topCategory'
         ));
     }
 
     public function create()
-    {   
+    {
         return view('categories.create');
     }
 
@@ -37,17 +42,16 @@ class CategoryController extends Controller
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('categories', 'public');
-            $imagePath = asset('storage/' . $imagePath);
         }
 
         Category::create([
-            'name'        => $request->name,
-            'slug'        => Str::slug($request->name),
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
             'description' => $request->description,
-            'status'      => $request->has('status') ? 'Active' : 'Inactive',
-            'featured'    => $request->has('featured') ? 1 : 0,
-            'color'       => $request->color ?? '#000000',
-            'image'       => $imagePath,
+            'status' => $request->has('status') ? 'Active' : 'Inactive',
+            'featured' => $request->has('featured') ? 1 : 0,
+            'color' => $request->color ?? '#000000',
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('categories.index')
@@ -57,14 +61,14 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         $category->loadCount('services');
-        
+
         return response()->json([
             'id' => $category->id,
             'name' => $category->name,
             'services_count' => $category->services_count,
             'status' => $category->status,
             'slug' => $category->slug,
-            'image' => $category->image ? (str_starts_with($category->image, 'http') ? $category->image : asset('storage/'.$category->image)) : 'https://images.unsplash.com/photo-1596704017254-9b1b1b9e07f9?auto=format&fit=crop&w=400&q=80',
+            'image' => $category->image ? (str_starts_with($category->image, 'http') ? $category->image : asset('storage/' . $category->image)) : 'https://images.unsplash.com/photo-1596704017254-9b1b1b9e07f9?auto=format&fit=crop&w=400&q=80',
         ]);
     }
 
@@ -81,18 +85,17 @@ class CategoryController extends Controller
 
         $imagePath = $category->image;
         if ($request->hasFile('image')) {
-            $stored    = $request->file('image')->store('categories', 'public');
-            $imagePath = asset('storage/' . $stored);
+            $imagePath = $request->file('image')->store('categories', 'public');
         }
 
         $category->update([
-            'name'        => $request->name,
-            'slug'        => Str::slug($request->name),
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
             'description' => $request->description,
-            'status'      => $request->has('status') ? 'Active' : 'Inactive',
-            'featured'    => $request->has('featured') ? 1 : 0,
-            'color'       => $request->color ?? $category->color,
-            'image'       => $imagePath,
+            'status' => $request->has('status') ? 'Active' : 'Inactive',
+            'featured' => $request->has('featured') ? 1 : 0,
+            'color' => $request->color ?? $category->color,
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('categories.index')
@@ -102,6 +105,9 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $category->delete();
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
         return redirect()->route('categories.index')
             ->with('success', 'Category deleted.');
     }
