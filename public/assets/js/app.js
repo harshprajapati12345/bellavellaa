@@ -166,20 +166,71 @@ function renderSidebarData(type, data) {
       </div>
     `;
   } else if (type === 'packages') {
+    const finalPrice = data.price.replace(/,/g, '');
+    const discount = data.discount || 0;
+    const durationHrs = Math.floor(data.duration / 60);
+    const durationMins = data.duration % 60;
+    const durationStr = (durationHrs > 0 ? durationHrs + 'h ' : '') + (durationMins > 0 ? durationMins + 'm' : (durationHrs === 0 ? '0m' : ''));
+
     html = `
-      <div class="rounded-3xl overflow-hidden h-48 mb-6 bg-gray-100 border border-gray-100">
-          <img src="${data.image}" class="w-full h-full object-cover">
-      </div>
-      <h4 class="text-xl font-bold text-gray-900 mb-2">${data.name}</h4>
-      <div class="grid grid-cols-1 gap-4 mt-6">
-          ${renderField('Price', '₹' + data.price, 'indian-rupee')}
-          ${renderField('Status', data.status, 'check-circle')}
-          <div class="pt-4 mt-4 border-t border-gray-100">
-              <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Included Services</p>
-              <div class="flex flex-wrap gap-2">
-                  ${data.services.map(s => `<span class="px-3 py-1.5 bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl border border-gray-100">${s}</span>`).join('')}
-              </div>
+      <div class="rounded-3xl overflow-hidden h-48 mb-6 bg-gray-100 border border-gray-100 shadow-inner group relative">
+          <img src="${data.image}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div class="absolute bottom-4 left-5 right-5">
+            <span class="px-2 py-0.5 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold rounded-full uppercase tracking-widest border border-white/20">Package</span>
+            <h4 class="text-xl font-bold text-white mt-1 leading-tight">${data.name}</h4>
           </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+          <!-- Pricing Card -->
+          <div class="p-5 rounded-3xl bg-gray-900 text-white shadow-xl shadow-gray-200">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Package Price</p>
+                <div class="flex items-baseline gap-2">
+                  <span class="text-3xl font-black">₹${data.final_price}</span>
+                  ${discount > 0 ? `<span class="text-sm text-gray-400 line-through">₹${data.price}</span>` : ''}
+                </div>
+              </div>
+              ${discount > 0 ? `<span class="px-2 py-1 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase">${discount}% OFF</span>` : ''}
+            </div>
+            <div class="flex items-center gap-4 text-xs font-medium text-gray-300 pt-4 border-t border-white/10">
+              <div class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${durationStr}</div>
+              <div class="flex items-center gap-1.5"><i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i> ${data.status}</div>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Included Services</p>
+            <div class="flex flex-wrap gap-2">
+                ${data.services.map(s => `<span class="px-3 py-2 bg-gray-50 text-gray-700 text-xs font-bold rounded-2xl border border-gray-100 flex items-center gap-2 transition-colors hover:bg-gray-100"><i data-lucide="sparkles" class="w-3 h-3 text-gray-400"></i> ${s}</span>`).join('')}
+            </div>
+          </div>
+
+          ${data.description ? `
+          <div class="pt-4 border-t border-gray-100 mt-2">
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Package Description</p>
+              ${data.desc_title ? `<h5 class="text-sm font-bold text-gray-900 mb-2 leading-snug">${data.desc_title}</h5>` : ''}
+              <div class="text-sm text-gray-600 leading-relaxed prose prose-sm max-w-none">
+                ${data.description}
+              </div>
+              ${data.desc_image ? `<img src="${data.desc_image}" class="w-full h-32 object-cover rounded-2xl mt-4 border border-gray-100 shadow-sm">` : ''}
+          </div>
+          ` : ''}
+
+          ${data.aftercare_content ? `
+          <div class="pt-6 border-t border-gray-100 mt-2">
+              <div class="flex items-center gap-2 mb-3 ml-1">
+                <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-500"></i>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aftercare Instructions</p>
+              </div>
+              <div class="p-5 rounded-3xl bg-rose-50/50 border border-rose-100/50 text-sm text-gray-700 leading-relaxed">
+                ${data.aftercare_content}
+              </div>
+              ${data.aftercare_image ? `<img src="${data.aftercare_image}" class="w-full h-32 object-cover rounded-2xl mt-4 border border-gray-100 shadow-sm">` : ''}
+          </div>
+          ` : ''}
       </div>
     `;
   } else if (type === 'offers') {

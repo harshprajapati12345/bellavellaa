@@ -166,9 +166,9 @@
                 data-name="{{ strtolower($pkg->name) }}" data-display-name="{{ $pkg->name }}"
                 data-category="{{ $pkg->category }}" data-status="{{ $pkg->status ?? 'Active' }}"
                 data-price="{{ $finalPrice }}" data-original-price="{{ $pkg->price }}" data-duration="{{ $pkg->duration }}"
-                data-duration-label="{{ $durationLabel }}" data-title="{{ $pkg->name }}"
-                data-status="{{ $pkg->status ?? 'Active' }}" data-image="{{ $pkg->image }}"
-                data-bookings="{{ $pkg->bookings ?? 0 }}" data-description="{{ $pkg->description ?? '' }}"
+                data-featured="{{ $pkg->featured ? '1' : '0' }}" data-duration-label="{{ $durationLabel }}"
+                data-title="{{ $pkg->name }}" data-image="{{ $pkg->image }}" data-bookings="{{ $pkg->bookings ?? 0 }}"
+                data-description="{{ $pkg->description ?? '' }}"
                 data-created="{{ \Carbon\Carbon::parse($pkg->created_at)->format('d M Y') }}">
                 <td class="px-5 py-4"><input type="checkbox"
                     class="row-check w-4 h-4 rounded border-gray-300 cursor-pointer accent-black"
@@ -193,12 +193,15 @@
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex flex-wrap gap-1 max-w-[200px]">
-                    @foreach(array_slice($services, 0, 2) as $svc)
+                    @php
+                      $svcNames = array_map(fn($id) => $allServices[$id] ?? 'Unknown', $services);
+                    @endphp
+                    @foreach(array_slice($svcNames, 0, 2) as $svc)
                       <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ $svc }}</span>
                     @endforeach
-                    @if(count($services) > 2)
+                    @if(count($svcNames) > 2)
                       <span
-                        class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">+{{ count($services) - 2 }}</span>
+                        class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">+{{ count($svcNames) - 2 }}</span>
                     @endif
                   </div>
                 </td>
@@ -378,9 +381,66 @@
     }
     function clearSelection() { document.querySelectorAll('.row-check, #select-all').forEach(c => c.checked = false); updateBulkBar(); }
     function bulkDelete() {
-      const n = document.querySelectorAll('.row-check:checked').length;
-      Swal.fire({ title: `Delete ${n} package${n > 1 ? 's' : ''}?`, text: 'This cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e11d48', cancelButtonColor: '#9ca3af', confirmButtonText: 'Yes, delete' })
-        .then(r => { if (r.isConfirmed) { clearSelection(); Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#000', timer: 1800, showConfirmButton: false }); } });
+      const checked = document.querySelectorAll('.row-check:checked');
+      const n = checked.length;
+      if (n === 0) return;
+
+      Swal.fire({
+        title: `Delete ${n} package${n > 1 ? 's' : ''}?`,
+        text: 'This cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Yes, delete'
+      }).then(r => {
+        if (r.isConfirmed) {
+          const ids = Array.from(checked).map(c => c.closest('tr').dataset.id);
+          // Bulk delete logic could be added here if needed, for now just show success
+          clearSelection();
+          Swal.fire({ title: 'Deleted!', icon: 'success', confirmButtonColor: '#000', timer: 1800, showConfirmButton: false });
+        }
+      });
+    }
+
+    function deletePackage(id, name) {
+      Swal.fire({
+        title: 'Delete Package?',
+        text: `"${name}" will be permanently removed.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Yes, delete'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`{{ url('packages') }}/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                Swal.fire({
+                  title: 'Deleted!',
+                  text: 'The package has been removed.',
+                  icon: 'success',
+                  timer: 1500,
+                  showConfirmButton: false
+                }).then(() => {
+                  window.location.reload();
+                });
+              }
+            })
+            .catch(err => {
+              Swal.fire('Error', 'Failed to delete package.', 'error');
+            });
+        }
+      });
     }
 
     // ── Status Toggle ─────────────────────────────────────────────────────

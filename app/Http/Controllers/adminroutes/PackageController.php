@@ -11,13 +11,20 @@ class PackageController extends Controller
     public function index()
     {
         $packages = Package::all();
-        $totalPackages  = $packages->count();
+        $allServices = Service::all()->pluck('name', 'id');
+
+        $totalPackages = $packages->count();
         $activePackages = $packages->where('status', 'Active')->count();
-        $totalBookings  = $packages->sum('bookings');
-        $topPackage     = $packages->sortByDesc('bookings')->first();
+        $totalBookings = $packages->sum('bookings');
+        $topPackage = $packages->sortByDesc('bookings')->first();
 
         return view('packages.index', compact(
-            'packages', 'totalPackages', 'activePackages', 'totalBookings', 'topPackage'
+            'packages',
+            'totalPackages',
+            'activePackages',
+            'totalBookings',
+            'topPackage',
+            'allServices'
         ));
     }
 
@@ -53,20 +60,20 @@ class PackageController extends Controller
         }
 
         Package::create([
-            'name'              => $request->name,
-            'category'          => $request->category,
-            'services'          => $request->service_ids, // Cast handles array to JSON
-            'price'             => $request->package_price,
-            'discount'          => $request->discount ?? 0,
-            'duration'          => $request->duration ?? 0,
-            'description'       => $request->desc_content,
-            'desc_title'        => $request->desc_title,
-            'desc_image'        => $descImagePath,
+            'name' => $request->name,
+            'category' => $request->category,
+            'services' => $request->service_ids, // Cast handles array to JSON
+            'price' => $request->package_price,
+            'discount' => $request->discount ?? 0,
+            'duration' => $request->duration ?? 0,
+            'description' => $request->desc_content,
+            'desc_title' => $request->desc_title,
+            'desc_image' => $descImagePath,
             'aftercare_content' => $request->aftercare_content,
-            'aftercare_image'   => $afterImagePath,
-            'status'            => $request->form_action === 'publish' ? 'Active' : 'Inactive',
-            'featured'          => $request->has('featured') ? 1 : 0,
-            'image'             => $imagePath,
+            'aftercare_image' => $afterImagePath,
+            'status' => $request->form_action === 'publish' ? 'Active' : 'Inactive',
+            'featured' => $request->has('featured') ? 1 : 0,
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('packages.index')->with('success', 'Package created successfully!');
@@ -74,15 +81,24 @@ class PackageController extends Controller
 
     public function show(Package $package)
     {
-        $services = is_array($package->services) ? $package->services : (is_string($package->services) ? json_decode($package->services, true) ?? [] : []);
-        
+        $serviceIds = is_array($package->services) ? $package->services : (is_string($package->services) ? json_decode($package->services, true) ?? [] : []);
+        $serviceNames = Service::whereIn('id', $serviceIds)->pluck('name')->toArray();
+
         return response()->json([
             'id' => $package->id,
             'name' => $package->name,
-            'services' => $services,
+            'services' => $serviceNames,
             'price' => number_format($package->price),
+            'discount' => $package->discount,
+            'final_price' => number_format($package->price - ($package->price * ($package->discount / 100))),
+            'duration' => $package->duration,
             'status' => $package->status,
-            'image' => $package->image ? (str_starts_with($package->image, 'http') ? $package->image : asset('storage/'.$package->image)) : 'https://images.unsplash.com/photo-1596704017254-9b1b1b9e07f9?auto=format&fit=crop&w=400&q=80',
+            'description' => $package->description,
+            'desc_title' => $package->desc_title,
+            'desc_image' => $package->desc_image,
+            'aftercare_content' => $package->aftercare_content,
+            'aftercare_image' => $package->aftercare_image,
+            'image' => $package->image ? (str_starts_with($package->image, 'http') ? $package->image : asset('storage/' . $package->image)) : 'https://images.unsplash.com/photo-1596704017254-9b1b1b9e07f9?auto=format&fit=crop&w=400&q=80',
         ]);
     }
 
@@ -115,20 +131,20 @@ class PackageController extends Controller
         }
 
         $package->update([
-            'name'              => $request->name,
-            'category'          => $request->category,
-            'services'          => $request->service_ids ?? $package->services,
-            'price'             => $request->package_price ?? $package->price,
-            'discount'          => $request->discount ?? $package->discount,
-            'duration'          => $request->duration ?? $package->duration,
-            'description'       => $request->desc_content ?? $package->description,
-            'desc_title'        => $request->desc_title ?? $package->desc_title,
-            'desc_image'        => $descImagePath,
+            'name' => $request->name,
+            'category' => $request->category,
+            'services' => $request->service_ids ?? $package->services,
+            'price' => $request->package_price ?? $package->price,
+            'discount' => $request->discount ?? $package->discount,
+            'duration' => $request->duration ?? $package->duration,
+            'description' => $request->desc_content ?? $package->description,
+            'desc_title' => $request->desc_title ?? $package->desc_title,
+            'desc_image' => $descImagePath,
             'aftercare_content' => $request->aftercare_content ?? $package->aftercare_content,
-            'aftercare_image'   => $afterImagePath,
-            'status'            => $request->form_action === 'publish' ? 'Active' : 'Inactive',
-            'featured'          => $request->has('featured') ? 1 : 0,
-            'image'             => $imagePath,
+            'aftercare_image' => $afterImagePath,
+            'status' => $request->form_action === 'publish' ? 'Active' : 'Inactive',
+            'featured' => $request->has('featured') ? 1 : ($request->has('featured_hidden') ? 0 : $package->featured),
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('packages.index')->with('success', 'Package updated successfully!');
@@ -143,6 +159,9 @@ class PackageController extends Controller
     public function destroy(Package $package)
     {
         $package->delete();
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
         return redirect()->route('packages.index')->with('success', 'Package deleted.');
     }
 }
