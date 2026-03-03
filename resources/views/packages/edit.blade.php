@@ -93,8 +93,8 @@
                   <p class="text-sm font-medium text-gray-600">Click to upload or drag &amp; drop</p>
                   <p class="text-xs text-gray-400 mt-1">Leave empty to keep current</p>
                 </div>
-                <input type="file" name="package_image" id="packageImageInput" accept="image/*" class="hidden"
-                  onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
+                <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
+                onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
               </div>
               <div class="relative mt-3 {{ $package->image ? '' : 'hidden' }}" id="packageImgPreviewWrap">
                 <img id="packageImgPreview" class="w-full h-44 object-cover rounded-2xl border border-gray-100 shadow-sm"
@@ -548,14 +548,14 @@
         const row = document.createElement('div');
         row.className = 'flex items-center gap-3 px-4 py-3.5 border border-gray-100 rounded-2xl bg-white hover:border-gray-200 transition-all';
         row.innerHTML = `
-            <div class="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 text-xs font-bold text-gray-400">${idx + 1}</div>
-            <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${svc.name}</p></div>
-            <div class="w-24 text-center"><span class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">${svc.duration} min</span></div>
-            <div class="w-28 text-right"><span class="text-sm font-bold text-gray-700">₹${svc.price.toLocaleString('en-IN')}</span></div>
-            <button type="button" onclick="removeSelectedService(${svc.id})" class="w-8 h-8 rounded-xl border border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            </button>
-          `;
+              <div class="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 text-xs font-bold text-gray-400">${idx + 1}</div>
+              <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">${svc.name}</p></div>
+              <div class="w-24 text-center"><span class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">${svc.duration} min</span></div>
+              <div class="w-28 text-right"><span class="text-sm font-bold text-gray-700">₹${svc.price.toLocaleString('en-IN')}</span></div>
+              <button type="button" onclick="removeSelectedService(${svc.id})" class="w-8 h-8 rounded-xl border border-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            `;
         list.appendChild(row);
       });
     }

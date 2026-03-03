@@ -18,7 +18,8 @@
     @if(session('success'))
       <div
         class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-4 rounded-2xl text-sm font-medium shadow-sm">
-        <i data-lucide="check-circle" class="w-5 h-5"></i> Category updated successfully!</div>
+        <i data-lucide="check-circle" class="w-5 h-5"></i> Category updated successfully!
+      </div>
     @endif
     @if($errors->any())
       <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl text-sm shadow-sm">
@@ -60,7 +61,7 @@
                     <i data-lucide="image-plus" class="w-5 h-5 text-gray-400"></i>
                   </div>
                   <p class="text-sm font-medium text-gray-600">Change image</p>
-                  <input type="file" name="image" accept="image/*" class="hidden" onchange="previewImage(this)">
+                  <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
                 </label>
                 <div class="w-40 h-40 relative group overflow-hidden rounded-[2.2rem]">
                   <img id="img-preview"
@@ -106,25 +107,25 @@
 
 @push('scripts')
   <script>
+        }
+    reader.readAsDataURL(input.files[0]);
       }
-      reader.readAsDataURL(input.files[0]);
     }
-  }
 
-  function handleDelete() {
-    Swal.fire({
-      title: 'Delete Category?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#e11d48',
-      cancelButtonColor: '#9ca3af',
-      confirmButtonText: 'Yes, delete it'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        document.getElementById('delete-cat-form').submit();
-      }
-    });
-  }
-</script>
+    function handleDelete() {
+      Swal.fire({
+        title: 'Delete Category?',
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#9ca3af',
+        confirmButtonText: 'Yes, delete it'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          document.getElementById('delete-cat-form').submit();
+        }
+      });
+    }
+  </script>
 @endpush

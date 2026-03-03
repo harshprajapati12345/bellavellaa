@@ -51,9 +51,9 @@
             </div>
           </div>
           <div class="space-y-5">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Image</label><input type="file" name="image"
-                accept="image/*"
-                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
+            <div><label class="block text-sm font-medium text-gray-700">Image</label><input type="file" name="image"
+                class="hidden" onchange="previewImage(this)" accept="image/*">
+              class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
             </div>
             <div><label class="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea
                 name="description" rows="4"
