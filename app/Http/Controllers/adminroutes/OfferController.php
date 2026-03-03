@@ -10,7 +10,7 @@ class OfferController extends Controller
     public function index()
     {
         $offers = Offer::all();
-        $total  = $offers->count();
+        $total = $offers->count();
         $active = $offers->where('status', 'Active')->count();
 
         return view('offers.index', compact('offers', 'total', 'active'));
@@ -23,23 +23,23 @@ class OfferController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['title' => 'required|string|max:255']);
+        $request->validate(['name' => 'required|string|max:255']);
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $stored = $request->file('image')->store('offers', 'public');
-            $imagePath = asset('storage/' . $stored);
+            $imagePath = $request->file('image')->store('offers', 'public');
         }
 
         Offer::create([
-            'title'       => $request->title,
+            'name' => $request->name,
             'description' => $request->description,
-            'discount'    => $request->discount ?? 0,
-            'code'        => $request->code,
-            'start_date'  => $request->start_date,
-            'end_date'    => $request->end_date,
-            'status'      => $request->has('status') ? 'Active' : 'Inactive',
-            'image'       => $imagePath,
+            'discount_value' => $request->discount_value ?? 0,
+            'discount_type' => $request->discount_type ?? 'percentage',
+            'code' => $request->code,
+            'valid_from' => $request->valid_from,
+            'valid_until' => $request->valid_until,
+            'status' => $request->has('status') ? 'Active' : 'Inactive',
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('offers.index')->with('success', 'Offer created successfully!');
@@ -49,14 +49,14 @@ class OfferController extends Controller
     {
         return response()->json([
             'id' => $offer->id,
-            'title' => $offer->title,
+            'name' => $offer->name,
             'description' => strip_tags($offer->description ?? 'No description available.'),
-            'discount' => $offer->discount . '% OFF',
+            'discount' => ($offer->discount_type === 'percentage' ? $offer->discount_value . '%' : '₹' . $offer->discount_value) . ' OFF',
             'code' => $offer->code ?? 'NO CODE',
-            'start_date' => $offer->start_date ? \Carbon\Carbon::parse($offer->start_date)->format('d M Y') : '—',
-            'end_date' => $offer->end_date ? \Carbon\Carbon::parse($offer->end_date)->format('d M Y') : '—',
+            'usage' => $offer->usage_count ?? 0,
+            'valid_from' => $offer->valid_from ? \Carbon\Carbon::parse($offer->valid_from)->format('d M Y') : '—',
+            'valid_until' => $offer->valid_until ? \Carbon\Carbon::parse($offer->valid_until)->format('d M Y') : '—',
             'status' => $offer->status,
-            'image' => $offer->image ?: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=400&q=80',
         ]);
     }
 
@@ -67,23 +67,23 @@ class OfferController extends Controller
 
     public function update(Request $request, Offer $offer)
     {
-        $request->validate(['title' => 'required|string|max:255']);
+        $request->validate(['name' => 'required|string|max:255']);
 
         $imagePath = $offer->image;
         if ($request->hasFile('image')) {
-            $stored = $request->file('image')->store('offers', 'public');
-            $imagePath = asset('storage/' . $stored);
+            $imagePath = $request->file('image')->store('offers', 'public');
         }
 
         $offer->update([
-            'title'       => $request->title,
+            'name' => $request->name,
             'description' => $request->description,
-            'discount'    => $request->discount ?? $offer->discount,
-            'code'        => $request->code,
-            'start_date'  => $request->start_date,
-            'end_date'    => $request->end_date,
-            'status'      => $request->has('status') ? 'Active' : 'Inactive',
-            'image'       => $imagePath,
+            'discount_value' => $request->discount_value ?? $offer->discount_value,
+            'discount_type' => $request->discount_type ?? $offer->discount_type,
+            'code' => $request->code,
+            'valid_from' => $request->valid_from,
+            'valid_until' => $request->valid_until,
+            'status' => $request->has('status') ? 'Active' : 'Inactive',
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('offers.index')->with('success', 'Offer updated!');
