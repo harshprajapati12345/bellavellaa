@@ -270,12 +270,26 @@
       Swal.fire({ title: `Set to ${newStatus}?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#000', cancelButtonColor: '#9ca3af', confirmButtonText: `Yes, ${newStatus}` })
         .then(r => {
           if (!r.isConfirmed) { checkbox.checked = !checkbox.checked; return; }
-          fetch(`/categories/${id}/toggle-status`, {
+          fetch(`{{ url('categories') }}/${id}/toggle-status`, {
             method: 'PATCH',
-            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' }
-          }).then(() => {
-            Swal.fire({ title: 'Updated!', text: `Category is now ${newStatus}.`, icon: 'success', confirmButtonColor: '#000', timer: 1800, showConfirmButton: false });
-          });
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ status: newStatus })
+          }).then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                Swal.fire({ title: 'Updated!', text: `Category is now ${newStatus}.`, icon: 'success', confirmButtonColor: '#000', timer: 1800, showConfirmButton: false });
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) row.dataset.status = newStatus;
+              }
+            })
+            .catch(err => {
+              checkbox.checked = !checkbox.checked;
+              Swal.fire('Error', 'Failed to update status.', 'error');
+            });
         });
     }
 
