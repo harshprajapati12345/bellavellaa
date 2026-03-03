@@ -104,27 +104,32 @@
 
       {{-- Actions Row --}}
       <div class="flex items-center justify-between">
-        {{-- Delete button is a SEPARATE form — NOT nested inside the PUT form --}}
-        <form action="{{ route('offers.destroy', $offer->id) }}" method="POST" class="inline"
+        <div class="flex gap-3">
+          <a href="{{ route('offers.index') }}"
+            class="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium">Cancel</a>
+          <button type="submit"
+            class="px-6 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-all shadow-lg shadow-black/10">Update Offer</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="pt-6 border-t border-gray-100 mt-6">
+      <div class="bg-red-50/30 rounded-[2rem] p-8 border border-red-100/50 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h4 class="text-lg font-bold text-red-900">Danger Zone</h4>
+          <p class="text-sm text-red-600/70 mt-1">Once you delete an offer, it cannot be recovered. Please be certain.</p>
+        </div>
+        <form action="{{ route('offers.destroy', $offer->id) }}" method="POST"
           onsubmit="return confirm('Are you sure you want to delete this offer? This cannot be undone.')">
           @csrf
           @method('DELETE')
           <button type="submit"
-            class="px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-all text-sm font-medium flex items-center gap-2">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> Delete
+            class="px-6 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Offer Permanently
           </button>
         </form>
-
-        <div class="flex gap-3">
-          <a href="{{ route('offers.index') }}"
-            class="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium">Cancel</a>
-          {{-- This submit belongs to the outer PUT form --}}
-          <button type="submit" form="edit-offer-form"
-            class="px-6 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-all">Update Offer</button>
-        </div>
       </div>
-
-    </form>{{-- end PUT form --}}
+    </div>
 
   </div>
 

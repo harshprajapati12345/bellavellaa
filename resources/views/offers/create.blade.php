@@ -67,11 +67,12 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-end gap-3"><a href="{{ route('offers.index') }}"
-          class="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium">Cancel</a><button
-          type="submit"
-          class="px-6 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-all">Create
-          Offer</button></div>
+      <div class="flex justify-end gap-3">
+        <a href="{{ route('offers.index') }}"
+          class="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium">Cancel</a>
+        <button type="submit"
+          class="px-6 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-all shadow-lg shadow-black/10">Create Offer</button>
+      </div>
     </form>
   </div>
   @push('scripts')
