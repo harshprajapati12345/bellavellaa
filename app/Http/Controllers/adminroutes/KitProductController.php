@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\adminroutes;
 
+use App\Models\KitCategory;
 use App\Models\KitProduct;
 use Illuminate\Http\Request;
 
@@ -9,7 +10,7 @@ class KitProductController extends Controller
 {
     public function index()
     {
-        $products = KitProduct::all();
+        $products = KitProduct::with('category')->get();
         $totalItems = $products->count();
         $lowStockCount = $products->filter(fn($p) => $p->available_stock <= $p->min_stock && $p->available_stock > 0)->count();
         $outOfStockCount = $products->filter(fn($p) => $p->available_stock == 0)->count();
@@ -18,11 +19,18 @@ class KitProductController extends Controller
         return view('professionals.kit-products.index', compact('products', 'totalItems', 'lowStockCount', 'outOfStockCount', 'totalValue'));
     }
 
+    public function create()
+    {
+        $categories = KitCategory::all();
+        return view('professionals.kit-products.create', compact('categories'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'sku' => 'required|unique:kit_products',
             'name' => 'required',
+            'category_id' => 'required|exists:kit_categories,id',
             'total_stock' => 'required|integer|min:0',
         ]);
 
@@ -31,11 +39,18 @@ class KitProductController extends Controller
         return redirect()->route('kit-products.index')->with('success', 'Product added successfully.');
     }
 
+    public function edit(KitProduct $kitProduct)
+    {
+        $categories = KitCategory::all();
+        return view('professionals.kit-products.edit', compact('kitProduct', 'categories'));
+    }
+
     public function update(Request $request, KitProduct $kitProduct)
     {
         $validated = $request->validate([
             'sku' => 'required|unique:kit_products,sku,'.$kitProduct->id,
             'name' => 'required',
+            'category_id' => 'required|exists:kit_categories,id',
             'total_stock' => 'required|integer|min:0',
         ]);
 

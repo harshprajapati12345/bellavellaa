@@ -10,6 +10,22 @@ use Illuminate\Http\Request;
 class KitController extends BaseController
 {
     /**
+     * GET /api/professionals/my-kits
+     * List kit orders assigned to the authenticated professional
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        $orders = KitOrder::with('kitProduct')
+            ->where('professional_id', $professional->id)
+            ->orderBy('assigned_at', 'desc')
+            ->get();
+
+        return $this->success($orders, 'Your kit assignments retrieved.');
+    }
+
+    /**
      * GET /api/professionals/kit-store
      * View available kit products and inventory
      */

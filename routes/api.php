@@ -146,6 +146,7 @@ Route::prefix('professionals')->group(function () {
         Route::post('wallet/withdraw', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'withdraw']);
 
         // Kit Management
+        Route::get('my-kits', [\App\Http\Controllers\Api\Professionals\KitController::class, 'index']);
         Route::get('kit-store', [\App\Http\Controllers\Api\Professionals\KitController::class, 'store']);
         Route::post('kit-orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'order']);
 

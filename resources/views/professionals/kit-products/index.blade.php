@@ -93,6 +93,12 @@
                 <option value="low">Low Stock</option>
                 <option value="out">Out of Stock</option>
             </select>
+            <select id="filter-category" onchange="applyFilters()" class="bg-gray-50 border-none rounded-xl text-sm px-4 py-2 focus:ring-2 focus:ring-black/5 outline-none cursor-pointer">
+                <option value="">All Categories</option>
+                @foreach($products->pluck('category')->unique('id')->filter() as $cat)
+                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                @endforeach
+            </select>
             <select id="filter-status" onchange="applyFilters()" class="bg-gray-50 border-none rounded-xl text-sm px-4 py-2 focus:ring-2 focus:ring-black/5 outline-none cursor-pointer">
                 <option value="">All Statuses</option>
                 <option value="Active">Active</option>
@@ -143,7 +149,7 @@
                             data-name="{{ strtolower($p->name) }}"
                             data-sku="{{ strtolower($p->sku) }}"
                             data-brand="{{ strtolower($p->brand) }}"
-                            data-category="{{ $p->category }}"
+                            data-category="{{ $p->category_id }}"
                             data-stock="{{ $stockAttr }}"
                             data-status="{{ $p->status }}">
 
@@ -153,7 +159,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-semibold text-gray-900">{{ $p->name }}</span>
-                                    <span class="text-xs text-gray-400">{{ $p->brand }}</span>
+                                    <span class="text-xs text-gray-400">{{ $p->brand }} · {{ $p->category?->name ?? 'Uncategorized' }}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
@@ -219,6 +225,7 @@
     function applyFilters() {
         const q = document.getElementById('search-input').value.toLowerCase().trim();
         const stock = document.getElementById('filter-stock').value;
+        const category = document.getElementById('filter-category').value;
         const status = document.getElementById('filter-status').value;
         const rows = document.querySelectorAll('.product-row');
         let visible = 0;
@@ -226,9 +233,10 @@
         rows.forEach(row => {
             const nameMatch = !q || row.dataset.name.includes(q) || row.dataset.sku.includes(q) || row.dataset.brand.includes(q);
             const stockMatch = !stock || row.dataset.stock === stock;
+            const catMatch = !category || row.dataset.category === category;
             const statMatch = !status || row.dataset.status === status;
 
-            if (nameMatch && stockMatch && statMatch) {
+            if (nameMatch && stockMatch && catMatch && statMatch) {
                 row.classList.remove('hidden-row');
                 visible++;
             } else {

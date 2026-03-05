@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class KitProduct extends Model
 {
     protected $fillable = [
-        'sku', 'name', 'brand', 'category', 'unit', 'price', 
+        'sku', 'name', 'brand', 'category_id', 'unit', 'price', 
         'total_stock', 'min_stock', 'expiry_date', 'status', 'last_restocked'
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(KitCategory::class);
+    }
 
     public function kitOrders()
     {
