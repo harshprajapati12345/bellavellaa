@@ -149,7 +149,8 @@ class EarningsController extends BaseController
 
         return $this->success([
             'cash_balance'   => $cashWallet->balance / 100,
-            'coin_balance'   => $coinWallet->balance, // Coins shouldn't be divided by 100 ordinarily
+            'coin_balance'   => $coinWallet->balance,
+            'kit_count'      => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'active_balance' => $type === 'coin' ? $coinWallet->balance : ($cashWallet->balance / 100),
             'transactions'   => $transactions
         ], 'Wallet retrieved.');

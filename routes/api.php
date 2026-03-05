@@ -127,6 +127,7 @@ Route::prefix('professional')->group(function () {
 
         // Booking Requests
         Route::get('booking-requests', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'requests']);
+        Route::get('bookings', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'index']);
         Route::get('bookings/{id}', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'show']);
         Route::post('bookings/{id}/accept', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'accept']);
         Route::post('bookings/{id}/reject', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'reject']);

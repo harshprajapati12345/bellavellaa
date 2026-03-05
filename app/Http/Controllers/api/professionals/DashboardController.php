@@ -38,9 +38,10 @@ class DashboardController extends BaseController
             'todays_earnings'  => Booking::where('professional_id', $professional->id)
                                     ->where('date', $today)
                                     ->where('status', 'Completed')
-                                    ->sum('price'), // Approximate, proper earnings logic inside EarningsController
+                                    ->sum('price'),
             'total_earnings'   => $professional->earnings,
             'total_orders'     => $professional->orders,
+            'kit_count'        => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'rating'           => $professional->rating,
             'is_online'        => (bool) $professional->is_online,
         ], 'Dashboard summary retrieved.');
