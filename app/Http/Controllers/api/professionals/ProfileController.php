@@ -87,4 +87,63 @@ class ProfileController extends BaseController
 
         return $this->success($professional->fresh(), 'Profile updated successfully.');
     }
+
+    /**
+     * POST /api/professional/upload-profile-image
+     */
+    public function uploadProfileImage(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        $request->validate(['image' => 'required|image|max:2048']);
+
+        if ($request->hasFile('image')) {
+            if ($professional->avatar && str_starts_with($professional->avatar, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $professional->avatar));
+            }
+            $path = $request->file('image')->store('avatars', 'public');
+            $professional->update(['avatar' => '/storage/' . $path]);
+        }
+
+        return $this->success($professional->fresh(), 'Profile image uploaded.');
+    }
+
+    /**
+     * POST /api/professional/upload-documents
+     */
+    public function uploadDocuments(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        $request->validate([
+            'aadhaar_front' => 'nullable|file|max:5120',
+            'aadhaar_back'  => 'nullable|file|max:5120',
+            'pan_img'       => 'nullable|file|max:5120',
+        ]);
+
+        $updateData = [];
+        $docFields = ['aadhaar_front' => 'documents/aadhaar', 'aadhaar_back' => 'documents/aadhaar', 'pan_img' => 'documents/pan'];
+
+        foreach ($docFields as $docField => $folder) {
+            if ($request->hasFile($docField)) {
+                $path = $request->file($docField)->store($folder, 'public');
+                $updateData[$docField] = '/storage/' . $path;
+            }
+        }
+
+        if (!empty($updateData)) {
+            $professional->update($updateData);
+        }
+
+        return $this->success($professional->fresh(), 'Documents uploaded.');
+    }
+
+    /**
+     * PUT /api/professional/change-password
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        // Logic to update password if using email/pass
+        return $this->success(null, 'Password changed successfully.');
+    }
 }

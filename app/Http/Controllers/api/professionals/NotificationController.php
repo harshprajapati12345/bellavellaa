@@ -24,22 +24,44 @@ class NotificationController extends BaseController
     }
 
     /**
-     * POST /api/professionals/notifications/read
-     * Mark notifications as read
+     * POST /api/professional/notifications/{id}/read
      */
-    public function markAsRead(Request $request): JsonResponse
+    public function read(Request $request, $id): JsonResponse
     {
         $professional = $request->user('professional-api');
         
-        $validated = $request->validate([
-            'notification_ids' => 'required|array',
-            'notification_ids.*' => 'integer|exists:professional_notifications,id',
-        ]);
-
-        ProfessionalNotification::whereIn('id', $validated['notification_ids'])
+        ProfessionalNotification::where('id', $id)
             ->where('professional_id', $professional->id)
             ->update(['read_at' => now()]);
 
-        return $this->success(null, 'Notifications marked as read.');
+        return $this->success(null, 'Notification marked as read.');
+    }
+
+    /**
+     * POST /api/professional/notifications/read-all
+     */
+    public function readAll(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        ProfessionalNotification::where('professional_id', $professional->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return $this->success(null, 'All notifications marked as read.');
+    }
+
+    /**
+     * DELETE /api/professional/notifications/{id}
+     */
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        ProfessionalNotification::where('id', $id)
+            ->where('professional_id', $professional->id)
+            ->delete();
+
+        return $this->success(null, 'Notification deleted.');
     }
 }

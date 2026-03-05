@@ -1,256 +1,145 @@
-# Professional App API - Postman Guide
+# Bellavella Professional API — Postman Guide
 
-**Base URL:** `http://127.0.0.1:8000/api/professionals`
+This guide provides a professional overview of the APIs used by the Bellavella Professionals Mobile Application.
 
-All successful responses return a 200 OK status code. Errors return 4xx or 500 status codes.
+## 1. Environment Configuration
 
----
+Set up these variables in your Postman environment:
 
-## 1. Authentication
+| Variable | Value | Description |
+| :--- | :--- | :--- |
+| `base_url` | `http://localhost:8000/api/professional` | The root URL for professional APIs |
+| `token` | `eyJ0eXAiOiJKV1Q...` | JWT access token obtained after login |
 
-### Send OTP
-Generates and sends an OTP to the professional's mobile number.
-- **Method:** `POST`
-- **URL:** `/auth/send-otp`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "mobile": "9876543210"
-  }
-  ```
-
-### Verify OTP
-Verifies the OTP and logs the professional in. If the mobile number doesn't exist, it prompts them to sign up.
-- **Method:** `POST`
-- **URL:** `/auth/verify-otp`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "mobile": "9876543210",
-      "otp": "1234"
-  }
-  ```
-- **Response:** If it's a new user, `is_new_user` will be true and no `access_token` is provided. If it's an existing user, it returns the `access_token`.
-
-### Signup (New Professional Registration)
-Completes the registration process for a verified mobile number.
-- **Method:** `POST`
-- **URL:** `/auth/signup`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "mobile": "9876543210",
-      "name": "Jane Does",
-      "category": "Hair Stylist",
-      "city": "Mumbai"
-  }
-  ```
-- **Response:** Returns the professional's data and an `access_token`.
-
-### Get Current User Profile (Me)
-- **Method:** `GET`
-- **URL:** `/auth/me`
-- **Headers:** `Authorization: Bearer <your_access_token>`
-
-### Get Verification Status
-Returns the verification status of the currently authenticated professional (`Pending`, `Verified`, `Rejected`).
-- **Method:** `GET`
-- **URL:** `/auth/status`
-- **Headers:** `Authorization: Bearer <your_access_token>`
-
-### Refresh Token
-Refresh the JWT token.
-- **Method:** `POST`
-- **URL:** `/auth/refresh`
-- **Headers:** `Authorization: Bearer <your_access_token>`
-
-### Logout
-Invalidate the current token.
-- **Method:** `POST`
-- **URL:** `/auth/logout`
-- **Headers:** `Authorization: Bearer <your_access_token>`
+### Global Headers
+All protected requests MUST include:
+- `Accept: application/json`
+- `Authorization: Bearer {{token}}`
 
 ---
 
-## 2. Profile Management
+## 2. Authentication Flow
 
-All endpoints require: `Authorization: Bearer <your_access_token>`
+### A. Send OTP
+Request a 4-digit OTP for login.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/send-otp`
+- **Body** (JSON):
+```json
+{
+  "mobile": "9876543210"
+}
+```
+- **Note**: In non-production environments, the OTP is returned in `otp_debug`.
+
+### B. Verify OTP / Login
+Verify the OTP to obtain a JWT token.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/verify-otp`
+- **Body** (JSON):
+```json
+{
+  "mobile": "9876543210",
+  "otp": "1234"
+}
+```
+- **Response**: Returns `access_token` and `user` object. Set `{{token}}` variable from this response.
+
+### C. Register
+Register a new professional account (requires previous OTP verification).
+- **Method**: `POST`
+- **URL**: `{{base_url}}/register`
+- **Body** (JSON):
+```json
+{
+  "mobile": "9876543210",
+  "name": "John Doe",
+  "category": "Barber",
+  "city": "Ahmedabad"
+}
+```
+
+---
+
+## 3. Dashboard & Status
+
+### Get Dashboard Stats
+Overview of today's jobs and earnings.
+- **Method**: `GET`
+- **URL**: `{{base_url}}/dashboard`
+
+### Toggle Online Status
+Switch between Online (Available) and Offline.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/toggle-availability`
+
+---
+
+## 4. Booking Management
+
+### View Booking Requests
+List unassigned jobs available to accept.
+- **Method**: `GET`
+- **URL**: `{{base_url}}/booking-requests`
+
+### Accept Booking
+Claim a job for yourself.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/bookings/{id}/accept`
+
+### Start / Complete Job
+- **Arrived**: `POST {{base_url}}/jobs/{id}/arrived`
+- **Start Service**: `POST {{base_url}}/jobs/{id}/start-service`
+- **Complete**: `POST {{base_url}}/jobs/{id}/complete`
+
+---
+
+## 5. Wallet & Earnings
+
+### View Wallet
+Check current balance and recent transactions.
+- **Method**: `GET`
+- **URL**: `{{base_url}}/wallet`
+
+### Request Withdrawal
+Withdraw funds to the bank account.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/request-withdrawal`
+- **Body** (JSON):
+```json
+{
+  "amount": 500,
+  "payment_method": "UPI"
+}
+```
+
+---
+
+## 6. Profile & Documents
 
 ### Get Profile
-Retrieve the professional's full profile details.
-- **Method:** `GET`
-- **URL:** `/profile`
+- **Method**: `GET`
+- **URL**: `{{base_url}}/profile`
 
-### Update Profile & Upload Documents
-Update text details and optionally upload files (`avatar`, `aadhaar_front`, `aadhaar_back`, `pan_img`).
-- **Method:** `POST`
-- **URL:** `/profile/update`
-- **Headers:** *Do not manually set Content-Type; let Postman handle boundary for form-data.*
-- **Body (`form-data`):**
-  - `name`: (Text) "Jane Doe"
-  - `email`: (Text) "jane@example.com"
-  - `phone`: (Text) "9876543210"
-  - `city`: (Text) "Mumbai"
-  - `category`: (Text) "Beautician"
-  - `experience`: (Text) "5 Years"
-  - `bio`: (Text) "Experienced beautician specializing in bridal makeup."
-  - `aadhaar`: (Text) "123412341234"
-  - `pan`: (Text) "ABCDE1234F"
-  - `avatar`: (File) *Select image*
-  - `aadhaar_front`: (File) *Select image/pdf*
-  - `aadhaar_back`: (File) *Select image/pdf*
-  - `pan_img`: (File) *Select image/pdf*
-
----
-
-## 3. Booking and Order Management
-
-All endpoints require: `Authorization: Bearer <your_access_token>`
-
-### Get Booking Requests
-List pending/unassigned bookings in the professional's city available to be accepted. **(Professional must be 'Verified')**
-- **Method:** `GET`
-- **URL:** `/bookings/requests`
-
-### Get My Assigned Bookings
-List all bookings currently assigned to the professional.
-- **Method:** `GET`
-- **URL:** `/bookings`
-
-### Get Booking Details
-Retrieve comprehensive details of a specific assigned booking.
-- **Method:** `GET`
-- **URL:** `/bookings/{id}`
-  - Example: `/bookings/5`
-
-### Accept a Booking Request
-Assign an unassigned booking to this professional. **(Professional must be 'Verified')**
-- **Method:** `POST`
-- **URL:** `/bookings/{id}/accept`
-
-### Reject/Dismiss a Booking Request
-Dismiss an unassigned booking from the professional's list.
-- **Method:** `POST`
-- **URL:** `/bookings/{id}/reject`
-
-### Update Booking Status
-Update the status of an assigned job.
-- **Method:** `POST`
-- **URL:** `/bookings/{id}/status`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "status": "In Progress" // Valid: "Assigned", "Started", "In Progress", "Completed", "Cancelled"
-  }
-  ```
-> Setting status to `Completed` automatically calculates commission and credits earnings to the professional.
-
----
-
-## 4. Dashboard and Schedule
-
-All endpoints require: `Authorization: Bearer <your_access_token>`
-
-### Get Dashboard Summary
-Provides an overview of today's bookings, total earnings, today's earnings, and counts of pending requests.
-- **Method:** `GET`
-- **URL:** `/dashboard`
-
-### Get Upcoming Schedule
-Retrieves all non-cancelled, assigned bookings from today onwards.
-- **Method:** `GET`
-- **URL:** `/schedule`
-
-### Get Online/Availability Status
-Returns if the professional is currently accepting requests (`is_online`).
-- **Method:** `GET`
-- **URL:** `/availability`
-
-### Toggle Online/Availability Status
-Set the professional as online (`true`) or offline (`false`).
-- **Method:** `POST`
-- **URL:** `/availability`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "is_online": true
-  }
-  ```
-
----
-
-## 5. Earnings and Wallet
-
-All endpoints require: `Authorization: Bearer <your_access_token>`
-
-### Get Earnings Overview
-Get daily, weekly, monthly, and lifetime earnings summary.
-- **Method:** `GET`
-- **URL:** `/earnings`
-
-### Get Completed Job History (Payouts)
-Get a paginated list of all historically completed bookings.
-- **Method:** `GET`
-- **URL:** `/jobs/history`
-
-### Get Wallet Balance & Transactions
-Retrieve the current cash balance (in Rupees) and recent wallet transactions (debits/credits).
-- **Method:** `GET`
-- **URL:** `/wallet`
-
-### Request a Withdrawal
-Withdraw funds from the wallet (Minimum Rs. 100).
-- **Method:** `POST`
-- **URL:** `/wallet/withdraw`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "amount": 500
-  }
-  ```
-
----
-
-## 6. Kit Management
-
-All endpoints require: `Authorization: Bearer <your_access_token>`
-
-### Get Kit Store Inventory
-Retrieve an inventory list of active `KitProducts` available to order.
-- **Method:** `GET`
-- **URL:** `/kit-store`
-
-### Place a Kit Order
-Request a product from the kit store inventory.
-- **Method:** `POST`
-- **URL:** `/kit-orders`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "kit_product_id": 1,
-      "quantity": 2,
-      "notes": "Please include standard nozzle sizes."
-  }
-  ```
+### Update Profile
+Update text fields and upload files.
+- **Method**: `POST`
+- **URL**: `{{base_url}}/profile`
+- **Body** (form-data):
+  - `name`: "Updated Name"
+  - `avatar`: (file)
+  - `aadhaar_front`: (file)
+  - `aadhaar_back`: (file)
+  - `pan_img`: (file)
 
 ---
 
 ## 7. Notifications
 
-All endpoints require: `Authorization: Bearer <your_access_token>`
+### List Notifications
+- **Method**: `GET`
+- **URL**: `{{base_url}}/notifications`
 
-### Get Recent Notifications
-Retrieve a paginated list of professional push/in-app notifications.
-- **Method:** `GET`
-- **URL:** `/notifications`
-
-### Mark Notifications as Read
-Mark an array of notification IDs as read.
-- **Method:** `POST`
-- **URL:** `/notifications/read`
-- **Body (`raw` JSON):**
-  ```json
-  {
-      "notification_ids": [1, 2, 3]
-  }
-  ```
+### Mark All as Read
+- **Method**: `POST`
+- **URL**: `{{base_url}}/notifications/read-all`

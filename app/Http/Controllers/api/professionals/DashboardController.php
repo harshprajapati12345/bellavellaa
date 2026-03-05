@@ -47,6 +47,21 @@ class DashboardController extends BaseController
     }
 
     /**
+     * GET /api/professional/active-job
+     */
+    public function activeJob(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        // Logic to find current started/in-progress job
+        $activeJob = Booking::where('professional_id', $professional->id)
+            ->whereIn('status', ['Started', 'In Progress'])
+            ->first();
+
+        return $this->success($activeJob, 'Active job retrieved.');
+    }
+
+    /**
      * GET /api/professionals/schedule
      * Upcoming bookings formatted for a calendar/schedule view
      */

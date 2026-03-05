@@ -10,26 +10,9 @@ use Illuminate\Http\Request;
 class KitController extends BaseController
 {
     /**
-     * GET /api/professionals/my-kits
-     * List kit orders assigned to the authenticated professional
+     * GET /api/professional/kit-products
      */
-    public function index(Request $request): JsonResponse
-    {
-        $professional = $request->user('professional-api');
-        
-        $orders = KitOrder::with('kitProduct')
-            ->where('professional_id', $professional->id)
-            ->orderBy('assigned_at', 'desc')
-            ->get();
-
-        return $this->success($orders, 'Your kit assignments retrieved.');
-    }
-
-    /**
-     * GET /api/professionals/kit-store
-     * View available kit products and inventory
-     */
-    public function store(Request $request): JsonResponse
+    public function products(Request $request): JsonResponse
     {
         $products = KitProduct::where('status', 'Active')
             ->where('total_stock', '>', 0)
@@ -72,5 +55,34 @@ class KitController extends BaseController
         ]);
 
         return $this->success($order, 'Kit order placed successfully.');
+    }
+
+    /**
+     * GET /api/professional/orders
+     */
+    public function orders(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $orders = KitOrder::where('professional_id', $professional->id)
+            ->with('product')
+            ->latest()
+            ->get();
+
+        return $this->success($orders, 'Kit orders retrieved.');
+    }
+
+    /**
+     * GET /api/professional/orders/{id}
+     */
+    public function showOrder(Request $request, $id): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $order = KitOrder::where('professional_id', $professional->id)
+            ->with('product')
+            ->findOrFail($id);
+
+        return $this->success($order, 'Kit order details retrieved.');
     }
 }

@@ -156,15 +156,14 @@ class EarningsController extends BaseController
     }
 
     /**
-     * POST /api/professionals/wallet/withdraw
-     * Request a payout/withdrawal
+     * POST /api/professional/request-withdrawal
      */
-    public function withdraw(Request $request): JsonResponse
+    public function requestWithdrawal(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:100', // e.g. minimum withdrawal ₹100
+            'amount' => 'required|numeric|min:100',
         ]);
 
         $amountInPaise = (int) ($validated['amount'] * 100);
@@ -198,5 +197,23 @@ class EarningsController extends BaseController
                 'balance' => $wallet->balance / 100
             ], 'Withdrawal successful.');
         });
+    }
+
+    /**
+     * GET /api/professional/schedule
+     */
+    public function schedule(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        // Upcoming bookings
+        $schedule = Booking::where('professional_id', $professional->id)
+            ->where('date', '>=', Carbon::today()->toDateString())
+            ->whereNotIn('status', ['Cancelled'])
+            ->orderBy('date', 'asc')
+            ->orderBy('slot', 'asc')
+            ->get();
+
+        return $this->success($schedule, 'Schedule retrieved.');
     }
 }

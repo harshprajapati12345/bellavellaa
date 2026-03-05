@@ -91,9 +91,9 @@ class AuthController extends BaseController
     }
 
     /**
-     * POST /api/professionals/auth/signup
+     * POST /api/professional/register
      */
-    public function signup(Request $request): JsonResponse
+    public function register(Request $request): JsonResponse
     {
         $request->validate([
             'mobile'   => 'required|string|digits:10',
@@ -148,9 +148,18 @@ class AuthController extends BaseController
     }
 
     /**
-     * GET /api/professionals/auth/status
+     * POST /api/professional/login
      */
-    public function status(): JsonResponse
+    public function login(Request $request): JsonResponse
+    {
+        // Placeholder for login logic (e.g. check version, start session)
+        return $this->success(null, 'Login initiated.');
+    }
+
+    /**
+     * GET /api/professional/verification-status
+     */
+    public function verificationStatus(): JsonResponse
     {
         $professional = $this->guard()->user();
 

@@ -102,57 +102,67 @@ Route::prefix('client')->group(function () {
 // PROFESSIONALS — Professional Mobile App
 // ═══════════════════════════════════════════════════════════════════
 
-Route::prefix('professionals')->group(function () {
-    Route::prefix('auth')->group(function () {
-        // Public — no JWT required
-        Route::middleware('throttle:otp')->group(function () {
-            Route::post('send-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'sendOtp']);
-            Route::post('verify-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'verifyOtp']);
-            Route::post('signup', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'signup']);
-        });
+// ═══════════════════════════════════════════════════════════════════
+// PROFESSIONAL — Professional Mobile App
+// ═══════════════════════════════════════════════════════════════════
 
-        // Protected — valid professional JWT required
-        Route::middleware('auth:professional-api')->group(function () {
-            Route::get('me', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'me']);
-            Route::get('status', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'status']);
-            Route::post('refresh', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'refresh']);
-            Route::post('logout', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'logout']);
-        });
-    });
+Route::prefix('professional')->group(function () {
+    // Auth (No JWT required)
+    Route::post('send-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'sendOtp']);
+    Route::post('verify-otp', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'verifyOtp']);
+    Route::post('register', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'register']);
+    Route::post('login', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'login']);
 
-    Route::middleware('auth:professional-api')->group(function () {
-        // Profile
-        Route::get('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'show']);
-        Route::post('profile/update', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'update']);
+    // Protected Routes (JWT required)
+    Route::middleware(['auth:professional-api'])->group(function () {
+        // Auth
+        Route::post('logout', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'logout']);
+        Route::get('me', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'me']);
+        Route::get('verification-status', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'verificationStatus']);
 
-        // Bookings & Orders
-        Route::get('bookings/requests', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'requests']);
-        Route::get('bookings', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'index']);
-        Route::get('bookings/{booking}', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'show']);
-        Route::post('bookings/{booking}/accept', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'accept']);
-        Route::post('bookings/{booking}/reject', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'reject']);
-        Route::post('bookings/{booking}/status', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'updateStatus']);
-
-        // Dashboard & Schedule
+        // Dashboard
         Route::get('dashboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'index']);
-        Route::get('schedule', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'schedule']);
-        Route::get('availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'availability']);
-        Route::post('availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'toggleAvailability']);
+        Route::get('active-job', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'activeJob']);
+        Route::post('toggle-availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'toggleAvailability']);
+
+        // Booking Requests
+        Route::get('booking-requests', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'requests']);
+        Route::get('bookings/{id}', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'show']);
+        Route::post('bookings/{id}/accept', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'accept']);
+        Route::post('bookings/{id}/reject', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'reject']);
+
+        // Job Workflow
+        Route::post('jobs/{id}/arrived', [\App\Http\Controllers\Api\Professionals\JobController::class, 'arrived']);
+        Route::post('jobs/{id}/start-service', [\App\Http\Controllers\Api\Professionals\JobController::class, 'startService']);
+        Route::post('jobs/{id}/scan-kit', [\App\Http\Controllers\Api\Professionals\JobController::class, 'scanKit']);
+        Route::post('jobs/{id}/complete', [\App\Http\Controllers\Api\Professionals\JobController::class, 'complete']);
+        Route::post('jobs/{id}/payment-confirm', [\App\Http\Controllers\Api\Professionals\JobController::class, 'paymentConfirm']);
 
         // Earnings & Wallet
         Route::get('earnings', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'index']);
-        Route::get('jobs/history', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'history']);
         Route::get('wallet', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'wallet']);
-        Route::post('wallet/withdraw', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'withdraw']);
+        Route::get('jobs-history', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'history']);
+        Route::get('schedule', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'schedule']);
+        Route::post('request-withdrawal', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'requestWithdrawal']);
 
-        // Kit Management
-        Route::get('my-kits', [\App\Http\Controllers\Api\Professionals\KitController::class, 'index']);
-        Route::get('kit-store', [\App\Http\Controllers\Api\Professionals\KitController::class, 'store']);
-        Route::post('kit-orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'order']);
+        // Kit Store / Orders
+        Route::get('kit-products', [\App\Http\Controllers\Api\Professionals\KitController::class, 'products']);
+        Route::post('orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'order']);
+        Route::get('orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'orders']);
+        Route::get('orders/{id}', [\App\Http\Controllers\Api\Professionals\KitController::class, 'showOrder']);
 
         // Notifications
         Route::get('notifications', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'index']);
-        Route::post('notifications/read', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'markAsRead']);
+        Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'read']);
+        Route::post('notifications/read-all', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'readAll']);
+        Route::delete('notifications/{id}', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'destroy']);
+
+        // Profile
+        Route::get('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'show']);
+        Route::put('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'update']);
+        Route::post('upload-profile-image', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadProfileImage']);
+        Route::post('upload-documents', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadDocuments']);
+        Route::put('change-password', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'changePassword']);
     });
 });
 
