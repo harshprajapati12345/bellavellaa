@@ -156,9 +156,9 @@
   </div>
 
   <!-- ── HISTORY DRAWER ──────────────────────────────────────────────────── -->
-  <div id="drawer-backdrop" class="fixed inset-0 z-50 hidden bg-black/30 backdrop-blur-sm" onclick="closeDrawer()"></div>
+  <div id="drawer-backdrop" class="fixed inset-0 z-[60] hidden bg-black/40 backdrop-blur-md" onclick="closeDrawer()"></div>
   <div id="drawer-panel"
-    class="drawer-panel closed fixed top-0 right-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col overflow-hidden">
+    class="drawer-content drawer-closed fixed top-0 right-0 h-full w-full max-w-lg bg-white z-[70] shadow-2xl flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-6 pt-6 pb-5 border-b border-gray-100 flex-shrink-0">
       <div class="flex items-center gap-3">
         <img id="hd-avatar" src="" class="w-10 h-10 rounded-full object-cover" alt="">
@@ -255,11 +255,11 @@
       background: #fafafa;
     }
 
-    .drawer-panel {
-      transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+    .drawer-content {
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .drawer-panel.closed {
+    .drawer-closed {
       transform: translateX(100%);
     }
 
@@ -377,12 +377,16 @@
         </div>`).join('');
 
       document.getElementById('drawer-backdrop').classList.remove('hidden');
-      document.getElementById('drawer-panel').classList.remove('closed');
+      document.getElementById('drawer-panel').classList.remove('drawer-closed');
       document.body.style.overflow = 'hidden';
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     }
 
-    function closeDrawer() { document.getElementById('drawer-panel').classList.add('closed'); document.getElementById('drawer-backdrop').classList.add('hidden'); document.body.style.overflow = ''; }
+    function closeDrawer() { 
+      document.getElementById('drawer-panel').classList.add('drawer-closed'); 
+      document.getElementById('drawer-backdrop').classList.add('hidden'); 
+      document.body.style.overflow = ''; 
+    }
     (function init() { visibleRows = Array.from(document.querySelectorAll('#hist-tbody tr.table-row')); renderPage(); })();
   </script>
 @endpush
