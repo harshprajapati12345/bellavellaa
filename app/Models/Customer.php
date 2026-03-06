@@ -122,7 +122,7 @@ class Customer extends Authenticatable implements JWTSubject
     public static function generateUniqueReferralCode(): string
     {
         do {
-            $code = strtoupper(\Illuminate\Support\Str::random(8));
+            $code = strtoupper(substr(md5(uniqid()), 0, 8));
         } while (self::where('referral_code', $code)->exists());
 
         return $code;

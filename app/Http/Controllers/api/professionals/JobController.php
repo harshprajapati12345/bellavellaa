@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Professionals;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\ReferralService;
 use App\Http\Requests\Professional\Job\ScanKitRequest;
 use App\Http\Requests\Professional\Job\CompleteJobRequest;
 use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
@@ -37,12 +38,19 @@ class JobController extends BaseController
         return $this->success(null, 'Kit scanned and verified.');
     }
 
-    /**
-     * POST /api/professional/jobs/{id}/complete
-     */
     public function complete(CompleteJobRequest $request, $id): JsonResponse
     {
-        // Logic to complete job (+ proof)
+        $booking = \App\Models\Booking::find($id);
+
+        if ($booking) {
+            $booking->update(['status' => 'Completed']);
+
+            // Trigger referral reward check
+            if ($booking->customer) {
+                ReferralService::processFirstBookingCompletion($booking->customer);
+            }
+        }
+
         return $this->success(null, 'Job marked as complete.');
     }
 

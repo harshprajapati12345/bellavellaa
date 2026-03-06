@@ -75,26 +75,29 @@ class AuthController extends BaseController
 
         // Handle referral code on first registration
         if ($customer->wasRecentlyCreated && $request->filled('referral_code')) {
-            $referrer = Customer::where('referral_code', $request->referral_code)
-                ->where('id', '!=', $customer->id)
-                ->first();
+            $referrer = Customer::where('referral_code', $request->referral_code)->first();
 
             if ($referrer) {
-                $customer->update([
-                    'referred_by_customer_id' => $referrer->id,
-                    'referral_code_used' => $request->referral_code,
-                ]);
+                // Prevent self-referral
+                if ($referrer->id === $customer->id || $referrer->mobile === $customer->mobile) {
+                    // We can just log this or ignore it silently depending on policy.
+                    // Implementation plan says "ignoring it with a message" is better but AuthController returns token.
+                    // We'll skip the link if it's self-referral.
+                } else {
+                    $customer->update([
+                        'referred_by_customer_id' => $referrer->id,
+                        'referral_code_used' => $request->referral_code,
+                    ]);
 
-                // Create referral record
-                \App\Models\Referral::create([
-                    'referrer_customer_id' => $referrer->id,
-                    'referred_customer_id' => $customer->id,
-                    'referral_code_used' => $request->referral_code,
-                    'status' => 'pending',
-                ]);
-                
-                // Note: Bonus logic can be triggered here or on first booking completion 
-                // as per business requirements. For now, we link them.
+                    // Create referral record
+                    \App\Models\Referral::create([
+                        'referrer_customer_id' => $referrer->id,
+                        'referred_customer_id' => $customer->id,
+                        'referral_code_used' => $request->referral_code,
+                        'status' => 'signed_up',
+                        'reward_coins' => 100, // Configurable reward amount
+                    ]);
+                }
             }
         }
 

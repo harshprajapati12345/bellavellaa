@@ -9,6 +9,7 @@ class VerifyOtpRequest extends ApiFormRequest
         return [
             'mobile' => ['required', 'string', 'digits:10'],
             'otp' => ['required', 'string', 'size:4'],
+            'referral_code' => ['nullable', 'string', 'max:20'],
         ];
     }
 
