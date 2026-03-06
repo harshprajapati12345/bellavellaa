@@ -17,11 +17,17 @@ class WalletController extends BaseController
     public function index(): JsonResponse
     {
         $customer = $this->guard()->user();
+        
+        // Explicitly select coin wallet only
         $coinWallet = $customer->coinWallet;
 
         if (!$coinWallet) {
+            // Consistent null wallet response
             return $this->success([
+                'wallet_type' => 'coin',
                 'balance' => 0,
+                'currency_label' => 'BellaVella Coins',
+                'exchange_rate' => '1 Coin = ₹1.00',
                 'transactions' => [],
             ], 'Wallet data retrieved successfully.');
         }
@@ -31,18 +37,46 @@ class WalletController extends BaseController
             ->get(['id', 'type', 'amount', 'source', 'description', 'created_at'])
             ->map(function ($tx) {
                 return [
-                    'id' => $tx->id,
-                    'title' => $tx->description ?? ucfirst(str_replace('_', ' ', $tx->source)),
+                    'id' => (string) $tx->id, // Ensure string
+                    'title' => $this->normalizeTransactionTitle($tx->description, $tx->source),
                     'date' => $tx->created_at->format('d M Y, h:i A'),
-                    'amount' => ($tx->type === 'credit' ? '+' : '-') . $tx->amount,
-                    'type' => $tx->type,
+                    'amount' => (int) $tx->amount,
+                    'type' => (string) $tx->type,
                 ];
-            });
+            })->values(); // Reindex array
 
         return $this->success([
-            'balance' => $coinWallet->balance,
-            'transactions' => $transactions,
+            'wallet_type' => 'coin',
+            'balance' => (int) $coinWallet->balance, // Force string
+            'currency_label' => 'BellaVella Coins',
+            'exchange_rate' => '1 Coin = ₹1.00',
+            'transactions' => $transactions->toArray(),
         ], 'Wallet data retrieved successfully.');
+    }
+
+    /**
+     * Normalize transaction title from description or source
+     */
+    private function normalizeTransactionTitle(?string $description, string $source): string
+    {
+        if ($description && trim($description) !== '') {
+            return $description;
+        }
+
+        // Normalize source to human-readable title
+        // daily_checkin -> Daily Check-in
+        // referral_bonus -> Referral Bonus
+        $normalized = str_replace('_', ' ', $source);
+        $words = explode(' ', $normalized);
+        $words = array_map(function ($word) {
+            // Special handling for hyphenated words like "check-in"
+            if (str_contains($word, '-')) {
+                return implode('-', array_map('ucfirst', explode('-', $word)));
+            }
+            return ucfirst($word);
+        }, $words);
+
+        return implode(' ', $words);
     }
 
     public function deposit(Request $request): JsonResponse

@@ -19,16 +19,15 @@ class CustomerResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'        => $this->id,
-            'name'      => $this->name,
-            'mobile'    => $this->mobile,
-            'avatar'    => $this->avatar,
-            'city'      => $this->city,
-            'zip'       => $this->zip,
-            'address'   => $this->address,
-            'status'    => $this->status,
-            'bookings'  => $this->bookings,
-            'joined'    => $this->joined?->toDateString(),
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'mobile' => $this->mobile,
+            'avatar' => $this->avatar ? asset('storage/' . $this->avatar) : null,
+            'date_of_birth' => $this->date_of_birth?->toDateString(),
+            'status' => $this->status,
+            'joined' => $this->joined?->toDateString(),
+            'referral_code' => $this->referral_code,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -20,16 +21,18 @@ class Customer extends Authenticatable implements JWTSubject
         'email',
         'mobile',
         'avatar',
-        'city',
-        'zip',
-        'address',
+        'date_of_birth',
         'status',
         'bookings',
         'joined',
+        'referral_code',
+        'referred_by_customer_id',
+        'referral_code_used',
     ];
 
     protected $casts = [
         'joined' => 'date',
+        'date_of_birth' => 'date',
         'bookings' => 'integer',
     ];
 
@@ -92,6 +95,37 @@ class Customer extends Authenticatable implements JWTSubject
     public function activeMembership(): HasOne
     {
         return $this->hasOne(CustomerMembership::class)->where('status', 'active')->where('expires_at', '>', now());
+    }
+
+    // ── Referral ───────────────────────────────────────────────────
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'referred_by_customer_id');
+    }
+
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(Referral::class, 'referrer_customer_id');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($customer) {
+            if (empty($customer->referral_code)) {
+                $customer->referral_code = self::generateUniqueReferralCode();
+            }
+        });
+    }
+
+    public static function generateUniqueReferralCode(): string
+    {
+        do {
+            $code = strtoupper(\Illuminate\Support\Str::random(8));
+        } while (self::where('referral_code', $code)->exists());
+
+        return $code;
     }
 
     // ── Scopes ─────────────────────────────────────────────────────

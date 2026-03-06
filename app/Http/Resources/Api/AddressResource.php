@@ -12,9 +12,12 @@ class AddressResource extends JsonResource
         return [
             'id' => $this->id,
             'label' => $this->label,
-            'address' => $this->address,
+            'house_number' => $this->house_number,
+            'landmark' => $this->landmark,
+            'address' => $this->address, // Keep for compatibility
             'city' => $this->city,
-            'zip' => $this->zip,
+            'pincode' => $this->zip, // Map zip to pincode for Flutter
+            'phone' => $this->phone,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'is_default' => (bool) $this->is_default,

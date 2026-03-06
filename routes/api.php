@@ -90,6 +90,7 @@ Route::prefix('client')->group(function () {
 
         // Reviews
         Route::post('reviews', [ReviewController::class, 'store']);
+        Route::post('app-feedback', [\App\Http\Controllers\Api\Client\AppFeedbackController::class, 'store']);
 
         // Promotions & Slots
         Route::get('promotions', [PromotionController::class, 'index']);

@@ -13,9 +13,12 @@ class Address extends Model
     protected $fillable = [
         'customer_id',
         'label',
+        'house_number',
+        'landmark',
         'address',
         'city',
         'zip',
+        'phone',
         'latitude',
         'longitude',
         'is_default'

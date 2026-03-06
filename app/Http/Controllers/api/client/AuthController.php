@@ -73,6 +73,31 @@ class AuthController extends BaseController
             ]
         );
 
+        // Handle referral code on first registration
+        if ($customer->wasRecentlyCreated && $request->filled('referral_code')) {
+            $referrer = Customer::where('referral_code', $request->referral_code)
+                ->where('id', '!=', $customer->id)
+                ->first();
+
+            if ($referrer) {
+                $customer->update([
+                    'referred_by_customer_id' => $referrer->id,
+                    'referral_code_used' => $request->referral_code,
+                ]);
+
+                // Create referral record
+                \App\Models\Referral::create([
+                    'referrer_customer_id' => $referrer->id,
+                    'referred_customer_id' => $customer->id,
+                    'referral_code_used' => $request->referral_code,
+                    'status' => 'pending',
+                ]);
+                
+                // Note: Bonus logic can be triggered here or on first booking completion 
+                // as per business requirements. For now, we link them.
+            }
+        }
+
         if ($customer->status === 'Blocked') {
             return $this->error('Your account has been blocked. Please contact support.', 403);
         }

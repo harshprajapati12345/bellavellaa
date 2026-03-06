@@ -35,13 +35,20 @@ class AddressController extends BaseController
     {
         $validated = $request->validate([
             'label' => 'required|string|max:20',
-            'address' => 'required|string',
-            'city' => 'nullable|string',
-            'zip' => 'nullable|string|max:10',
+            'house_number' => 'required|string|max:255',
+            'address' => 'required|string|max:255', // Area/Street/Society
+            'landmark' => 'nullable|string|max:255',
+            'city' => 'required|string|max:100',
+            'pincode' => 'required|string|max:10',
+            'phone' => 'nullable|string|max:15',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'is_default' => 'boolean',
         ]);
+
+        // Rename pincode to zip for DB
+        $validated['zip'] = $validated['pincode'];
+        unset($validated['pincode']);
 
         if ($validated['is_default'] ?? false) {
             $this->guard()->user()->addresses()->update(['is_default' => false]);
@@ -60,13 +67,22 @@ class AddressController extends BaseController
 
         $validated = $request->validate([
             'label' => 'sometimes|string|max:20',
-            'address' => 'sometimes|string',
-            'city' => 'nullable|string',
-            'zip' => 'nullable|string|max:10',
+            'house_number' => 'sometimes|string|max:255',
+            'address' => 'sometimes|string|max:255', // Area/Street/Society
+            'landmark' => 'nullable|string|max:255',
+            'city' => 'sometimes|string|max:100',
+            'pincode' => 'sometimes|string|max:10',
+            'phone' => 'nullable|string|max:15',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'is_default' => 'boolean',
         ]);
+
+        // Rename pincode to zip for DB
+        if (isset($validated['pincode'])) {
+            $validated['zip'] = $validated['pincode'];
+            unset($validated['pincode']);
+        }
 
         if ($validated['is_default'] ?? false) {
             $this->guard()->user()->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);

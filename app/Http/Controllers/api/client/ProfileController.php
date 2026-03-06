@@ -27,9 +27,8 @@ class ProfileController extends BaseController
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'city' => 'nullable|string|max:100',
-            'zip' => 'nullable|string|max:10',
-            'address' => 'nullable|string',
+            'email' => 'sometimes|email|unique:customers,email,' . $customer->id,
+            'date_of_birth' => 'sometimes|date|before:today',
             'avatar_file' => 'nullable|image|max:2048',
         ]);
 
