@@ -6,6 +6,7 @@ use App\Http\Requests\Api\SendOtpRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Models\Professional;
 use App\Models\Otp;
+use App\Services\RewardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,6 +77,10 @@ class AuthController extends BaseController
             return $this->error('Could not create token.', 500);
         }
 
+        // Award Login Reward
+        $rewardService = app(\App\Services\RewardService::class);
+        $rewardService->awardLoginReward($professional, 'professional');
+
         return $this->success([
             'access_token' => $token,
             'token_type'   => 'bearer',
@@ -98,8 +103,23 @@ class AuthController extends BaseController
         $request->validate([
             'mobile'   => 'required|string|digits:10',
             'name'     => 'required|string|max:255',
+            'email'    => 'nullable|email|max:255',
             'category' => 'nullable|string|max:100',
             'city'     => 'nullable|string|max:100',
+            'dob'      => 'nullable|string',
+            'gender'   => 'nullable|string',
+            'experience' => 'nullable|string',
+            'languages' => 'nullable|string',
+            'address'  => 'nullable|string',
+            'pincode'  => 'nullable|string|digits:6',
+            'state'    => 'nullable|string',
+            'aadhar'   => 'nullable|string|digits:12',
+            'pan'      => 'nullable|string|size:10',
+            'aadhar_front' => 'nullable|image|max:2048',
+            'aadhar_back'  => 'nullable|image|max:2048',
+            'pan_photo'    => 'nullable|image|max:2048',
+            'selfie'       => 'nullable|image|max:2048',
+            'referral_code' => 'nullable|string|exists:professionals,referral_code',
         ]);
 
         $alreadyVerified = Otp::where('mobile', $request->mobile)
@@ -118,15 +138,71 @@ class AuthController extends BaseController
             return $this->error('This mobile number is already registered.', 400);
         }
 
-        $professional = Professional::create([
+        $data = [
             'phone'        => $request->mobile,
             'name'         => $request->name,
+            'email'        => $request->email,
             'category'     => $request->category,
             'city'         => $request->city,
+            'dob'          => $request->dob,
+            'gender'       => $request->gender,
+            'experience'   => $request->experience,
+            'languages'    => $request->languages ? explode(', ', $request->languages) : [],
+            'service_area' => $request->address,
+            'aadhaar'      => $request->aadhar,
+            'pan'          => $request->pan,
             'status'       => 'Active',
             'verification' => 'Pending',
             'joined'       => now()->toDateString(),
-        ]);
+        ];
+
+        // Handle Referral
+        if ($request->filled('referral_code')) {
+            $referrer = Professional::where('referral_code', $request->referral_code)->first();
+            if ($referrer) {
+                $data['referred_by'] = $referrer->id;
+            }
+        }
+
+        // Handle File Uploads
+        if ($request->hasFile('aadhar_front')) {
+            $path = $request->file('aadhar_front')->store('documents/aadhaar', 'public');
+            $data['aadhaar_front'] = '/storage/' . $path;
+        }
+        if ($request->hasFile('aadhar_back')) {
+            $path = $request->file('aadhar_back')->store('documents/aadhaar', 'public');
+            $data['aadhaar_back'] = '/storage/' . $path;
+        }
+        if ($request->hasFile('pan_photo')) {
+            $path = $request->file('pan_photo')->store('documents/pan', 'public');
+            $data['pan_img'] = '/storage/' . $path;
+        }
+        if ($request->hasFile('selfie')) {
+            $path = $request->file('selfie')->store('avatars', 'public');
+            $data['avatar'] = '/storage/' . $path;
+        }
+
+        // Auto-set docs flag if all uploaded
+        if (isset($data['aadhaar_front']) && isset($data['aadhaar_back']) && isset($data['pan_img'])) {
+            $data['docs'] = true;
+        }
+
+        $professional = Professional::create($data);
+
+        // --- AUTOMATED REWARDS ---
+        $rewardService = app(RewardService::class);
+        $coinsAwarded = 0;
+        $coinsAwarded += $rewardService->awardSignupReward($professional, 'professional');
+
+        if ($request->referral_code) {
+            $referrer = Professional::where('referral_code', $request->referral_code)->first()
+                     ?? \App\Models\Customer::where('referral_code', $request->referral_code)->first();
+            
+            if ($referrer) {
+                $referrerType = $referrer instanceof Professional ? 'professional' : 'customer';
+                $coinsAwarded += $rewardService->awardReferralRewards($professional, 'professional', $referrer, $referrerType, $request->referral_code);
+            }
+        }
 
         try {
             $token = $this->guard()->login($professional);
@@ -143,7 +219,8 @@ class AuthController extends BaseController
                 'name' => $professional->name,
                 'verification' => $professional->verification,
                 'status' => $professional->status,
-            ]
+            ],
+            'coins_awarded' => $coinsAwarded,
         ], 'Registration successful.');
     }
 

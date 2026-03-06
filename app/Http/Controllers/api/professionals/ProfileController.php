@@ -46,11 +46,60 @@ class ProfileController extends BaseController
         $updateData = [];
 
         // Direct text fields
-        $fields = ['name', 'email', 'phone', 'city', 'category', 'experience', 'bio', 'aadhaar', 'pan'];
+        $fields = [
+            'name', 'email', 'phone', 'city', 'category', 'experience', 'bio', 
+            'gender', 'dob', 'service_area', 'service_radius', 'aadhaar', 'pan'
+        ];
         foreach ($fields as $field) {
             if ($request->has($field)) {
                 $updateData[$field] = $request->input($field);
             }
+        }
+
+        // JSON fields - Merge with existing data
+        if ($request->has('languages')) {
+            $newLanguages = is_array($request->input('languages')) 
+                ? $request->input('languages') 
+                : json_decode($request->input('languages'), true);
+            $updateData['languages'] = array_merge($professional->languages ?? [], $newLanguages);
+        }
+
+        if ($request->has('payout')) {
+            $newPayout = is_array($request->input('payout')) 
+                ? $request->input('payout') 
+                : json_decode($request->input('payout'), true);
+            $updateData['payout'] = array_merge($professional->payout ?? [], $newPayout);
+        }
+
+        if ($request->has('portfolio')) {
+            $newPortfolio = is_array($request->input('portfolio')) 
+                ? $request->input('portfolio') 
+                : json_decode($request->input('portfolio'), true);
+            $updateData['portfolio'] = array_merge($professional->portfolio ?? [], $newPortfolio);
+        }
+
+        if ($request->has('working_hours') || $request->has('available_days')) {
+            // Handle both structured working_hours and flat available_days/times
+            $workingHours = $professional->working_hours ?? [];
+            
+            if ($request->has('working_hours')) {
+                $newWH = is_array($request->input('working_hours')) 
+                    ? $request->input('working_hours') 
+                    : json_decode($request->input('working_hours'), true);
+                $workingHours = array_merge($workingHours, $newWH);
+            }
+
+            if ($request->has('available_days')) {
+                $workingHours['available_days'] = $request->input('available_days');
+            }
+            if ($request->has('start_time')) {
+                $workingHours['start_time'] = $request->input('start_time');
+            }
+            if ($request->has('end_time')) {
+                $workingHours['end_time'] = $request->input('end_time');
+            }
+
+            $updateData['working_hours'] = $workingHours;
         }
 
         // File fields

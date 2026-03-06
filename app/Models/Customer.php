@@ -98,14 +98,19 @@ class Customer extends Authenticatable implements JWTSubject
     }
 
     // ── Referral ───────────────────────────────────────────────────
-    public function referrer(): BelongsTo
+    public function referrals()
     {
-        return $this->belongsTo(Customer::class, 'referred_by_customer_id');
+        return $this->morphMany(Referral::class, 'referrer');
     }
 
-    public function referrals(): HasMany
+    public function referrer()
     {
-        return $this->hasMany(Referral::class, 'referrer_customer_id');
+        return $this->belongsTo(Customer::class, 'referred_by');
+    }
+
+    public function referralsReceived()
+    {
+        return $this->morphMany(Referral::class, 'referred');
     }
 
     protected static function boot()
@@ -127,7 +132,6 @@ class Customer extends Authenticatable implements JWTSubject
 
         return $code;
     }
-
     // ── Scopes ─────────────────────────────────────────────────────
     public function scopeActive($q)
     {

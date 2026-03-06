@@ -96,6 +96,9 @@ Route::prefix('client')->group(function () {
         Route::get('promotions', [PromotionController::class, 'index']);
         Route::post('promotions/validate', [PromotionController::class, 'validateCode']);
         Route::get('slots', [SlotController::class, 'index']);
+
+        // Refer & Earn
+        Route::get('referrals', [\App\Http\Controllers\Api\Client\ReferralController::class, 'index']);
     });
 });
 
@@ -153,6 +156,10 @@ Route::prefix('professional')->group(function () {
         Route::get('orders', [\App\Http\Controllers\Api\Professionals\KitController::class, 'orders']);
         Route::get('orders/{id}', [\App\Http\Controllers\Api\Professionals\KitController::class, 'showOrder']);
 
+        // Kit Payment
+        Route::post('payment/create-order', [\App\Http\Controllers\Api\Professionals\KitController::class, 'createPaymentOrder']);
+        Route::post('payment/verify', [\App\Http\Controllers\Api\Professionals\KitController::class, 'verifyPayment']);
+
         // Notifications
         Route::get('notifications', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'index']);
         Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\Professionals\NotificationController::class, 'read']);
@@ -165,6 +172,10 @@ Route::prefix('professional')->group(function () {
         Route::post('upload-profile-image', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadProfileImage']);
         Route::post('upload-documents', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadDocuments']);
         Route::put('change-password', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'changePassword']);
+
+        // Refer & Earn
+        Route::get('referrals', [\App\Http\Controllers\Api\Professionals\ReferralController::class, 'index']);
+        Route::post('referrals/submit', [\App\Http\Controllers\Api\Professionals\ReferralController::class, 'submit']);
     });
 });
 

@@ -7,6 +7,7 @@ use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Http\Resources\Api\CustomerResource;
 use App\Models\Customer;
 use App\Models\Otp;
+use App\Services\RewardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
@@ -64,40 +65,63 @@ class AuthController extends BaseController
         }
 
         // Find or create customer on first login
-        $customer = Customer::firstOrCreate(
-            ['mobile' => $request->mobile],
-            [
-                'name' => null,
-                'status' => 'Active',
-                'joined' => now()->toDateString(),
-            ]
-        );
+        $isNewUser = !Customer::where('mobile', $request->mobile)->exists();
+        
+        $customerData = [
+            'name' => null,
+            'status' => 'Active',
+            'joined' => now()->toDateString(),
+        ];
 
-        // Handle referral code on first registration
-        if ($customer->wasRecentlyCreated && $request->filled('referral_code')) {
-            $referrer = Customer::where('referral_code', $request->referral_code)->first();
+        if ($isNewUser && $request->filled('referral_code')) {
+            // Check in professionals first, then customers
+            $referrer = \App\Models\Professional::where('referral_code', $request->referral_code)->first();
+            $referrerType = 'professional';
+            
+            if (!$referrer) {
+                $referrer = Customer::where('referral_code', $request->referral_code)->first();
+                $referrerType = 'client';
+            }
 
             if ($referrer) {
-                // Prevent self-referral
-                if ($referrer->id === $customer->id || $referrer->mobile === $customer->mobile) {
-                    // We can just log this or ignore it silently depending on policy.
-                    // Implementation plan says "ignoring it with a message" is better but AuthController returns token.
-                    // We'll skip the link if it's self-referral.
-                } else {
-                    $customer->update([
-                        'referred_by_customer_id' => $referrer->id,
-                        'referral_code_used' => $request->referral_code,
-                    ]);
+                $customerData['referred_by'] = $referrer->id;
+                // We'll create the referral record AFTER the customer is created to get the ID
+            }
+        }
 
-                    // Create referral record
-                    \App\Models\Referral::create([
-                        'referrer_customer_id' => $referrer->id,
-                        'referred_customer_id' => $customer->id,
-                        'referral_code_used' => $request->referral_code,
-                        'status' => 'signed_up',
-                        'reward_coins' => 100, // Configurable reward amount
-                    ]);
+        $customer = Customer::firstOrCreate(
+            ['mobile' => $request->mobile],
+            $customerData
+        );
+
+        $coinsAwarded = 0;
+        if ($isNewUser) {
+            $rewardService = app(RewardService::class);
+            
+            // 1. Award Signup Reward (Automatic)
+            $coinsAwarded += $rewardService->awardSignupReward($customer, 'customer');
+
+            // 2. Award Referral Rewards (Automatic)
+            if (isset($customerData['referred_by'])) {
+                // We re-fetch referrer to ensure we have the model instance
+                $referrer = \App\Models\Professional::find($customerData['referred_by']);
+                $referrerType = 'professional';
+                
+                if (!$referrer) {
+                    $referrer = Customer::find($customerData['referred_by']);
+                    $referrerType = 'customer';
                 }
+
+                if ($referrer) {
+                    $coinsAwarded += $rewardService->awardReferralRewards(
+                        $customer, 
+                        'customer', 
+                        $referrer, 
+                        $referrerType, 
+                        $request->referral_code
+                    );
+                }
+
             }
         }
 
@@ -106,12 +130,21 @@ class AuthController extends BaseController
         }
 
         try {
-            $token = $this->guard()->login($customer);
+            if (!$token = $this->guard()->login($customer)) {
+                return $this->error('Unauthorized', 401);
+            }
+
+            return $this->success([
+                'access_token' => $token,
+                'token_type'   => 'bearer',
+                'expires_in'   => $this->guard()->factory()->getTTL() * 60,
+                'user'         => $customer,
+                'is_new'       => $isNewUser,
+                'coins_awarded' => $coinsAwarded,
+            ], 'Verification successful.');
         } catch (JWTException $e) {
             return $this->error('Could not create token.', 500);
         }
-
-        return $this->tokenResponse($token, 'Login successful.');
     }
 
     // ─── 3. AUTHENTICATED CUSTOMER PROFILE ─────────────────────────
