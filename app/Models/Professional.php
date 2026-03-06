@@ -16,7 +16,12 @@ class Professional extends Authenticatable implements JWTSubject
 
 
     protected $casts = [
-        'services' => 'array',
+        'services'      => 'array',
+        'languages'     => 'array',
+        'payout'        => 'array',
+        'portfolio'     => 'array',
+        'working_hours' => 'array',
+        'docs'          => 'boolean',
     ];
 
     // ── JWT ────────────────────────────────────────────────────────
@@ -41,6 +46,25 @@ class Professional extends Authenticatable implements JWTSubject
     public function leaveRequests()
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function referrals()
+    {
+        return $this->morphMany(Referral::class, 'referrer');
+    }
+
+    public function referrer()
+    {
+        return $this->belongsTo(Professional::class, 'referred_by');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($professional) {
+            if (empty($professional->referral_code)) {
+                $professional->referral_code = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+            }
+        });
     }
 }
 

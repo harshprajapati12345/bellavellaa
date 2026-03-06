@@ -18,6 +18,8 @@ use App\Http\Controllers\adminroutes\KitProductController;
 use App\Http\Controllers\adminroutes\KitOrderController;
 use App\Http\Controllers\adminroutes\LeaveRequestController;
 use App\Http\Controllers\adminroutes\SettingController;
+use App\Http\Controllers\adminroutes\ReferralController;
+use App\Http\Controllers\adminroutes\RewardSettingController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -91,4 +93,13 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('homepage/reorder', [HomepageController::class, 'reorder'])->name('homepage.reorder');
     Route::patch('homepage/{homepage}/toggle-status', [HomepageController::class, 'toggleStatus'])->name('homepage.toggle-status');
     Route::resource('homepage', HomepageController::class);
+
+    // Refer & Earn
+    Route::get('referrals', [ReferralController::class, 'index'])->name('referrals.index');
+    Route::get('referrals/{id}', [ReferralController::class, 'show'])->name('referrals.show');
+    Route::post('referrals/{id}/toggle-status', [ReferralController::class, 'toggleStatus'])->name('referrals.toggle-status');
+
+    // Reward Settings
+    Route::get('settings/rewards', [RewardSettingController::class, 'index'])->name('settings.rewards');
+    Route::post('settings/rewards/update', [RewardSettingController::class, 'update'])->name('settings.rewards.update');
 });

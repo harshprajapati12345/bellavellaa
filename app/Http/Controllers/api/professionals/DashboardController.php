@@ -44,6 +44,7 @@ class DashboardController extends BaseController
             'kit_count'        => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'rating'           => $professional->rating,
             'is_online'        => (bool) $professional->is_online,
+            'wallet_balance'   => (float) ($professional->wallet_balance ?? $professional->wallet ?? 0),
         ], 'Dashboard summary retrieved.');
     }
 

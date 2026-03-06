@@ -15,6 +15,7 @@ return new class extends Migration
         \DB::table('kit_products')->update(['category_id' => null]);
 
         Schema::table('kit_products', function (Blueprint $table) {
+            $table->dropForeign(['category_id']);
             $table->foreign('category_id')->references('id')->on('kit_categories')->onDelete('set null');
         });
     }
