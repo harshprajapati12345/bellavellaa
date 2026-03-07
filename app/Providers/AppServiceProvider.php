@@ -41,8 +41,11 @@ class AppServiceProvider extends ServiceProvider
 
         // ── Polymorphic Relation Morph Map ────────────────────────
         \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
-            'service' => \App\Models\Service::class,
-            'package' => \App\Models\Package::class,
+            'service'      => \App\Models\Service::class,
+            'package'      => \App\Models\Package::class,
+            'professional' => \App\Models\Professional::class,
+            'customer'     => \App\Models\Customer::class,
+            'client'       => \App\Models\Customer::class,
         ]);
     }
 }
