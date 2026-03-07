@@ -17,10 +17,15 @@ class ReferralController extends BaseController
         $customer = $request->user('api');
         
         $referrals = Referral::where('referrer_id', $customer->id)
-            ->where('referred_type', 'client') // or both if allowed
+            ->where('referrer_type', 'customer')
             ->with(['referred'])
             ->latest()
             ->get();
+
+        if (empty($customer->referral_code)) {
+            $customer->referral_code = \App\Models\Customer::generateUniqueReferralCode($customer->name);
+            $customer->save();
+        }
 
         $stats = [
             'referral_code' => $customer->referral_code,

@@ -119,15 +119,18 @@ class Customer extends Authenticatable implements JWTSubject
 
         static::creating(function ($customer) {
             if (empty($customer->referral_code)) {
-                $customer->referral_code = self::generateUniqueReferralCode();
+                $customer->referral_code = self::generateUniqueReferralCode($customer->name);
             }
         });
     }
 
-    public static function generateUniqueReferralCode(): string
+    public static function generateUniqueReferralCode($name = null): string
     {
+        $namePart = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name ?? 'USR'), 0, 5));
+        if (empty($namePart)) $namePart = 'USR';
+        
         do {
-            $code = strtoupper(substr(md5(uniqid()), 0, 8));
+            $code = $namePart . rand(100, 999);
         } while (self::where('referral_code', $code)->exists());
 
         return $code;

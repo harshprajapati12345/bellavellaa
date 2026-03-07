@@ -14,11 +14,16 @@ class ReferralController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
-        
         $referrals = Referral::where('referrer_id', $professional->id)
+            ->where('referrer_type', 'professional')
             ->with(['referred'])
             ->latest()
             ->get();
+
+        if (empty($professional->referral_code)) {
+            $professional->referral_code = \App\Models\Professional::generateUniqueReferralCode($professional->name);
+            $professional->save();
+        }
 
         $stats = [
             'referral_code' => $professional->referral_code,

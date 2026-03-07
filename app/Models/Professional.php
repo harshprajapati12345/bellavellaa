@@ -62,9 +62,21 @@ class Professional extends Authenticatable implements JWTSubject
     {
         static::creating(function ($professional) {
             if (empty($professional->referral_code)) {
-                $professional->referral_code = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+                $professional->referral_code = self::generateUniqueReferralCode($professional->name);
             }
         });
+    }
+
+    public static function generateUniqueReferralCode($name = null): string
+    {
+        $namePart = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name ?? 'PRO'), 0, 5));
+        if (empty($namePart)) $namePart = 'PRO';
+        
+        do {
+            $code = $namePart . rand(100, 999);
+        } while (self::where('referral_code', $code)->exists());
+
+        return $code;
     }
 }
 

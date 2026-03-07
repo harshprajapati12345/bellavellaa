@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\adminroutes;
 
-use App\Http\Controllers\Controller;
 use App\Models\RewardRule;
 use Illuminate\Http\Request;
 
