@@ -75,14 +75,15 @@ class MasterSeeder extends Seeder
         // ══════════════════════════════════════════════════════════════
         $customers = [];
         $custNames = ['Priya Sharma', 'Rahul Verma', 'Sneha Patel', 'Amit Kumar', 'Neha Gupta'];
-        $cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad'];
         foreach ($custNames as $i => $name) {
             $customerId = DB::table('customers')->insertGetId([
                 'name' => $name,
+                'email' => strtolower(str_replace(' ', '.', $name)) . '@example.com',
                 'mobile' => '98' . rand(10000000, 99999999),
-                'city' => $cities[$i],
-                'zip' => (string) rand(100000, 999999),
-                'address' => ($i + 1) . ', MG Road, ' . $cities[$i],
+                'referral_code' => strtoupper(Str::random(8)),
+                'referred_by' => null,
+                'avatar' => null,
+                'date_of_birth' => now()->subYears(rand(18, 60))->subDays(rand(0, 365)),
                 'status' => 'Active',
                 'bookings' => rand(0, 20),
                 'joined' => now()->subDays(rand(30, 365)),
@@ -248,6 +249,7 @@ class MasterSeeder extends Seeder
         // 7. PROFESSIONALS
         // ══════════════════════════════════════════════════════════════
         $proNames = ['Anjali Mehta', 'Kavita Singh', 'Pooja Reddy', 'Ritu Jain', 'Deepika Nair'];
+        $cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad'];
         $proIds = [];
         foreach ($proNames as $i => $name) {
             $proIds[] = DB::table('professionals')->insertGetId([
@@ -350,6 +352,7 @@ class MasterSeeder extends Seeder
                 'valid_from' => now()->subDays(5),
                 'valid_until' => now()->addDays(30),
                 'status' => 'Active',
+                'description' => "Special {$offerNames[$i]} offer for our valued customers.",
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -406,7 +409,7 @@ class MasterSeeder extends Seeder
                 'sku' => 'KIT-' . str_pad($i + 1, 4, '0', STR_PAD_LEFT),
                 'name' => $kit,
                 'brand' => ['VLCC', 'L\'Oreal', 'Biotique', 'OPI', 'Forest Essentials'][$i],
-                'category' => $catNames[$i],
+                'category_id' => null,
                 'unit' => ['pack', 'kit', 'set', 'set', 'bottle'][$i],
                 'price' => rand(200, 1500),
                 'total_stock' => rand(50, 200),
