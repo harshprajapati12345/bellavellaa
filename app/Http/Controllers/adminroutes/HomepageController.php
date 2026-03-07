@@ -4,6 +4,7 @@ namespace App\Http\Controllers\adminroutes;
 
 use App\Models\HomepageContent;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class HomepageController extends Controller
 {
@@ -22,7 +23,11 @@ class HomepageController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'content_type' => 'required|string'
+            'content_type' => 'required|string|in:static,dynamic',
+            'data_source' => [
+                'nullable',
+                Rule::in(['categories', 'featured_services', 'trending', 'packages', 'testimonials', 'video_stories'])
+            ],
         ]);
 
         $imagePath = null;
@@ -69,7 +74,11 @@ class HomepageController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'content_type' => 'required|string'
+            'content_type' => 'required|string|in:static,dynamic',
+            'data_source' => [
+                'nullable',
+                Rule::in(['categories', 'featured_services', 'trending', 'packages', 'testimonials', 'video_stories'])
+            ],
         ]);
 
         $imagePath = $homepage->image;

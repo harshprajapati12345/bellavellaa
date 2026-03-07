@@ -62,11 +62,12 @@
           @php $dataSource = old('data_source', $homepage->content['data_source'] ?? ''); @endphp
           <select name="data_source" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white">
             <option value="">Select source...</option>
-            <option {{ $dataSource === 'Services' ? 'selected' : '' }}>Services</option>
-            <option {{ $dataSource === 'Packages' ? 'selected' : '' }}>Packages</option>
-            <option {{ $dataSource === 'Reviews / Testimonials' ? 'selected' : '' }}>Reviews / Testimonials</option>
-            <option {{ $dataSource === 'Professionals' ? 'selected' : '' }}>Professionals</option>
-            <option {{ $dataSource === 'Gallery / Media' ? 'selected' : '' }}>Gallery / Media</option>
+            <option value="categories" {{ $dataSource === 'categories' ? 'selected' : '' }}>Categories Carousel</option>
+            <option value="featured_services" {{ $dataSource === 'featured_services' ? 'selected' : '' }}>Featured Services</option>
+            <option value="trending" {{ $dataSource === 'trending' ? 'selected' : '' }}>Trending Services</option>
+            <option value="packages" {{ $dataSource === 'packages' ? 'selected' : '' }}>Packages</option>
+            <option value="testimonials" {{ $dataSource === 'testimonials' ? 'selected' : '' }}>Reviews / Testimonials</option>
+            <option value="video_stories" {{ $dataSource === 'video_stories' ? 'selected' : '' }}>Video Stories (Media)</option>
           </select>
         </div>
         <div>

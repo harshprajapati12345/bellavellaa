@@ -22,14 +22,15 @@ $sections = $sections ?? collect();
     @foreach($sections as $s)
     @php
         $iconMap = [
-            'hero' => 'image',
-            'about' => 'info',
-            'services' => 'scissors',
-            'packages' => 'shopping-bag',
-            'professionals' => 'users',
+            'hero_banner' => 'image',
+            'active_booking' => 'calendar-check',
+            'category_carousel' => 'layout-grid',
+            'service_grid' => 'grid',
+            'service_carousel' => 'layers',
+            'image_banner' => 'monitor',
+            'video_stories' => 'play-circle',
             'testimonials' => 'message-circle',
-            'gallery' => 'grid-3x3',
-            'contact' => 'phone'
+            'download_app' => 'download-cloud'
         ];
         $icon = $iconMap[$s->section] ?? 'layout';
         $ctype = $s->content['content_type'] ?? 'static';

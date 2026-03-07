@@ -21,6 +21,7 @@ class CategoryResource extends JsonResource
             'status' => $this->status,
             'featured' => (bool) $this->featured,
             'color' => $this->color,
+            'badge' => $this->badge,
             'image' => $this->image ? url($this->image) : null,
             'description' => $this->description,
         ];

@@ -58,6 +58,7 @@
                 <input type="text" name="name" id="sectionName" required
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
                   placeholder="e.g. Hero Banner, About Us" value="{{ old('name') }}">
+                <p class="text-[10px] text-gray-400 mt-1 italic">Suggested: hero_banner, category_carousel, service_grid, video_stories</p>
               </div>
 
               <!-- Section Key (auto-generated) -->
@@ -87,12 +88,12 @@
                 <select name="data_source"
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
                   <option value="">Select source...</option>
-                  <option {{ old('data_source') === 'Services' ? 'selected' : '' }}>Services</option>
-                  <option {{ old('data_source') === 'Packages' ? 'selected' : '' }}>Packages</option>
-                  <option {{ old('data_source') === 'Reviews / Testimonials' ? 'selected' : '' }}>Reviews / Testimonials
-                  </option>
-                  <option {{ old('data_source') === 'Professionals' ? 'selected' : '' }}>Professionals</option>
-                  <option {{ old('data_source') === 'Gallery / Media' ? 'selected' : '' }}>Gallery / Media</option>
+                  <option value="categories" {{ old('data_source') === 'categories' ? 'selected' : '' }}>Categories Carousel</option>
+                  <option value="featured_services" {{ old('data_source') === 'featured_services' ? 'selected' : '' }}>Featured Services</option>
+                  <option value="trending" {{ old('data_source') === 'trending' ? 'selected' : '' }}>Trending Services</option>
+                  <option value="packages" {{ old('data_source') === 'packages' ? 'selected' : '' }}>Packages</option>
+                  <option value="testimonials" {{ old('data_source') === 'testimonials' ? 'selected' : '' }}>Reviews / Testimonials</option>
+                  <option value="video_stories" {{ old('data_source') === 'video_stories' ? 'selected' : '' }}>Video Stories (Media)</option>
                 </select>
               </div>
 
