@@ -49,32 +49,45 @@
                   </div>
                   <div>
                     <label class="form-label">Main Category <span class="text-red-400">*</span></label>
-                    <select name="category_id" class="form-input cursor-pointer" onchange="pvUpdateCategory()">
+                    <select name="category_id" id="categorySelect" class="form-input cursor-pointer" onchange="loadServiceGroups(this)" required>
                       <option value="">Select Category</option>
                       @foreach($categories as $cat)
-                        <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}
-                        </option>
+                        <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
                       @endforeach
                     </select>
                   </div>
                   <div>
-                    <label class="form-label">Subcategory <span class="text-red-400">*</span></label>
-                    <select name="subcategory" class="form-input cursor-pointer">
-                      <option value="">Select Subcategory</option>
-                      @foreach($subcategories as $sub)
-                        <option value="{{ $sub }}" {{ old('subcategory') === $sub ? 'selected' : '' }}>{{ $sub }}</option>
-                      @endforeach
+                    <label class="form-label">Service Group <span class="text-gray-400 font-normal text-xs">(Optional — if category has groups)</span></label>
+                    <select name="service_group_id" id="serviceGroupSelect" class="form-input cursor-pointer">
+                      <option value="">— No group (direct service) —</option>
                     </select>
+                    <p id="groupHint" class="text-xs text-gray-400 mt-1 hidden">Loading groups…</p>
                   </div>
                   <div>
-                    <label class="form-label">Duration <span
-                        class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <label class="form-label">Duration <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
                     <select name="duration" class="form-input cursor-pointer">
                       <option value="">Select Duration</option>
                       @for($d = 5; $d <= 180; $d += 5)
                         <option value="{{ $d }}" {{ old('duration') == $d ? 'selected' : '' }}>{{ $d }} min</option>
                       @endfor
                     </select>
+                  </div>
+                  <div>
+                    <label class="form-label">Sort Order <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <input type="number" name="sort_order" value="{{ old('sort_order', 0) }}" min="0" class="form-input" placeholder="0">
+                  </div>
+                  <div class="pt-2">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                      <div class="relative flex items-center">
+                        <input type="checkbox" name="has_variants" value="1" {{ old('has_variants') ? 'checked' : '' }}
+                          class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-300 checked:border-black checked:bg-black transition-all">
+                        <i data-lucide="check" class="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none transition-opacity"></i>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-sm font-medium text-gray-900 group-hover:text-black">Service has variants?</span>
+                        <span class="text-[11px] text-gray-400">Enable this if the service has different types (e.g. Aloe Wax, Milk Wax)</span>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
@@ -119,13 +132,13 @@
             </div>
           </div>
 
-          <!-- ━━━ SECTION 2 · SERVICE PREVIEW ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-          <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
+          <!-- ━━━ SECTION 2 · SERVICE PREVIEW (Legacy / Variants) ━━━━━━━━━━━━━━━━ -->
+          <div id="serviceTypesSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ old('has_variants') ? 'hidden' : '' }}">
             <div class="px-8 pt-7 pb-2">
               <div class="flex items-center gap-3 mb-6">
                 <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">
                   2</div>
-                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Preview</h3>
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Types (Quick Setup)</h3>
                 <div class="flex-1 h-px bg-gray-100 ml-2"></div>
               </div>
             </div>
@@ -138,8 +151,7 @@
                     <div class="flex items-center justify-between mb-4">
                       <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-gray-900"></div>
-                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider svc-label">Service
-                          1</span>
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider svc-label">Item 1</span>
                       </div>
                       <button type="button" onclick="removeServiceCard(this)"
                         class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center">
@@ -148,62 +160,51 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Service
-                          Name</label>
+                        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Title</label>
                         <input type="text" name="service_types[]" placeholder="e.g. Underarm Thread" class="form-input">
                       </div>
                       <div>
-                        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹)
-                          *</label>
+                        <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
                         <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01"
                           class="form-input text-right svc-price">
-                      </div>
-                    </div>
-                    <div class="mb-4">
-                      <label
-                        class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Reviews</label>
-                      <input type="number" name="service_reviews[]" placeholder="e.g. 120" min="0" class="form-input">
-                    </div>
-                    <div class="inline-upload-wrap">
-                      <label
-                        class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Image</label>
-                      <label
-                        class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                          stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
-                          <line x1="16" x2="22" y1="5" y2="5" />
-                          <line x1="19" x2="19" y1="2" y2="8" />
-                          <circle cx="9" cy="9" r="2" />
-                          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                        </svg>
-                        <p class="text-xs text-gray-400 mt-1.5">Upload image</p>
-                        <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
-                      </label>
-                      <div class="relative mt-2">
-                        <img class="inline-img-preview hidden w-full h-24 object-cover rounded-xl border border-gray-100"
-                          src="" alt="">
-                        <button type="button"
-                          class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm"
-                          onclick="removeInlineImg(this)">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 6 6 18" />
-                            <path d="m6 6 12 12" />
-                          </svg>
-                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
                 <button type="button" onclick="addServiceType()"
                   class="mt-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-                  <div
-                    class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
+                  <div class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                   </div>
-                  Add Another Service
+                  Add Another Option
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ━━━ SECTION 2 (ALT) · SERVICE VARIANTS (Advanced) ━━━━━━━━━━━━━━ -->
+          <div id="variantsSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ old('has_variants') ? '' : 'hidden' }}">
+            <div class="px-8 pt-7 pb-2">
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+                  <i data-lucide="layers" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Variants</h3>
+                <div class="flex-1 h-px bg-gray-100 ml-2"></div>
+              </div>
+            </div>
+            <div class="px-8 pb-8">
+              <div class="bg-purple-50 rounded-2xl border border-purple-100 p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center mx-auto mb-3 shadow-sm">
+                  <i data-lucide="plus" class="w-6 h-6 text-purple-600"></i>
+                </div>
+                <h4 class="text-sm font-semibold text-gray-900">Manage Variants After Saving</h4>
+                <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">To add specific variants (like Aloe Wax, Milk Wax) with separate images, please save this service first as a draft or publish it.</p>
+                <div class="mt-4 flex items-center justify-center gap-2">
+                  <span class="text-[10px] font-bold text-purple-600 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-purple-100">Step 1: Save Service</span>
+                  <i data-lucide="arrow-right" class="w-3 h-3 text-purple-300"></i>
+                  <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-gray-100">Step 2: Add Variants</span>
+                </div>
               </div>
             </div>
           </div>
@@ -794,14 +795,33 @@
       if (el) el.textContent = v === 'Select Category' ? '—' : v;
     }
 
-    // ── Subcategory
-    function pvUpdateSubcategory() {
-      const sel = document.querySelector('[name="subcategory"]');
-      const v = sel?.options[sel.selectedIndex]?.value || '';
-      const el = document.getElementById('pv-subcategory');
-      if (!el) return;
-      if (v) { el.textContent = v; el.style.display = 'inline-flex'; }
-      else { el.style.display = 'none'; }
+    // ── Service Group (dynamic via AJAX)
+    function loadServiceGroups(selectEl) {
+      const catId = selectEl.value;
+      const groupSel = document.getElementById('serviceGroupSelect');
+      const hint = document.getElementById('groupHint');
+      groupSel.innerHTML = '<option value="">— No group (direct service) —</option>';
+      if (!catId) return;
+      hint.classList.remove('hidden');
+      fetch(`/categories/${catId}/service-groups`)
+        .then(r => r.json())
+        .then(groups => {
+          hint.classList.add('hidden');
+          groups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id; opt.textContent = g.name;
+            groupSel.appendChild(opt);
+          });
+          if (groups.length === 0) {
+            hint.textContent = 'No groups — this category uses a flat service list.';
+            hint.classList.remove('hidden');
+          }
+        })
+        .catch(() => { hint.textContent = 'Could not load groups.'; hint.classList.remove('hidden'); });
+      // also update live preview category name
+      const v = selectEl.options[selectEl.selectedIndex]?.text || '—';
+      const el = document.getElementById('pv-category');
+      if (el) el.textContent = v === 'Select Category' ? '—' : v;
     }
 
     // ── Duration
@@ -912,8 +932,6 @@
 
     // ── Event listeners
     document.querySelector('[name="name"]')?.addEventListener('input', pvUpdateName);
-    document.querySelector('[name="category_id"]')?.addEventListener('change', pvUpdateCategory);
-    document.querySelector('[name="subcategory"]')?.addEventListener('change', pvUpdateSubcategory);
     document.querySelector('[name="duration"]')?.addEventListener('change', pvUpdateDuration);
     document.querySelector('[name="description"]')?.addEventListener('input', pvUpdateDescription);
     document.querySelector('[name="desc_title"]')?.addEventListener('input', pvUpdateDescTitle);
@@ -924,8 +942,28 @@
       .observe(document.getElementById('serviceTypesContainer') || document.body,
         { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'class'] });
 
+    // ── Toggle Variants vs Legacy Section
+    const hasVariantsCheck = document.querySelector('[name="has_variants"]');
+    if (hasVariantsCheck) {
+      hasVariantsCheck.addEventListener('change', function() {
+        const legacySec = document.getElementById('serviceTypesSection');
+        const variantSec = document.getElementById('variantsSection');
+        if (this.checked) {
+          legacySec?.classList.add('hidden');
+          variantSec?.classList.remove('hidden');
+        } else {
+          legacySec?.classList.remove('hidden');
+          variantSec?.classList.add('hidden');
+        }
+      });
+    }
+
     // Initial render
-    pvUpdateName(); pvUpdateCategory(); pvUpdateSubcategory(); pvUpdateDuration();
+    pvUpdateName(); pvUpdateCategory(); pvUpdateDuration();
     pvUpdateDescription(); pvUpdateDescTitle(); pvUpdateServices();
+
+    // If old category_id is retained (e.g. after validation error), load its groups on page load
+    const catSel = document.getElementById('categorySelect');
+    if (catSel && catSel.value) loadServiceGroups(catSel);
   </script>
 @endpush

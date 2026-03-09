@@ -11,21 +11,59 @@ class Service extends Model
 
     protected $casts = [
         'service_types' => 'array',
+        'has_variants' => 'boolean',
     ];
 
-    protected $appends = ['average_rating', 'total_reviews'];
+
+
+    // ─── Relationships ───────────────────────────────────────────────
+
+    public function variants()
+    {
+        return $this->hasMany(ServiceVariant::class)->orderBy('sort_order');
+    }
+
+    public function includedItems()
+    {
+        return $this->hasMany(ServiceIncludedItem::class)->orderBy('sort_order');
+    }
+
+    public function addons()
+    {
+        return $this->hasMany(ServiceAddon::class)->orderBy('sort_order');
+    }
 
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
+
+    /**
+     * The service group (Luxe, Prime, Ayurveda) this service belongs to.
+     * Null for categories without a group layer (e.g. Hair Studio).
+     */
+    public function serviceGroup()
+    {
+        return $this->belongsTo(ServiceGroup::class);
+    }
+
     public function bookings()
     {
         return $this->hasMany(Booking::class);
     }
 
     /**
-     * Get average rating for the service from reviews linked via bookings.
+     * Packages that include this service (via pivot).
+     */
+    public function packages()
+    {
+        return $this->belongsToMany(Package::class, 'package_service');
+    }
+
+    // ─── Computed attributes ─────────────────────────────────────────
+
+    /**
+     * Average rating from approved reviews linked via bookings.
      */
     public function getAverageRatingAttribute(): float
     {
@@ -37,7 +75,7 @@ class Service extends Model
     }
 
     /**
-     * Get total review count for the service.
+     * Total count of approved reviews.
      */
     public function getTotalReviewsAttribute(): int
     {

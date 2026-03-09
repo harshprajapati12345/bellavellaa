@@ -52,15 +52,15 @@
               <div>
                 <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Category <span
                     class="text-red-400">*</span></label>
-                <select name="category"
+                <select name="category_id"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black/50 text-sm bg-white cursor-pointer transition-all"
                   required>
                   <option value="">Select category</option>
-                  @foreach(['Bridal', 'Hair', 'Makeup', 'Nails', 'Skincare', 'Wellness'] as $cat)
-                    <option value="{{ $cat }}" {{ old('category', $package->category) === $cat ? 'selected' : '' }}>{{ $cat }}
-                    </option>
+                  @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" {{ old('category_id', $package->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
                   @endforeach
                 </select>
+                <p class="text-xs text-gray-400 mt-1 ml-1">Only packages-type categories shown</p>
               </div>
               <div class="flex items-center gap-6 mt-4">
                 <label class="flex items-center gap-2 cursor-pointer group">
@@ -93,8 +93,7 @@
                   <p class="text-sm font-medium text-gray-600">Click to upload or drag &amp; drop</p>
                   <p class="text-xs text-gray-400 mt-1">Leave empty to keep current</p>
                 </div>
-                <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
-                onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
+                <input type="file" id="packageImageInput" name="image" class="hidden" accept="image/*" onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
               </div>
               <div class="relative mt-3 {{ $package->image ? '' : 'hidden' }}" id="packageImgPreviewWrap">
                 <img id="packageImgPreview" class="w-full h-44 object-cover rounded-2xl border border-gray-100 shadow-sm"
@@ -462,15 +461,17 @@
 @push('scripts')
   <script>
     // --- Initialization ---
-    let selectedServices = @json($package->services ?? []);
+    // Use pivot-based service objects (id, name, duration, price)
+    @php
+        $mappedServices = $package->services->map(fn($s) => [
+            'id' => $s->id,
+            'name' => $s->name,
+            'duration' => $s->duration,
+            'price' => $s->price ?? 0
+        ]);
+    @endphp
+    let serviceObjects = @json($mappedServices);
     const masterServices = @json($services);
-
-    // Convert basic IDs to full service objects for internal tracking
-    let serviceObjects = [];
-    selectedServices.forEach(id => {
-      const svc = masterServices.find(s => s.id == id);
-      if (svc) serviceObjects.push({ ...svc });
-    });
 
     // --- Service Selection ---
     function showServiceDropdown() {

@@ -41,10 +41,40 @@
               <label class="form-label font-semibold">Category Name *</label>
               <input type="text" name="name" value="{{ old('name', $category->name) }}" class="form-input" required>
             </div>
+
+            <div>
+              <label class="form-label font-semibold">Category Type <span class="text-red-400">*</span></label>
+              <p class="text-xs text-gray-400 mb-3">Controls what this category shows in the app</p>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2.5 cursor-pointer group">
+                  <input type="radio" name="type" value="services"
+                    {{ old('type', $category->type) === 'services' ? 'checked' : '' }}
+                    class="w-4 h-4 accent-black cursor-pointer" required>
+                  <span class="text-sm font-medium text-gray-700 group-hover:text-black">
+                    Services <span class="text-xs text-gray-400">(Salon, Spa, Hair)</span>
+                  </span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer group">
+                  <input type="radio" name="type" value="packages"
+                    {{ old('type', $category->type) === 'packages' ? 'checked' : '' }}
+                    class="w-4 h-4 accent-black cursor-pointer">
+                  <span class="text-sm font-medium text-gray-700 group-hover:text-black">
+                    Packages <span class="text-xs text-gray-400">(Bride)</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div>
               <label class="form-label font-semibold">Description</label>
-              <textarea name="description" rows="6"
+              <textarea name="description" rows="5"
                 class="form-input resize-none">{{ old('description', $category->description) }}</textarea>
+            </div>
+
+            <div>
+              <label class="form-label font-semibold">Sort Order</label>
+              <input type="number" name="sort_order" value="{{ old('sort_order', $category->sort_order ?? 0) }}" min="0" class="form-input">
+              <p class="text-xs text-gray-400 mt-1">Lower number = shown first in app</p>
             </div>
           </div>
 

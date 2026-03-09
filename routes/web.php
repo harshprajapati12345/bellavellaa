@@ -20,6 +20,8 @@ use App\Http\Controllers\adminroutes\LeaveRequestController;
 use App\Http\Controllers\adminroutes\SettingController;
 use App\Http\Controllers\adminroutes\ReferralController;
 use App\Http\Controllers\adminroutes\RewardSettingController;
+use App\Http\Controllers\adminroutes\ServiceGroupController;
+use App\Http\Controllers\adminroutes\ServiceVariantController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -34,8 +36,19 @@ Route::middleware(['auth:admin'])->group(function () {
 
     Route::resource('categories', CategoryController::class);
     Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
+
+    // Service Groups (sub-tier under service-type categories)
+    Route::resource('service-groups', ServiceGroupController::class);
+    // AJAX helper: returns service groups for a given category (used by service create/edit form)
+    Route::get('categories/{category}/service-groups', [ServiceGroupController::class, 'byCategory'])->name('categories.service-groups');
+
     Route::resource('services', ServiceController::class);
     Route::patch('services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
+    
+    // Service Variants (AJAX CRUD)
+    Route::post('services/{service}/variants', [ServiceVariantController::class, 'store'])->name('services.variants.store');
+    Route::patch('service-variants/{variant}', [ServiceVariantController::class, 'update'])->name('service-variants.update');
+    Route::delete('service-variants/{variant}', [ServiceVariantController::class, 'destroy'])->name('service-variants.destroy');
     Route::resource('packages', PackageController::class);
     Route::patch('packages/{package}/toggle-status', [PackageController::class, 'toggleStatus'])->name('packages.toggle-status');
 

@@ -15,8 +15,16 @@ class PackageResource extends JsonResource
         return [
             'id'                => $this->id,
             'name'              => $this->name,
-            'category'          => $this->category,
-            'services'          => $this->services, // Cast as array in Model
+            'slug'              => $this->slug,
+            'category_id'       => $this->category_id,
+            // Services via package_service pivot — loaded with ->with('services')
+            'services'          => $this->whenLoaded('services', fn() =>
+                $this->services->map(fn($s) => [
+                    'id'    => $s->id,
+                    'name'  => $s->name,
+                    'price' => $s->price,
+                ])
+            ),
             'price'             => $this->price,
             'discount'          => $this->discount,
             'duration'          => $this->duration,
@@ -27,6 +35,7 @@ class PackageResource extends JsonResource
             'aftercare_image'   => $this->aftercare_image,
             'status'            => $this->status,
             'featured'          => (bool) $this->featured,
+            'sort_order'        => $this->sort_order,
             'image'             => $this->image,
             'created_at'        => $this->created_at?->toIso8601String(),
             'updated_at'        => $this->updated_at?->toIso8601String(),

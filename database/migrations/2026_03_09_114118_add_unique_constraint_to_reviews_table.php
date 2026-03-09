@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->timestamp('last_seen')->nullable();
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->unique('booking_id');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn('last_seen');
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->dropUnique(['booking_id']);
         });
     }
 };

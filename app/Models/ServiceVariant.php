@@ -8,15 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ServiceVariant extends Model
 {
     protected $fillable = [
-        'service_id', 'name', 'price_paise',
-        'duration_minutes', 'is_default', 'sort_order',
+        'service_id', 'name', 'slug', 'image', 'price',
+        'duration_minutes', 'status', 'is_default', 'sort_order',
     ];
 
     protected $casts = [
-        'price_paise' => 'integer',
+        'price' => 'float',
         'is_default' => 'boolean',
     ];
 
-    public function getPriceAttribute(): float { return $this->price_paise / 100; }
     public function service(): BelongsTo { return $this->belongsTo(Service::class); }
 }

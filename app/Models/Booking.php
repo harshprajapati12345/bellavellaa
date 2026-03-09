@@ -20,6 +20,10 @@ class Booking extends Model
     {
         return $this->belongsTo(Service::class);
     }
+    public function variant()
+    {
+        return $this->belongsTo(ServiceVariant::class, 'service_variant_id');
+    }
     public function package()
     {
         return $this->belongsTo(Package::class);

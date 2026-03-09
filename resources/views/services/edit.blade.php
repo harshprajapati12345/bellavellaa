@@ -52,7 +52,7 @@
               </div>
               <div>
                 <label class="form-label">Category <span class="text-red-400">*</span></label>
-                <select name="category_id" class="form-input cursor-pointer" required>
+                <select name="category_id" id="categorySelect" class="form-input cursor-pointer" onchange="loadServiceGroups(this)" required>
                   <option value="">Select category</option>
                   @foreach($categories as $cat)
                     <option value="{{ $cat->id }}" {{ old('category_id', $service->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
@@ -60,24 +60,39 @@
                 </select>
               </div>
               <div>
-                <label class="form-label">Subcategory</label>
-                <select name="subcategory" class="form-input cursor-pointer">
-                  <option value="">Select Subcategory</option>
-                  @foreach($subcategories as $sub)
-                    <option value="{{ $sub }}" {{ old('subcategory', $service->subcategory ?? '') === $sub ? 'selected' : '' }}>{{ $sub }}</option>
-                  @endforeach
+                <label class="form-label">Service Group <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                <select name="service_group_id" id="serviceGroupSelect" class="form-input cursor-pointer">
+                  <option value="">— No group (direct service) —</option>
+                  {{-- populated by JS on load if category is set --}}
                 </select>
+                <p id="groupHint" class="text-xs text-gray-400 mt-1 hidden">Loading groups…</p>
               </div>
               <div>
                 <label class="form-label">Duration <span class="text-red-400">*</span></label>
                 <select name="duration" class="form-input cursor-pointer md:w-1/2" required>
                   <option value="">Select Duration</option>
                   @for($d = 5; $d <= 180; $d += 5)
-                    <option value="{{ $d }}" {{ old('duration', $service->duration) == $d ? 'selected' : '' }}>{{ $d }} min
-                    </option>
+                    <option value="{{ $d }}" {{ old('duration', $service->duration) == $d ? 'selected' : '' }}>{{ $d }} min</option>
                   @endfor
                 </select>
                 <p class="text-[11px] text-gray-400 mt-1.5 ml-1">This duration applies to all service variations</p>
+              </div>
+              <div>
+                <label class="form-label">Sort Order</label>
+                <input type="number" name="sort_order" value="{{ old('sort_order', $service->sort_order ?? 0) }}" min="0" class="form-input" placeholder="0">
+              </div>
+              <div class="pt-2">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                  <div class="relative flex items-center">
+                    <input type="checkbox" name="has_variants" value="1" {{ old('has_variants', $service->has_variants) ? 'checked' : '' }}
+                      class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-300 checked:border-black checked:bg-black transition-all">
+                    <i data-lucide="check" class="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none transition-opacity"></i>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium text-gray-900 group-hover:text-black">Service has variants?</span>
+                    <span class="text-[11px] text-gray-400">Enable this if the service has different types (e.g. Aloe Wax, Milk Wax)</span>
+                  </div>
+                </label>
               </div>
             </div>
             <div>
@@ -119,13 +134,58 @@
         </div>
       </div>
 
-      <!-- ━━━ SECTION 2 · SERVICE PREVIEW ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-      <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
+      <!-- ━━━ SECTION 2 · VARIANTS MANAGEMENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+      <div id="variantsSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ $service->has_variants ? '' : 'hidden' }}">
+        <div class="px-8 pt-7 pb-2 text-white">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">V</div>
+            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Variants</h3>
+            <div class="flex-1 h-px bg-gray-100 ml-2"></div>
+            <button type="button" onclick="openVariantModal()" class="btn btn-primary py-1.5 px-3 text-xs">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Variant
+            </button>
+          </div>
+        </div>
+        <div class="px-8 pb-8">
+            <div id="variantsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @forelse($service->variants as $variant)
+                    <div class="variant-card p-4 rounded-2xl border border-gray-100 bg-gray-50/30 flex gap-4 items-center group relative h-24"
+                         data-id="{{ $variant->id }}"
+                         data-name="{{ $variant->name }}"
+                         data-price="{{ $variant->price }}"
+                         data-duration="{{ $variant->duration_minutes }}"
+                         data-status="{{ $variant->status }}"
+                         data-sort="{{ $variant->sort_order }}"
+                         data-image="{{ $variant->image }}">
+                        <div class="w-16 h-16 rounded-xl bg-gray-200 overflow-hidden shrink-0 shadow-sm">
+                            <img src="{{ $variant->image ? (str_starts_with($variant->image, 'http') ? $variant->image : asset('storage/' . $variant->image)) : 'https://placehold.co/100?text=No+Img' }}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-semibold text-gray-900 truncate">{{ $variant->name }}</h4>
+                            <p class="text-[11px] text-gray-500 font-medium">₹{{ number_format($variant->price, 2) }} <span class="mx-1 text-gray-300">|</span> {{ $variant->duration_minutes ?? '?' }} min</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full {{ $variant->status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500' }}">{{ $variant->status }}</span>
+                        </div>
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button type="button" onclick="editVariant({{ $variant->id }})" class="p-1.5 rounded-lg bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button type="button" onclick="deleteVariant({{ $variant->id }})" class="p-1.5 rounded-lg bg-white border border-gray-100 text-red-500 hover:bg-red-50 shadow-sm"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                        <p class="text-sm text-gray-400">No variants added yet.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+      </div>
+
+      <!-- ━━━ SECTION 3 · SERVICE PREVIEW (Legacy - Hidden if variants active) ━━━ -->
+      <div id="legacyTypesSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ $service->has_variants ? 'hidden' : '' }}">
         <div class="px-8 pt-7 pb-2">
           <div class="flex items-center gap-3 mb-6">
             <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">2
             </div>
-            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Preview</h3>
+            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Quick Service Types</h3>
             <div class="flex-1 h-px bg-gray-100 ml-2"></div>
           </div>
         </div>
@@ -248,11 +308,8 @@
       <!-- ━━━ STICKY ACTION BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
       <div
         class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-between mt-2">
-        <form action="{{ route('services.destroy', $service->id) }}" method="POST" class="inline" id="deleteForm">
-          @csrf @method('DELETE')
-          <button type="button" onclick="confirmDelete()" class="btn btn-danger text-sm"><i data-lucide="trash-2"
-              class="w-4 h-4"></i> Delete</button>
-        </form>
+        <button type="button" onclick="confirmDelete()" class="btn btn-danger text-sm"><i data-lucide="trash-2"
+            class="w-4 h-4"></i> Delete</button>
         <div class="flex gap-3">
           <a href="{{ route('services.index') }}" class="btn btn-secondary">Cancel</a>
           <button type="submit" name="form_action" value="draft" class="btn btn-secondary"><i data-lucide="file-text"
@@ -262,6 +319,10 @@
         </div>
       </div>
 
+    </form>
+    
+    <form action="{{ route('services.destroy', $service->id) }}" method="POST" class="hidden" id="deleteForm">
+      @csrf @method('DELETE')
     </form>
   </div>
 @endsection
@@ -559,7 +620,194 @@
     // Init: add one empty slot on load
     addDescImage();
 
-    /* ── Delete confirmation ────────────────────────────────────────────── */
+    /* ── Service Group AJAX ─────────────────────────────────────────── */
+    function loadServiceGroups(selectEl, preselectId = null) {
+      const catId = selectEl.value;
+      const groupSel = document.getElementById('serviceGroupSelect');
+      const hint = document.getElementById('groupHint');
+      groupSel.innerHTML = '<option value="">— No group (direct service) —</option>';
+      if (!catId) return;
+      hint.textContent = 'Loading groups…'; hint.classList.remove('hidden');
+      fetch(`/categories/${catId}/service-groups`)
+        .then(r => r.json())
+        .then(groups => {
+          hint.classList.add('hidden');
+          groups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id; opt.textContent = g.name;
+            if (preselectId && g.id == preselectId) opt.selected = true;
+            groupSel.appendChild(opt);
+          });
+          if (groups.length === 0) {
+            hint.textContent = 'No groups — flat service list.';
+            hint.classList.remove('hidden');
+          }
+        })
+        .catch(() => { hint.textContent = 'Could not load groups.'; hint.classList.remove('hidden'); });
+    }
+
+    // Preload groups for current service on page load
+    const catSel = document.getElementById('categorySelect');
+    if (catSel && catSel.value) {
+      loadServiceGroups(catSel, {{ old('service_group_id', $service->service_group_id ?? 'null') }});
+    }
+
+    /* ── Delete confirmation ────────────────────────────────────── */
+    // Toggle Variants Section
+    const hasVariantsCheckbox = document.querySelector('input[name="has_variants"]');
+    if(hasVariantsCheckbox) {
+        hasVariantsCheckbox.addEventListener('change', function() {
+            document.getElementById('variantsSection').classList.toggle('hidden', !this.checked);
+            document.getElementById('legacyTypesSection').classList.toggle('hidden', this.checked);
+        });
+    }
+
+    /* ── Service Variant AJAX Handlers ──────────────────────────────── */
+    function openVariantModal(variant = null) {
+        const title = variant ? 'Edit Service Variant' : 'Add Service Variant';
+        const confirmText = variant ? 'Update Variant' : 'Save Variant';
+        
+        Swal.fire({
+            title: title,
+            html: `
+                <div class="text-left space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Variant Name</label>
+                        <input type="text" id="v_name" class="swal2-input !m-0 !w-full" placeholder="e.g. Aloe Wax" value="${variant ? variant.name : ''}">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Price (₹)</label>
+                            <input type="number" id="v_price" class="swal2-input !m-0 !w-full" placeholder="0.00" step="0.01" value="${variant ? variant.price : ''}">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Duration (min)</label>
+                            <input type="number" id="v_duration" class="swal2-input !m-0 !w-full" placeholder="30" value="${variant ? variant.duration_minutes : ''}">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Status</label>
+                            <select id="v_status" class="swal2-select !m-0 !w-full !flex">
+                                <option value="Active" ${variant && variant.status === 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${variant && variant.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Sort Order</label>
+                            <input type="number" id="v_sort" class="swal2-input !m-0 !w-full" placeholder="0" value="${variant ? variant.sort_order : ''}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Image</label>
+                        <input type="file" id="v_image" class="swal2-file !m-0 !w-full" accept="image/*">
+                        ${variant && variant.image ? `<p class="text-[10px] text-gray-400 mt-1">Leave empty to keep current image</p>` : ''}
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            confirmButtonColor: '#000',
+            preConfirm: () => {
+                const name = document.getElementById('v_name').value;
+                const price = document.getElementById('v_price').value;
+                if (!name || !price) {
+                    Swal.showValidationMessage('Name and Price are required');
+                    return false;
+                }
+                return {
+                    name: name,
+                    price: price,
+                    duration: document.getElementById('v_duration').value,
+                    status: document.getElementById('v_status').value,
+                    sort_order: document.getElementById('v_sort').value,
+                    image: document.getElementById('v_image').files[0]
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                saveVariant(result.value, variant ? variant.id : null);
+            }
+        });
+    }
+
+    function editVariant(id) {
+        // Find existing data from DOM or fetch (here we'll just parse the data-attributes we add)
+        const card = document.querySelector(`.variant-card[data-id="${id}"]`);
+        const variantData = {
+            id: id,
+            name: card.dataset.name,
+            price: card.dataset.price,
+            duration_minutes: card.dataset.duration,
+            status: card.dataset.status,
+            sort_order: card.dataset.sort,
+            image: card.dataset.image
+        };
+        openVariantModal(variantData);
+    }
+
+    function saveVariant(data, variantId = null) {
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('price', data.price);
+        formData.append('duration_minutes', data.duration || 0);
+        formData.append('status', data.status);
+        formData.append('sort_order', data.sort_order || 0);
+        
+        if (data.image) formData.append('image', data.image);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        if (variantId) {
+            formData.append('_method', 'PATCH');
+        }
+
+        Swal.fire({ title: variantId ? 'Updating...' : 'Saving...', didOpen: () => Swal.showLoading() });
+
+        const url = variantId 
+            ? `/service-variants/${variantId}` 
+            : `{{ route('services.variants.store', $service->id) }}`;
+
+        fetch(url, {
+            method: 'POST', // Use POST with _method=PATCH for multipart/form-data support in PHP
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if(res.status === 'success') {
+                Swal.fire('Saved!', 'Variant added successfully', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', res.message || 'Could not save variant', 'error');
+            }
+        })
+        .catch(() => Swal.fire('Error', 'Connection failed', 'error'));
+    }
+
+    function deleteVariant(id) {
+        Swal.fire({
+            title: 'Delete Variant?',
+            text: 'This variant will be permanently removed.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Yes, delete'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/service-variants/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if(res.status === 'success') location.reload();
+                    else Swal.fire('Error', 'Delete failed', 'error');
+                });
+            }
+        });
+    }
+
     function confirmDelete() {
       Swal.fire({
         title: 'Delete this service?',

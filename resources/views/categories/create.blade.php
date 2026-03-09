@@ -40,10 +40,39 @@
               <input type="text" name="name" value="{{ old('name') }}" placeholder="e.g. Bridal Glam" class="form-input"
                 required>
             </div>
+
+            {{-- TYPE: required, drives Flutter behavior --}}
+            <div>
+              <label class="form-label font-semibold">Category Type <span class="text-red-400">*</span></label>
+              <p class="text-xs text-gray-400 mb-3">Controls what this category shows in the app</p>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2.5 cursor-pointer group">
+                  <input type="radio" name="type" value="services" {{ old('type', 'services') === 'services' ? 'checked' : '' }}
+                    class="w-4 h-4 accent-black cursor-pointer" required>
+                  <span class="text-sm font-medium text-gray-700 group-hover:text-black">
+                    Services <span class="text-xs text-gray-400">(Salon, Spa, Hair Studio)</span>
+                  </span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer group">
+                  <input type="radio" name="type" value="packages" {{ old('type') === 'packages' ? 'checked' : '' }}
+                    class="w-4 h-4 accent-black cursor-pointer">
+                  <span class="text-sm font-medium text-gray-700 group-hover:text-black">
+                    Packages <span class="text-xs text-gray-400">(Bride)</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div>
               <label class="form-label font-semibold">Description</label>
-              <textarea name="description" rows="5" placeholder="Tell us about this category…"
+              <textarea name="description" rows="4" placeholder="Tell us about this category…"
                 class="form-input resize-none">{{ old('description') }}</textarea>
+            </div>
+
+            <div>
+              <label class="form-label font-semibold">Sort Order</label>
+              <input type="number" name="sort_order" value="{{ old('sort_order', 0) }}" min="0" class="form-input" placeholder="0">
+              <p class="text-xs text-gray-400 mt-1">Lower number = shown first in app (0 = auto)</p>
             </div>
           </div>
           <div class="space-y-8">

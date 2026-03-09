@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->timestamp('last_seen')->nullable();
+        Schema::table('services', function (Blueprint $table) {
+            $table->boolean('has_variants')->default(false)->after('service_types');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn('last_seen');
+        Schema::table('services', function (Blueprint $table) {
+            //
         });
     }
 };

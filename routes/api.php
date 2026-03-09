@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Client\PromotionController;
 use App\Http\Controllers\Api\Client\SlotController;
 use App\Http\Controllers\Api\Client\NotificationController;
+use App\Http\Controllers\Api\Client\ServiceController as ClientServiceController;
+use App\Http\Controllers\Api\Client\ServiceGroupController as ClientServiceGroupController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
 
 use Illuminate\Support\Facades\Route;
@@ -48,8 +50,25 @@ Route::get('/images/{path}', function ($path) {
 Route::prefix('client')->group(function () {
     // Public Routes
     Route::get('homepage', [HomepageController::class, 'index']);
-    Route::get('categories', [CategoryController::class, 'index']);
-    Route::get('categories/{slug}', [CategoryController::class, 'show']);
+
+    // Categories
+    Route::get('categories', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'index']);
+    Route::get('categories/{id}', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'show']);
+    Route::get('categories/{id}/page', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'pageData']);
+    Route::get('categories/{id}/details', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'details']);
+    Route::get('categories/{id}/service-groups', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'serviceGroups']);
+
+    // Dedicated Resource Details
+    Route::get('service-groups/{id}', [\App\Http\Controllers\api\client\ClientServiceGroupController::class, 'show']);
+    Route::get('services/{id}', [\App\Http\Controllers\api\client\ClientServiceController::class, 'show']);
+    Route::get('services/{id}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class, 'index']);
+
+    // Original (Legacy Compatibility)
+    Route::get('categories/{categorySlug}/groups', [CategoryController::class, 'groups']);
+    Route::get('categories/{categorySlug}/services', [CategoryController::class, 'services']);
+    Route::get('categories/{categorySlug}/packages', [CategoryController::class, 'packages']);
+    Route::get('categories/{categorySlug}/groups/{groupSlug}/services', [ClientServiceGroupController::class, 'services']);
+    Route::get('services/{serviceId}/variants', [ClientServiceController::class, 'variants']);
 
     // Authentication (No JWT required)
     Route::prefix('auth')->group(function () {
@@ -101,7 +120,7 @@ Route::prefix('client')->group(function () {
         Route::post('cart/checkout', [CartController::class, 'checkout']);
 
         // Reviews
-        Route::post('reviews', [ReviewController::class, 'store']);
+        Route::post('bookings/{bookingId}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class, 'store']);
         Route::post('app-feedback', [\App\Http\Controllers\Api\Client\AppFeedbackController::class, 'store']);
 
         // Promotions & Slots

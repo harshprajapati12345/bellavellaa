@@ -5,6 +5,7 @@ $section = '';
 if (str_starts_with($routeName, 'dashboard')) $section = 'dashboard';
 elseif (str_starts_with($routeName, 'categories')) $section = 'categories';
 elseif (str_starts_with($routeName, 'services')) $section = 'services';
+elseif (str_starts_with($routeName, 'service-groups')) $section = 'service-groups';
 elseif (str_starts_with($routeName, 'packages')) $section = 'packages';
 elseif (str_starts_with($routeName, 'professionals')) $section = 'professionals';
 elseif (str_starts_with($routeName, 'customers')) $section = 'customers';
@@ -114,6 +115,13 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
             class="flex items-center gap-3 px-4 py-3 {{ $isServicesActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
             <i data-lucide="store" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
             <span class="font-normal text-base text-black">Services</span>
+          </a>
+
+          <!-- Service Groups (sub-item under Services) -->
+          <a href="{{ route('service-groups.index') }}"
+            class="flex items-center gap-3 px-4 py-2.5 ml-3 {{ $section === 'service-groups' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+            <i data-lucide="layers-2" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+            <span class="font-normal text-sm text-black">Service Groups</span>
           </a>
 
           <!-- Professionals dropdown -->

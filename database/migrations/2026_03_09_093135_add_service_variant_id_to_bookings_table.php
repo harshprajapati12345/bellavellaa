@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->timestamp('last_seen')->nullable();
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->unsignedBigInteger('service_variant_id')->nullable()->after('service_id');
+            $table->foreign('service_variant_id')->references('id')->on('service_variants')->onDelete('set null');
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn('last_seen');
+        Schema::table('bookings', function (Blueprint $table) {
+            //
         });
     }
 };

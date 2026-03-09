@@ -6,6 +6,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -37,7 +38,9 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'       => 'required|string|max:255',
+            'type'       => ['required', Rule::in(['services', 'packages'])],
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $imagePath = null;
@@ -46,13 +49,15 @@ class CategoryController extends Controller
         }
 
         Category::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'name'        => $request->name,
+            'slug'        => Str::slug($request->name),
+            'type'        => $request->type,
+            'sort_order'  => $request->sort_order ?? 0,
             'description' => $request->description,
-            'status' => $request->has('status') ? 'Active' : 'Inactive',
-            'featured' => $request->has('featured') ? 1 : 0,
-            'color' => $request->color ?? '#000000',
-            'image' => $imagePath,
+            'status'      => $request->has('status') ? 'Active' : 'Inactive',
+            'featured'    => $request->has('featured') ? 1 : 0,
+            'color'       => $request->color ?? '#000000',
+            'image'       => $imagePath,
         ]);
 
         return redirect()->route('categories.index')
@@ -83,7 +88,9 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'       => 'required|string|max:255',
+            'type'       => ['required', Rule::in(['services', 'packages'])],
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $imagePath = $category->image;
@@ -92,13 +99,15 @@ class CategoryController extends Controller
         }
 
         $category->update([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'name'        => $request->name,
+            'slug'        => Str::slug($request->name),
+            'type'        => $request->type,
+            'sort_order'  => $request->sort_order ?? $category->sort_order,
             'description' => $request->description,
-            'status' => $request->has('status') ? 'Active' : 'Inactive',
-            'featured' => $request->has('featured') ? 1 : 0,
-            'color' => $request->color ?? $category->color,
-            'image' => $imagePath,
+            'status'      => $request->has('status') ? 'Active' : 'Inactive',
+            'featured'    => $request->has('featured') ? 1 : 0,
+            'color'       => $request->color ?? $category->color,
+            'image'       => $imagePath,
         ]);
 
         return redirect()->route('categories.index')

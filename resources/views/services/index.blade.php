@@ -1,5 +1,8 @@
 @extends('layouts.app')
-@php $pageTitle = 'Services'; @endphp
+@php
+  $pageTitle = 'Services';
+  use Illuminate\Support\Str;
+@endphp
 
 @section('content')
 @php
@@ -9,7 +12,7 @@ $activeServices  = $services instanceof \Illuminate\Support\Collection ? $servic
 $inactiveServices = $totalServices - $activeServices;
 $mostBooked = $services instanceof \Illuminate\Support\Collection ? $services->sortByDesc('bookings')->first() : null;
 
-$categoryList = $services instanceof \Illuminate\Support\Collection ? $services->pluck('category')->unique()->filter()->values() : collect();
+$categoryList = $services instanceof \Illuminate\Support\Collection ? $services->map(fn($s) => $s->category?->name)->unique()->filter()->values() : collect();
 @endphp
 
     <div class="flex flex-col gap-6">
@@ -160,12 +163,12 @@ $categoryList = $services instanceof \Illuminate\Support\Collection ? $services-
             </thead>
             <tbody id="services-tbody">
               @foreach($services as $svc)
-              @php $catClass = 'badge-' . strtolower($svc->category ?? 'default'); @endphp
+              @php $catClass = 'badge-' . strtolower(Str::slug($svc->category?->name ?? 'default')); @endphp
               <tr class="table-row border-b border-gray-50"
                   data-id="{{ $svc->id }}"
                   data-name="{{ strtolower($svc->name) }}"
                   data-display-name="{{ $svc->name }}"
-                  data-category="{{ $svc->category }}"
+                  data-category="{{ $svc->category?->name }}"
                   data-title="{{ $svc->name }}"
                   data-status="{{ $svc->status ?? 'Active' }}"
                   data-price="{{ $svc->price }}"
@@ -198,7 +201,7 @@ $categoryList = $services instanceof \Illuminate\Support\Collection ? $services-
 
                 <td class="px-5 py-4">
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $catClass }}">
-                    {{ $svc->category }}
+                    {{ $svc->category?->name ?? '—' }}
                   </span>
                 </td>
 

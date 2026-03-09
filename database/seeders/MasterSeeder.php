@@ -18,9 +18,11 @@ class MasterSeeder extends Seeder
         DB::table('admins')->truncate();
         DB::table('otps')->truncate();
         DB::table('addresses')->truncate();
-        DB::table('categories')->truncate();
-        DB::table('services')->truncate();
+        DB::table('package_service')->truncate();
         DB::table('packages')->truncate();
+        DB::table('services')->truncate();
+        DB::table('service_groups')->truncate();
+        DB::table('categories')->truncate();
         DB::table('professionals')->truncate();
         DB::table('bookings')->truncate();
         DB::table('reviews')->truncate();
@@ -167,89 +169,204 @@ class MasterSeeder extends Seeder
         $this->command->info('✅ OTPs seeded');
 
         // ══════════════════════════════════════════════════════════════
-        // 4. CATEGORIES
+        // 4. CATEGORIES  (matches Flutter bottom nav)
         // ══════════════════════════════════════════════════════════════
-        $catNames = ['Hair Care', 'Skin Care', 'Nail Art', 'Makeup', 'Spa & Wellness'];
-        $catColors = ['#FF6B6B', '#4ECDC4', '#FF9FF3', '#F368E0', '#54A0FF'];
-        $catIds = [];
-        foreach ($catNames as $i => $cat) {
-            $catIds[] = DB::table('categories')->insertGetId([
-                'name' => $cat,
-                'slug' => Str::slug($cat),
-                'services_count' => rand(3, 15),
-                'bookings_count' => rand(10, 200),
-                'status' => 'Active',
-                'featured' => $i < 3,
-                'color' => $catColors[$i],
-                'description' => "Professional {$cat} services.",
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        $this->command->info('✅ Categories seeded');
-
-        // ══════════════════════════════════════════════════════════════
-        // 5. SERVICES
-        // ══════════════════════════════════════════════════════════════
-        $serviceData = [
-            ['Hair Cut & Style', 0, 45, 499],
-            ['Classic Facial', 1, 60, 899],
-            ['Gel Nail Extension', 2, 90, 1499],
-            ['Bridal Makeup', 3, 120, 4999],
-            ['Full Body Massage', 4, 75, 1999],
+        // type 'services'  → tapping opens service-group picker then service list
+        // type 'packages'  → tapping opens package listing directly
+        $catData = [
+            // [name, slug, type, sort, color, featured]
+            ['Salon for Women',        'salon-for-women',        'services', 1, '#F9A8D4', true],
+            ['Spa for Women',          'spa-for-women',          'services', 2, '#6EE7B7', true],
+            ['Hair Studio for Women',  'hair-studio-for-women',  'services', 3, '#93C5FD', true],
+            ['Bridal',                 'bridal',                 'packages', 4, '#FDE68A', true],
         ];
-        $serviceIds = [];
-        foreach ($serviceData as $s) {
-            $serviceIds[] = DB::table('services')->insertGetId([
-                'name' => $s[0],
-                'category' => $catNames[$s[1]],
-                'category_id' => $catIds[$s[1]],
-                'duration' => $s[2],
-                'price' => $s[3],
-                'status' => 'Active',
-                'featured' => true,
-                'bookings' => rand(5, 100),
-                'description' => "Premium {$s[0]} service.",
-                'created_at' => now(),
-                'updated_at' => now(),
+        $catIds = [];
+        foreach ($catData as $c) {
+            $catIds[$c[1]] = DB::table('categories')->insertGetId([
+                'name'        => $c[0],
+                'slug'        => $c[1],
+                'type'        => $c[2],
+                'sort_order'  => $c[3],
+                'color'       => $c[4],
+                'featured'    => $c[5],
+                'status'      => 'Active',
+                'description' => "{$c[0]} services.",
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
         }
-        $this->command->info('✅ Services seeded');
+        $this->command->info('✅ Categories seeded (Salon, Spa, Hair Studio, Bridal)');
 
         // ══════════════════════════════════════════════════════════════
-        // 6. PACKAGES
+        // 5. SERVICE GROUPS  (second-level picker in Flutter)
+        // ══════════════════════════════════════════════════════════════
+        // Salon → Luxe, Prime
+        // Spa   → Ayurveda, Prime
+        // Hair Studio & Bridal → no groups
+        $groupData = [
+            // [category_slug, name, slug, tag_label, sort]
+            ['salon-for-women', 'Luxe',     'salon-luxe',      'Premium',    1],
+            ['salon-for-women', 'Prime',    'salon-prime',     'Affordable', 2],
+            ['spa-for-women',   'Ayurveda', 'spa-ayurveda',    'Holistic',   1],
+            ['spa-for-women',   'Prime',    'spa-prime',       'Affordable', 2],
+        ];
+        $groupIds = [];
+        foreach ($groupData as $g) {
+            $groupIds[$g[2]] = DB::table('service_groups')->insertGetId([
+                'category_id' => $catIds[$g[0]],
+                'name'        => $g[1],
+                'slug'        => $g[2],
+                'tag_label'   => $g[3],
+                'sort_order'  => $g[4],
+                'status'      => 'Active',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+        $this->command->info('✅ Service Groups seeded (Salon: Luxe/Prime, Spa: Ayurveda/Prime)');
+
+        // ══════════════════════════════════════════════════════════════
+        // 6. SERVICES  (bookable items under each group or category)
+        // ══════════════════════════════════════════════════════════════
+        // Threading has service_types (variants) — all others are simple.
+        // Variants Data for different services
+        $variantsMap = [
+            'Waxing' => [
+                ['name' => 'Full Leg (Aloe Wax)',      'price' => 499, 'duration' => 30],
+                ['name' => 'Full Leg (Milk Roll-on)',  'price' => 699, 'duration' => 30],
+                ['name' => 'Full Arm & Underarm',      'price' => 399, 'duration' => 25],
+                ['name' => 'Back Waxing (Honey)',      'price' => 299, 'duration' => 20],
+            ],
+            'Threading' => [
+                ['name' => 'Eyebrows',   'price' => 30,  'duration' => 5],
+                ['name' => 'Forehead',   'price' => 30,  'duration' => 5],
+                ['name' => 'Upper Lip',  'price' => 20,  'duration' => 5],
+                ['name' => 'Chin',       'price' => 20,  'duration' => 5],
+                ['name' => 'Full Face',  'price' => 120, 'duration' => 20],
+            ],
+            'Korean Facial' => [
+                ['name' => 'Glass Skin Facial',   'price' => 1499, 'duration' => 60],
+                ['name' => 'Age-Rewind Facial',   'price' => 1999, 'duration' => 75],
+            ],
+            'Cleanup' => [
+                ['name' => 'Detox & Cleanup',     'price' => 599, 'duration' => 45],
+                ['name' => 'Casmara Charcoal',    'price' => 899, 'duration' => 45],
+            ],
+            'Bleach, Detan & Massage' => [
+                ['name' => 'Full Face Bleach',    'price' => 299, 'duration' => 20],
+                ['name' => 'Full Back Detan',     'price' => 499, 'duration' => 30],
+                ['name' => 'Head Massage (20m)',   'price' => 199, 'duration' => 20],
+            ]
+        ];
+
+        // [name, category_slug, group_slug|null, duration, price, has_variants]
+        $svcData = [
+            ['Waxing',            'salon-for-women', 'salon-luxe',   45,  499, true],
+            ['Korean Facial',      'salon-for-women', 'salon-luxe',   60,  999, true],
+            ['Signature Facial',  'salon-for-women', 'salon-luxe',   60, 1299, false],
+            ['Cleanup',           'salon-for-women', 'salon-luxe',   45,  599, true],
+            ['Threading',         'salon-for-women', 'salon-luxe',   20,   30, true],
+            ['Bleach, Detan & Massage', 'salon-for-women', 'salon-luxe', 30, 399, true],
+            
+            ['Basic Facial',      'salon-for-women', 'salon-prime',  45,  499, false],
+            ['Hair Cut & Style',  'hair-studio-for-women', null,    45,  499, false],
+            ['Keratin Treatment', 'hair-studio-for-women', null,   120, 2999, false],
+            ['Swedish Massage',   'spa-for-women',   'spa-prime',    60,  999, false],
+        ];
+
+        $serviceIds = [];
+        foreach ($svcData as $s) {
+            $base = Str::slug($s[0]);
+            $slug = $base; $n = 1;
+            while (DB::table('services')->where('slug', $slug)->exists()) {
+                $slug = $base . '-' . $n++;
+            }
+            $serviceId = DB::table('services')->insertGetId([
+                'name'             => $s[0],
+                'slug'             => $slug,
+                'category_id'      => $catIds[$s[1]],
+                'service_group_id' => $s[2] ? ($groupIds[$s[2]] ?? null) : null,
+                'duration'         => $s[3],
+                'price'            => $s[4],
+                'has_variants'     => $s[5],
+                'status'           => 'Active',
+                'featured'         => true,
+                'bookings'         => rand(5, 100),
+                'description'      => "Premium {$s[0]} service.",
+                'created_at'       => now(),
+                'updated_at'       => now(),
+            ]);
+            $serviceIds[] = $serviceId;
+
+            // If it has variants, seed them
+            if ($s[5] && isset($variantsMap[$s[0]])) {
+                foreach ($variantsMap[$s[0]] as $v) {
+                    DB::table('service_variants')->insert([
+                        'service_id'       => $serviceId,
+                        'name'             => $v['name'],
+                        'slug'             => Str::slug($v['name']),
+                        'price'            => $v['price'],
+                        'duration_minutes' => $v['duration'],
+                        'status'           => 'Active',
+                        'sort_order'       => 0,
+                        'created_at'       => now(),
+                        'updated_at'       => now(),
+                    ]);
+                }
+            }
+        }
+        $this->command->info('✅ Services seeded (17 services across Salon/Spa/Hair Studio with threading variants)');
+
+        // ══════════════════════════════════════════════════════════════
+        // 7. PACKAGES  (Bridal only — type=packages category)
         // ══════════════════════════════════════════════════════════════
         $pkgData = [
-            ['Bridal Glow Package', 'Makeup', 2999, 20, 180],
-            ['Complete Hair Makeover', 'Hair Care', 1499, 15, 90],
-            ['Weekend Spa Retreat', 'Spa & Wellness', 3999, 25, 150],
-            ['Party Ready Package', 'Makeup', 1999, 10, 120],
-            ['Nail Art Combo', 'Nail Art', 999, 12, 60],
+            ['Bridal Glow Package',       2999, 20, 180, 'Complete bridal skin prep package.'],
+            ['Royal Bride Package',        5999, 15, 240, 'Luxury full-day bridal package.'],
+            ['Budget Bride Package',       1999, 10, 120, 'Affordable bridal essentials.'],
+            ['Pre-Bridal Ritual (3 Days)', 7999, 25, 300, 'Three-session pre-bridal ritual.'],
         ];
         $pkgIds = [];
         foreach ($pkgData as $p) {
-            $pkgIds[] = DB::table('packages')->insertGetId([
-                'name' => $p[0],
-                'category' => $p[1],
-                'services' => json_encode(array_slice($serviceIds, 0, rand(2, 4))),
-                'price' => $p[2],
-                'discount' => $p[3],
-                'duration' => $p[4],
-                'bookings' => rand(5, 50),
-                'status' => 'Active',
-                'featured' => true,
-                'description' => "All-inclusive {$p[0]}.",
-                'created_at' => now(),
-                'updated_at' => now(),
+            $base = Str::slug($p[0]);
+            $slug = $base; $n = 1;
+            while (DB::table('packages')->where('slug', $slug)->exists()) {
+                $slug = $base . '-' . $n++;
+            }
+            $packageId = DB::table('packages')->insertGetId([
+                'name'        => $p[0],
+                'slug'        => $slug,
+                'category_id' => $catIds['bridal'],
+                'price'       => $p[1],
+                'discount'    => $p[2],
+                'duration'    => $p[3],
+                'description' => $p[4],
+                'bookings'    => rand(5, 50),
+                'status'      => 'Active',
+                'featured'    => true,
+                'image'       => 'https://images.unsplash.com/photo-1522335789203-aa9fb3d5133b?q=80&w=400',
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
+            $pkgIds[] = $packageId;
+
+            // Link to some sample services
+            $sampleServices = array_slice($serviceIds, 0, rand(2, 4));
+            foreach ($sampleServices as $sid) {
+                DB::table('package_service')->insert([
+                    'package_id' => $packageId,
+                    'service_id' => $sid,
+                ]);
+            }
         }
-        $this->command->info('✅ Packages seeded');
+        $this->command->info('✅ Packages seeded (4 Bridal packages)');
 
         // ══════════════════════════════════════════════════════════════
         // 7. PROFESSIONALS
         // ══════════════════════════════════════════════════════════════
         $proNames = ['Anjali Mehta', 'Kavita Singh', 'Pooja Reddy', 'Ritu Jain', 'Deepika Nair'];
         $cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad'];
+        $proCats = ['Salon for Women', 'Spa for Women', 'Hair Studio for Women', 'Bridal', 'Salon for Women'];
         $proIds = [];
         foreach ($proNames as $i => $name) {
             $proIds[] = DB::table('professionals')->insertGetId([
@@ -257,8 +374,8 @@ class MasterSeeder extends Seeder
                 'email' => strtolower(str_replace(' ', '.', $name)) . '@bellavella.com',
                 'phone' => '97' . rand(10000000, 99999999),
                 'city' => $cities[$i],
-                'category' => $catNames[$i],
-                'bio' => "Expert in {$catNames[$i]}.",
+                'category' => $proCats[$i],
+                'bio' => "Expert in {$proCats[$i]}.",
                 'status' => 'Active',
                 'verification' => $i < 3 ? 'Verified' : 'Pending',
                 'orders' => rand(10, 200),
@@ -274,6 +391,7 @@ class MasterSeeder extends Seeder
             ]);
         }
         $this->command->info('✅ Professionals seeded');
+        $this->command->info('✅ Professionals seeded');
 
         // ══════════════════════════════════════════════════════════════
         // 8. BOOKINGS (customer_id instead of user_id)
@@ -287,18 +405,19 @@ class MasterSeeder extends Seeder
                 'customer_phone' => '98' . rand(10000000, 99999999),
                 'city' => $cities[$i],
                 'service_id' => $serviceIds[$i],
-                'service_name' => $serviceData[$i][0],
+                'service_name' => $svcData[$i][0],
                 'professional_id' => $proIds[$i],
                 'professional_name' => $proNames[$i],
                 'date' => now()->addDays(rand(1, 30)),
                 'slot' => ['10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM'][$i],
                 'status' => $statuses[$i],
-                'price' => $serviceData[$i][3],
+                'price' => $svcData[$i][4],
                 'notes' => 'Sample booking #' . ($i + 1),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
+        $this->command->info('✅ Bookings seeded');
         $this->command->info('✅ Bookings seeded');
 
         // ══════════════════════════════════════════════════════════════
@@ -326,15 +445,16 @@ class MasterSeeder extends Seeder
         // ══════════════════════════════════════════════════════════════
         for ($i = 1; $i <= 5; $i++) {
             DB::table('media')->insert([
-                'type' => $i <= 3 ? 'banner' : 'video',
-                'title' => $i <= 3 ? "Summer Sale Banner {$i}" : "Tutorial Video {$i}",
-                'url' => "https://placehold.co/1200x400?text=Banner+{$i}",
-                'thumbnail' => "https://placehold.co/300x100?text=Thumb+{$i}",
-                'linked_section' => ['services', 'packages', 'offers', 'services', 'packages'][$i - 1],
-                'status' => 'Active',
-                'order' => $i,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'type'        => $i <= 3 ? 'banner' : 'video',
+                'title'       => $i <= 3 ? "Summer Sale Banner {$i}" : "Tutorial Video {$i}",
+                'subtitle'    => $i <= 3 ? "Limited time offer #{$i}" : null,
+                'url'         => "https://placehold.co/1200x400?text=Banner+{$i}",
+                'thumbnail'   => "https://placehold.co/300x100?text=Thumb+{$i}",
+                'target_page' => ['services', 'packages', 'offers', 'services', 'packages'][$i - 1],
+                'status'      => 'Active',
+                'order'       => $i,
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
         }
         $this->command->info('✅ Media seeded');
@@ -529,7 +649,7 @@ class MasterSeeder extends Seeder
                 'order_id' => $oid,
                 'item_type' => $i % 2 === 0 ? 'service' : 'package',
                 'item_id' => $i % 2 === 0 ? $serviceIds[$i] : $pkgIds[$i],
-                'item_name' => $i % 2 === 0 ? $serviceData[$i][0] : $pkgData[$i][0],
+                'item_name' => $i % 2 === 0 ? $svcData[$i][0] : $pkgData[$i][0],
                 'quantity' => 1,
                 'unit_price_paise' => $unitPrice,
                 'total_price_paise' => $unitPrice,
@@ -842,23 +962,15 @@ class MasterSeeder extends Seeder
         $tagNames = ['trending', 'premium', 'budget-friendly', 'bestseller', 'new-arrival'];
         $tagIds = [];
         foreach ($serviceIds as $i => $sid) {
+            $optIdx = $i % count($optionNames);
+            $varIdx = $i % count($variantNames);
             DB::table('service_options')->insert([
                 'service_id' => $sid,
-                'name' => $optionNames[$i],
-                'description' => "Premium {$optionNames[$i]} add-on",
+                'name' => $optionNames[$optIdx],
+                'description' => "Premium {$optionNames[$optIdx]} add-on",
                 'price_paise' => rand(19900, 99900),
                 'duration_minutes' => rand(15, 45),
                 'is_required' => false,
-                'sort_order' => $i + 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            DB::table('service_variants')->insert([
-                'service_id' => $sid,
-                'name' => $variantNames[$i],
-                'price_paise' => rand(29900, 149900),
-                'duration_minutes' => rand(30, 90),
-                'is_default' => $i === 0,
                 'sort_order' => $i + 1,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -873,7 +985,7 @@ class MasterSeeder extends Seeder
             ]);
         }
         foreach ($serviceIds as $i => $sid) {
-            DB::table('service_tag')->insert(['service_id' => $sid, 'tag_id' => $tagIds[$i]]);
+            DB::table('service_tag')->insert(['service_id' => $sid, 'tag_id' => $tagIds[$i % count($tagIds)]]);
         }
         $this->command->info('✅ Service Extensions seeded');
 

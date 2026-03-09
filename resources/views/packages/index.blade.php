@@ -8,8 +8,8 @@
     $active = $packages->where('status', 'Active')->count();
     $inactive = $total - $active;
     $topBooked = $packages->sortByDesc('bookings')->first();
-    $categoryList = $packages->pluck('category')->unique()->filter()->values();
-  @endphp
+    $categoryList = \App\Models\Category::where('type', 'packages')->pluck('name')->unique()->filter()->values();
+@endphp
 
   <div class="flex flex-col gap-6">
 
@@ -164,7 +164,7 @@
               @endphp
               <tr class="table-row border-b border-gray-50" data-id="{{ $pkg->id }}"
                 data-name="{{ strtolower($pkg->name) }}" data-display-name="{{ $pkg->name }}"
-                data-category="{{ $pkg->category }}" data-status="{{ $pkg->status ?? 'Active' }}"
+                data-category="{{ $pkg->category?->name }}" data-status="{{ $pkg->status ?? 'Active' }}"
                 data-price="{{ $finalPrice }}" data-original-price="{{ $pkg->price }}" data-duration="{{ $pkg->duration }}"
                 data-featured="{{ $pkg->featured ? '1' : '0' }}" data-duration-label="{{ $durationLabel }}"
                 data-title="{{ $pkg->name }}" data-image="{{ $pkg->image }}" data-bookings="{{ $pkg->bookings ?? 0 }}"
@@ -187,21 +187,22 @@
                 </td>
                 <td class="px-5 py-4">
                   <span
-                    class="text-xs font-semibold px-2.5 py-1 rounded-full {{ ($pkg->category ?? '') === 'Luxe' ? 'bg-violet-50 text-violet-600' : 'bg-amber-50 text-amber-600' }}">
-                    {{ $pkg->category }}
+                    class="text-xs font-semibold px-2.5 py-1 rounded-full {{ ($pkg->category?->name ?? '') === 'Luxe' ? 'bg-violet-50 text-violet-600' : 'bg-amber-50 text-amber-600' }}">
+                    {{ $pkg->category?->name ?? 'Unmapped' }}
                   </span>
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex flex-wrap gap-1 max-w-[200px]">
                     @php
-                      $svcNames = array_map(fn($id) => $allServices[$id] ?? 'Unknown', $services);
+                      // Use the relationship directly
+                      $packageServices = $pkg->services;
                     @endphp
-                    @foreach(array_slice($svcNames, 0, 2) as $svc)
-                      <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ $svc }}</span>
+                    @foreach($packageServices->take(2) as $svc)
+                      <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ $svc->name }}</span>
                     @endforeach
-                    @if(count($svcNames) > 2)
+                    @if($packageServices->count() > 2)
                       <span
-                        class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">+{{ count($svcNames) - 2 }}</span>
+                        class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">+{{ $packageServices->count() - 2 }}</span>
                     @endif
                   </div>
                 </td>

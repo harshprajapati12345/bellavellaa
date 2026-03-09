@@ -49,14 +49,15 @@
               <div>
                 <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Category <span
                     class="text-red-400">*</span></label>
-                <select name="category"
+                <select name="category_id"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black/50 text-sm bg-white cursor-pointer transition-all"
                   required>
                   <option value="">Select category</option>
-                  @foreach(['Bridal', 'Hair', 'Makeup', 'Nails', 'Skincare', 'Wellness'] as $cat)
-                    <option value="{{ $cat }}" {{ old('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                  @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
                   @endforeach
                 </select>
+                <p class="text-xs text-gray-400 mt-1 ml-1">Only packages-type categories shown</p>
               </div>
               <div class="flex items-center gap-6 mt-4">
                 <label class="flex items-center gap-2 cursor-pointer group">
@@ -88,19 +89,18 @@
                   </div>
                   <p class="text-sm font-medium text-gray-600">Click to upload or drag &amp; drop</p>
                   <p class="text-xs text-gray-400 mt-1">JPG, PNG up to 2MB</p>
-                  <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
-                  <input type="file" name="package_image" id="packageImageInput" accept="image/*" class="hidden"
-                    onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
                 </div>
-                <div class="relative mt-3 hidden" id="packageImgPreviewWrap">
-                  <img id="packageImgPreview"
-                    class="w-full h-44 object-cover rounded-2xl border border-gray-100 shadow-sm" src="" alt="">
-                  <button type="button"
-                    class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
-                    onclick="removeImage('packageImageInput','packageImgPreview','packageImgPreviewWrap','uploadPlaceholder1','dropZone1')">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                  </button>
-                </div>
+                <input type="file" name="package_image" id="packageImageInput" accept="image/*" class="hidden"
+                  onchange="previewImg(this, 'packageImgPreview', 'uploadPlaceholder1', 'dropZone1')">
+              </div>
+              <div class="relative mt-3 hidden" id="packageImgPreviewWrap">
+                <img id="packageImgPreview"
+                  class="w-full h-44 object-cover rounded-2xl border border-gray-100 shadow-sm" src="" alt="">
+                <button type="button"
+                  class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
+                  onclick="removeImage('packageImageInput','packageImgPreview','packageImgPreviewWrap','uploadPlaceholder1','dropZone1')">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
               </div>
             </div>
           </div>

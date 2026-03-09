@@ -19,7 +19,7 @@ class ProfessionalTestSeeder extends Seeder
                 'name' => 'Test Professional',
                 'phone' => $phonePro,
                 'city' => 'Mumbai',
-                'category' => 'Hair Care',
+                'category' => 'Hair Care', // professionals.category column still exists
                 'status' => 'Active',
                 'verification' => 'Verified',
                 'joined' => now(),
