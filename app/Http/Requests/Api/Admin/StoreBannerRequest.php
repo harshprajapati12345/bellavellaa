@@ -16,7 +16,7 @@ class StoreBannerRequest extends ApiFormRequest
         return [
             'title'          => ['required', 'string', 'max:255'],
             'media_file'     => ['required', 'image', 'max:5120'], // 5MB max for images
-            'linked_section' => ['nullable', 'string'],
+            'homepage_content_id' => ['nullable', 'exists:homepage_contents,id'],
             'target_page'    => ['nullable', 'string'],
             'order'          => ['nullable', 'integer'],
             'status'         => ['nullable', 'in:Active,Inactive'],

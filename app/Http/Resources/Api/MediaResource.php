@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Support\MediaPathNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +10,7 @@ class MediaResource extends JsonResource
 {
     /**
      * Transform the media into an array.
+     * URL generation happens ONLY here — DB stores relative paths.
      */
     public function toArray(Request $request): array
     {
@@ -17,9 +19,10 @@ class MediaResource extends JsonResource
             'type'           => $this->type,
             'title'          => $this->title,
             'subtitle'       => $this->subtitle,
-            'url'            => $this->url ? (filter_var($this->url, FILTER_VALIDATE_URL) ? $this->url : asset('storage/' . ltrim($this->url, '/'))) : null,
-            'thumbnail'      => $this->thumbnail,
-            'linked_section' => $this->linked_section,
+            'url'            => MediaPathNormalizer::url($this->url),
+            'thumbnail'      => MediaPathNormalizer::url($this->thumbnail),
+            'homepage_content_id' => $this->homepage_content_id,
+            'section'        => $this->homepageContent?->section,
             'target_page'    => $this->target_page,
             'status'         => $this->status,
             'order'          => $this->order,

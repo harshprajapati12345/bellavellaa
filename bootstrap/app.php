@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth'  => \App\Http\Middleware\JwtAuthenticate::class,
             'jwt.admin' => \App\Http\Middleware\JwtAdminAuthenticate::class,
+            'cors'      => \App\Http\Middleware\CorsMiddleware::class,
+        ]);
+
+        // Add CORS middleware globally
+        $middleware->use([
+            \App\Http\Middleware\CorsMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

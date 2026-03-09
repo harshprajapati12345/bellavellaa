@@ -21,18 +21,7 @@ $sections = $sections ?? collect();
   <div id="sections-list" class="space-y-3">
     @foreach($sections as $s)
     @php
-        $iconMap = [
-            'hero_banner' => 'image',
-            'active_booking' => 'calendar-check',
-            'category_carousel' => 'layout-grid',
-            'service_grid' => 'grid',
-            'service_carousel' => 'layers',
-            'image_banner' => 'monitor',
-            'video_stories' => 'play-circle',
-            'testimonials' => 'message-circle',
-            'download_app' => 'download-cloud'
-        ];
-        $icon = $iconMap[$s->section] ?? 'layout';
+        $icon = 'layout';
         $ctype = $s->content['content_type'] ?? 'static';
         $ctypeLabel = ucfirst($ctype);
     @endphp

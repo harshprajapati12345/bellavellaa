@@ -36,10 +36,11 @@
 
     <form method="POST" action="{{ route('homepage.store') }}" enctype="multipart/form-data" id="sectionForm">
       @csrf
+      <input type="hidden" name="content_type" value="dynamic">
       <div class="flex flex-col gap-6">
 
         <!-- CARD 1: SECTION DETAILS -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden section-card">
+        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden section-card max-w-4xl mx-auto w-full">
           <div class="px-8 pt-7 pb-2">
             <div class="flex items-center gap-3 mb-6">
               <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">1
@@ -51,58 +52,69 @@
           <div class="px-8 pb-8">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-              <!-- Section Name -->
+              <!-- Section Type (Dropdown) -->
+              <div class="sm:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Type <span class="text-red-400">*</span></label>
+                @php
+                  $allSections = [
+                    'hero_banner'       => 'Hero Banner',
+                    'category_carousel' => 'Category Carousel',
+                    'service_carousel'  => 'Service Carousel',
+                    'service_grid'      => 'Service Grid',
+                    'video_stories'     => 'Video Stories',
+                    'image_banner'      => 'Image Banner',
+                    'active_booking'    => 'Active Booking',
+                    'testimonials'      => 'Testimonials',
+                    'trending_packages' => 'Trending Packages',
+                    'download_app'      => 'Download App',
+                  ];
+                  $availableSections = array_diff_key($allSections, array_flip($usedSections ?? []));
+                @endphp
+                @if(count($availableSections) === 0)
+                  <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl text-sm">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+                    All available section types have already been created. Each section type can only appear once.
+                  </div>
+                @else
+                  <select name="section_type" id="sectionType" required
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
+                    <option value="">Choose a section type…</option>
+                    @foreach($availableSections as $key => $label)
+                      <option value="{{ $key }}" {{ old('section_type') === $key ? 'selected' : '' }}
+                        data-label="{{ $label }}">
+                        {{ $label }} <span class="text-gray-400">({{ $key }})</span>
+                      </option>
+                    @endforeach
+                  </select>
+                  <p class="text-[10px] text-gray-400 mt-1 italic">Only section types not yet created are shown. Each type can exist only once.</p>
+                @endif
+              </div>
+
+              <!-- Title -->
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Name <span
-                    class="text-red-400">*</span></label>
-                <input type="text" name="name" id="sectionName" required
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Title <span class="text-red-400">*</span></label>
+                <input type="text" name="title" id="sectionTitle" required
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                  placeholder="e.g. Hero Banner, About Us" value="{{ old('name') }}">
-                <p class="text-[10px] text-gray-400 mt-1 italic">Suggested: hero_banner, category_carousel, service_grid, video_stories</p>
+                  placeholder="e.g. Welcome to Bellavella" value="{{ old('title') }}">
               </div>
 
-              <!-- Section Key (auto-generated) -->
+              <!-- Subtitle -->
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Key</label>
-                <input type="text" name="key" id="sectionKey" readonly
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-500 cursor-default focus:outline-none"
-                  placeholder="auto-generated" value="{{ old('key') }}">
-              </div>
-
-              <!-- Content Type -->
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Content Type <span
-                    class="text-red-400">*</span></label>
-                <select name="content_type" id="content-type" required
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
-                  <option value="">Select type...</option>
-                  <option value="static" {{ old('content_type') === 'static' ? 'selected' : '' }}>Static Content</option>
-                  <option value="dynamic" {{ old('content_type') === 'dynamic' ? 'selected' : '' }}>Dynamic (Linked to Data)
-                  </option>
-                </select>
-              </div>
-
-              <!-- Data Source (dynamic only) -->
-              <div id="dynamic-source-wrap" class="{{ old('content_type') === 'dynamic' ? '' : 'hidden' }}">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Data Source</label>
-                <select name="data_source"
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
-                  <option value="">Select source...</option>
-                  <option value="categories" {{ old('data_source') === 'categories' ? 'selected' : '' }}>Categories Carousel</option>
-                  <option value="featured_services" {{ old('data_source') === 'featured_services' ? 'selected' : '' }}>Featured Services</option>
-                  <option value="trending" {{ old('data_source') === 'trending' ? 'selected' : '' }}>Trending Services</option>
-                  <option value="packages" {{ old('data_source') === 'packages' ? 'selected' : '' }}>Packages</option>
-                  <option value="testimonials" {{ old('data_source') === 'testimonials' ? 'selected' : '' }}>Reviews / Testimonials</option>
-                  <option value="video_stories" {{ old('data_source') === 'video_stories' ? 'selected' : '' }}>Video Stories (Media)</option>
-                </select>
-              </div>
-
-              <!-- Order -->
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Display Order</label>
-                <input type="number" name="order" min="1"
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Subtitle <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
+                <input type="text" name="subtitle"
                   class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                  placeholder="e.g. 1" value="{{ old('order') }}">
+                  placeholder="e.g. Premium Salon &amp; Beauty Experience" value="{{ old('subtitle') }}">
+              </div>
+
+              <!-- Media Type -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Media Type <span class="text-red-400">*</span></label>
+                <select name="media_type" required
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
+                  <option value="">Select media type...</option>
+                  <option value="banner" {{ old('media_type') === 'banner' ? 'selected' : '' }}>Banner (Image)</option>
+                  <option value="video" {{ old('media_type') === 'video' ? 'selected' : '' }}>Video</option>
+                </select>
               </div>
 
               <!-- Status -->
@@ -118,180 +130,18 @@
                   </label>
                 </div>
               </div>
-
             </div>
           </div>
-        </div>
 
-        <!-- CARD 2: SECTION CONTENT -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">2
-              </div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Section Content</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8 space-y-5">
-
-            <!-- Title -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Section Title</label>
-              <input type="text" name="title"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                placeholder="e.g. Welcome to Bellavella" value="{{ old('title') }}">
-            </div>
-
-            <!-- Subtitle -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Subtitle <span
-                  class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-              <input type="text" name="subtitle"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                placeholder="e.g. Premium Salon &amp; Beauty Experience" value="{{ old('subtitle') }}">
-            </div>
-
-            <!-- Description -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Description <span
-                  class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-              <div class="border border-gray-200 rounded-2xl overflow-hidden">
-                <!-- Toolbar -->
-                <div class="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
-                  <button type="button" onclick="execCmd('bold')"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
-                    title="Bold">
-                    <i data-lucide="bold" class="w-4 h-4"></i>
-                  </button>
-                  <button type="button" onclick="execCmd('italic')"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
-                    title="Italic">
-                    <i data-lucide="italic" class="w-4 h-4"></i>
-                  </button>
-                  <button type="button" onclick="execCmd('underline')"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
-                    title="Underline">
-                    <i data-lucide="underline" class="w-4 h-4"></i>
-                  </button>
-                  <div class="w-px h-5 bg-gray-200 mx-1"></div>
-                  <button type="button" onclick="execCmd('insertUnorderedList')"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
-                    title="List">
-                    <i data-lucide="list" class="w-4 h-4"></i>
-                  </button>
-                  <button type="button" onclick="execCmd('createLink')"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"
-                    title="Link">
-                    <i data-lucide="link" class="w-4 h-4"></i>
-                  </button>
-                </div>
-                <div id="descEditor" contenteditable="true"
-                  class="min-h-[160px] px-4 py-4 text-sm text-gray-700 focus:outline-none leading-relaxed">
-                  {!! old('description') !!}</div>
-                <input type="hidden" name="description" id="descHidden">
-              </div>
-            </div>
-
-            <!-- Button Row -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Button Text <span
-                    class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-                <input type="text" name="btn_text"
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                  placeholder="e.g. View All Services" value="{{ old('btn_text') }}">
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Button Link <span
-                    class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-                <input type="text" name="btn_link"
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
-                  placeholder="e.g. /services" value="{{ old('btn_link') }}">
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- CARD 3: SECTION IMAGE -->
-        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden section-card">
-          <div class="px-8 pt-7 pb-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">3
-              </div>
-              <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Section Image</h3>
-              <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            </div>
-          </div>
-          <div class="px-8 pb-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
-
-              <!-- Upload Zone -->
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Background / Feature Image <span
-                    class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-                <div id="dropZone"
-                  class="drop-zone relative flex flex-col items-center justify-center w-full h-52 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                  onclick="document.getElementById('sectionImageInput').click()"
-                  ondragover="event.preventDefault(); this.classList.add('dragover')"
-                  ondragleave="this.classList.remove('dragover')"
-                  ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event)">
-                  <div id="uploadPlaceholder" class="flex flex-col items-center gap-2">
-                    <div
-                      class="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                      <i data-lucide="upload-cloud" class="w-6 h-6 text-gray-400"></i>
-                    </div>
-                    <p class="text-sm font-medium text-gray-600">Click to upload or drag &amp; drop</p>
-                    <p class="text-xs text-gray-400">JPG, PNG, WebP up to 4MB</p>
-                  </div>
-                  <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
-                </div>
-
-                <div class="relative mt-3 hidden" id="imgPreviewWrap">
-                  <img id="imgPreview" class="w-full h-44 object-cover rounded-2xl border border-gray-100" src="" alt="">
-                  <button type="button" id="removeImgBtn"
-                    class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
-                    onclick="removeImage()">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Image Tips -->
-              <div class="bg-gray-50 rounded-2xl p-5 space-y-3 text-sm text-gray-500">
-                <div class="flex items-start gap-2.5">
-                  <i data-lucide="info" class="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0"></i>
-                  <p><span class="font-semibold text-gray-700">Recommended size:</span> 1920 × 800px for hero banners.</p>
-                </div>
-                <div class="flex items-start gap-2.5">
-                  <i data-lucide="image" class="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0"></i>
-                  <p><span class="font-semibold text-gray-700">Format:</span> Use JPG for photos, PNG for graphics with
-                    transparency.</p>
-                </div>
-                <div class="flex items-start gap-2.5">
-                  <i data-lucide="zap" class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0"></i>
-                  <p><span class="font-semibold text-gray-700">Performance:</span> Compress images before uploading for
-                    faster load times.</p>
-                </div>
-              </div>
-
-            </div>
-          </div>
         </div>
 
         <!-- STICKY ACTION BAR -->
         <div
-          class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-end gap-3 mt-2">
+          class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-end gap-3 mt-2 max-w-4xl mx-auto w-full">
           <a href="{{ route('homepage.index') }}"
             class="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-white transition-colors">Cancel</a>
-          <button type="submit" name="form_action" value="draft"
-            class="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-white transition-colors flex items-center gap-2">
-            <i data-lucide="file-text" class="w-4 h-4"></i> Save as Draft
-          </button>
           <button type="submit" name="form_action" value="publish"
-            class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-2"
-            onclick="syncDesc()">
+            class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-2">
             <i data-lucide="globe" class="w-4 h-4"></i> Publish Section
           </button>
         </div>
@@ -311,11 +161,6 @@
 
     .section-card:hover {
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
-    }
-
-    .drop-zone.dragover {
-      border-color: #000 !important;
-      background: #fafafa;
     }
 
     .sticky-bar {
@@ -373,65 +218,16 @@
 
 @push('scripts')
   <script>
-    // Auto-generate key from name
-    document.getElementById('sectionName').addEventListener('input', function () {
-      document.getElementById('sectionKey').value =
-        this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    });
-
-    // Show / hide data source dropdown
-    document.getElementById('content-type').addEventListener('change', function () {
-      document.getElementById('dynamic-source-wrap').classList.toggle('hidden', this.value !== 'dynamic');
-    });
-
-    // Rich text editor commands
-    function execCmd(cmd) {
-      if (cmd === 'createLink') {
-        const url = prompt('Enter URL:');
-        if (url) document.execCommand('createLink', false, url);
-      } else {
-        document.execCommand(cmd, false, null);
-      }
-      document.getElementById('descEditor').focus();
-    }
-
-    function syncDesc() {
-      document.getElementById('descHidden').value =
-        document.getElementById('descEditor').innerHTML;
-    }
-
-    // Sync before any submit
-    document.getElementById('sectionForm').addEventListener('submit', syncDesc);
-
-    // Image upload helpers
-    function previewImage(input) {
-      if (!input.files || !input.files[0]) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        document.getElementById('imgPreview').src = e.target.result;
-        document.getElementById('imgPreviewWrap').classList.remove('hidden');
-        document.getElementById('uploadPlaceholder').classList.add('hidden');
-      };
-      reader.readAsDataURL(input.files[0]);
-      lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-    }
-
-    function removeImage() {
-      document.getElementById('sectionImageInput').value = '';
-      document.getElementById('imgPreviewWrap').classList.add('hidden');
-      document.getElementById('uploadPlaceholder').classList.remove('hidden');
-      document.getElementById('imgPreview').src = '';
-    }
-
-    function handleDrop(e) {
-      const dt = e.dataTransfer;
-      if (dt.files && dt.files[0]) {
-        const input = document.getElementById('sectionImageInput');
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(dt.files[0]);
-        input.files = dataTransfer.files;
-        previewImage(input);
-      }
+    // When a section type is selected, pre-fill the title field if it's empty
+    const sectionTypeEl = document.getElementById('sectionType');
+    if (sectionTypeEl) {
+      sectionTypeEl.addEventListener('change', function () {
+        const selected = this.options[this.selectedIndex];
+        const titleEl = document.getElementById('sectionTitle');
+        if (titleEl && !titleEl.value) {
+          titleEl.value = selected.dataset.label || '';
+        }
+      });
     }
   </script>
 @endpush

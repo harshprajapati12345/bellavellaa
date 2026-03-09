@@ -16,45 +16,57 @@ class HomepageController extends Controller
 
     public function create()
     {
-        return view('homepage.create');
+        $usedSections = HomepageContent::pluck('section')->toArray();
+        return view('homepage.create', compact('usedSections'));
     }
+
+    // All valid Flutter client homepage section types
+    public const SECTION_TYPES = [
+        'hero_banner'        => 'Hero Banner',
+        'category_carousel'  => 'Category Carousel',
+        'service_carousel'   => 'Service Carousel',
+        'service_grid'       => 'Service Grid',
+        'video_stories'      => 'Video Stories',
+        'image_banner'       => 'Image Banner',
+        'active_booking'     => 'Active Booking',
+        'testimonials'       => 'Testimonials',
+        'trending_packages'  => 'Trending Packages',
+        'download_app'       => 'Download App',
+    ];
 
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'content_type' => 'required|string|in:static,dynamic',
-            'data_source' => [
-                'nullable',
-                Rule::in(['categories', 'featured_services', 'trending', 'packages', 'testimonials', 'video_stories'])
+            'section_type' => [
+                'required',
+                Rule::in(array_keys(self::SECTION_TYPES)),
+                Rule::unique('homepage_contents', 'section'),
             ],
+            'title'        => 'required|string|max:255',
+            'media_type'   => 'required|string|in:banner,video',
         ]);
+
+        $sectionKey = $request->section_type;
+        $label      = self::SECTION_TYPES[$sectionKey];
 
         $imagePath = null;
         if ($request->hasFile('section_image')) {
-            $stored = $request->file('section_image')->store('homepage', 'public');
+            $stored    = $request->file('section_image')->store('homepage', 'public');
             $imagePath = asset('storage/' . $stored);
         }
 
-        $status = $request->has('status') ? 'Active' : 'Inactive';
-        // If "Save as Draft" button was clicked, we might want to force Inactive
-        // But let's stick to the toggle as the primary source of truth if both exist.
-
         HomepageContent::create([
-            'section'    => $request->key ?? str($request->name)->slug(),
-            'title'      => $request->title,
-            'image'      => $imagePath,
-            'status'     => $status,
-            'sort_order' => $request->order ?? (HomepageContent::max('sort_order') + 1),
-            'content'    => [
-                'name'         => $request->name,
-                'content_type' => $request->content_type,
-                'data_source'  => $request->data_source,
-                'subtitle'     => $request->subtitle,
-                'description'  => $request->description,
-                'btn_text'     => $request->btn_text,
-                'btn_link'     => $request->btn_link,
-            ],
+            'section'      => $sectionKey,
+            'name'         => $label,
+            'title'        => $request->title,
+            'subtitle'     => $request->subtitle,
+            'content_type' => 'dynamic',
+            'media_type'   => $request->media_type,
+            'description'  => $request->description,
+            'image'        => $imagePath,
+            'status'       => $request->has('status') ? 'Active' : 'Inactive',
+            'sort_order'   => HomepageContent::max('sort_order') + 1,
+            'content'      => [],
         ]);
 
         return redirect()->route('homepage.index')->with('success', 'Section created successfully!');
@@ -73,35 +85,25 @@ class HomepageController extends Controller
     public function update(Request $request, HomepageContent $homepage)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'content_type' => 'required|string|in:static,dynamic',
-            'data_source' => [
-                'nullable',
-                Rule::in(['categories', 'featured_services', 'trending', 'packages', 'testimonials', 'video_stories'])
-            ],
+            'title'      => 'required|string|max:255',
+            'media_type' => 'required|string|in:banner,video',
         ]);
 
         $imagePath = $homepage->image;
         if ($request->hasFile('section_image')) {
-            $stored = $request->file('section_image')->store('homepage', 'public');
+            $stored    = $request->file('section_image')->store('homepage', 'public');
             $imagePath = asset('storage/' . $stored);
         }
 
         $homepage->update([
-            'section'    => $request->key ?? $homepage->section,
-            'title'      => $request->title,
-            'image'      => $imagePath,
-            'status'     => $request->has('status') ? 'Active' : 'Inactive',
-            'sort_order' => $request->order ?? $homepage->sort_order,
-            'content'    => [
-                'name'         => $request->name,
-                'content_type' => $request->content_type,
-                'data_source'  => $request->data_source,
-                'subtitle'     => $request->subtitle,
-                'description'  => $request->description,
-                'btn_text'     => $request->btn_text,
-                'btn_link'     => $request->btn_link,
-            ],
+            // 'section' and 'name' are locked — cannot change section type after creation
+            'title'        => $request->title,
+            'subtitle'     => $request->subtitle,
+            'media_type'   => $request->media_type,
+            'description'  => $request->description,
+            'image'        => $imagePath,
+            'status'       => $request->has('status') ? 'Active' : 'Inactive',
+            // Preserve sort_order, content, section, name
         ]);
 
         return redirect()->route('homepage.index')->with('success', 'Section updated successfully!');

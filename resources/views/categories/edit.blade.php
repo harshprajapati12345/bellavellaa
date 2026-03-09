@@ -82,6 +82,14 @@
               </div>
               <label class="toggle-switch"><input type="checkbox" name="status" {{ ($category->status ?? 'Active') === 'Active' ? 'checked' : '' }}><span class="toggle-slider"></span></label>
             </div>
+
+            <div class="flex items-center justify-between p-7 bg-[#F9F9F9] rounded-[2rem] border border-gray-50">
+              <div>
+                <p class="text-sm font-bold text-gray-900">Show on Homepage</p>
+                <p class="text-xs text-gray-400 mt-1">Feature this category in the app home screen</p>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" name="featured" {{ $category->featured ? 'checked' : '' }}><span class="toggle-slider"></span></label>
+            </div>
           </div>
         </div>
       </div>

@@ -88,15 +88,16 @@ $currentFilter = $filter ?? 'All';
             <tbody>
               @forelse($media as $m)
               @php
-                $typeBg = ($m->type ?? 'Banner') === 'Banner' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600';
-                $typeIcon = ($m->type ?? 'Banner') === 'Banner' ? 'image' : 'video';
+                $typeVal = strtolower($m->type ?? 'banner');
+                $typeBg = $typeVal === 'banner' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600';
+                $typeIcon = $typeVal === 'banner' ? 'image' : 'video';
               @endphp
               <tr class="table-row border-b border-gray-50"
                   data-id="{{ $m->id }}"
                   data-title="{{ $m->title ?? '' }}"
                   data-search-title="{{ strtolower($m->title ?? '') }}"
                   data-type="{{ $m->type ?? '' }}"
-                  data-section="{{ $m->section ?? $m->linked_section ?? '—' }}"
+                  data-section="{{ $m->homepageContent ? str_replace('"', '&quot;', ($m->homepageContent->content['name'] ?? $m->homepageContent->title ?? $m->homepageContent->section)) : '—' }}"
                   data-order="{{ $m->order ?? $m->sort_order ?? '—' }}"
                   data-status="{{ ($m->status ?? false) ? 'Active' : 'Inactive' }}"
                   data-preview="{{ $m->file_path ?? $m->url ?? '' }}"
@@ -113,8 +114,8 @@ $currentFilter = $filter ?? 'All';
                   </div>
                 </td>
                 <td class="px-4 py-4"><span class="text-sm font-semibold text-gray-900">{{ $m->title }}</span></td>
-                <td class="px-4 py-4"><span class="text-xs font-semibold px-2.5 py-1 rounded-lg {{ $typeBg }}">{{ $m->type }}</span></td>
-                <td class="px-4 py-4 text-sm text-gray-500">{{ $m->section ?? $m->linked_section ?? '—' }}</td>
+                <td class="px-4 py-4"><span class="text-xs font-semibold px-2.5 py-1 rounded-lg {{ $typeBg }} capitalize">{{ strtolower($m->type) }}</span></td>
+                <td class="px-4 py-4 text-sm text-gray-500">{{ $m->homepageContent ? ($m->homepageContent->content['name'] ?? $m->homepageContent->title ?? $m->homepageContent->section) : '—' }}</td>
                 <td class="px-4 py-4 text-sm text-gray-400 text-center">{{ $m->order ?? $m->sort_order ?? '—' }}</td>
                 <td class="px-4 py-4">
                   <label class="toggle-switch">

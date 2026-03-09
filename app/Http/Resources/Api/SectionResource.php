@@ -7,18 +7,22 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class SectionResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     */
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this['id'] ?? null,
-            'type'       => $this['type'] ?? 'unknown',
-            'title'      => $this['title'] ?? null,
-            'subtitle'   => $this['subtitle'] ?? null,
-            'sort_order' => $this['sort_order'] ?? 0,
-            'items'      => $this['items'] ?? [],
+            'id'           => $this['id'] ?? null,
+            'type'         => $this['type'] ?? 'unknown',
+            'name'         => $this['name'] ?? null,
+            'title'        => $this['title'] ?? null,
+            'subtitle'     => $this['subtitle'] ?? null,
+            'media_type'   => $this['media_type'] ?? 'banner',
+            'content_type' => $this['content_type'] ?? 'dynamic',
+            'data_source'  => $this['data_source'] ?? null,
+            'description'  => $this['description'] ?? null,
+            'btn_text'     => $this['btn_text'] ?? null,
+            'btn_link'     => $this['btn_link'] ?? null,
+            'sort_order'   => $this['sort_order'] ?? 0,
+            'items'        => $this['items'] ?? [],
         ];
     }
 }

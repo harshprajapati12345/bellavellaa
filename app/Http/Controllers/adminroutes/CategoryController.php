@@ -4,6 +4,7 @@ namespace App\Http\Controllers\adminroutes;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
@@ -68,7 +69,9 @@ class CategoryController extends Controller
             'services_count' => $category->services_count,
             'status' => $category->status,
             'slug' => $category->slug,
-            'image' => $category->image ? (str_starts_with($category->image, 'http') ? $category->image : asset('storage/' . $category->image)) : 'https://images.unsplash.com/photo-1596704017254-9b1b1b9e07f9?auto=format&fit=crop&w=400&q=80',
+            'image' => $category->image
+                ? Storage::disk('public')->url($category->image)
+                : null,
         ]);
     }
 

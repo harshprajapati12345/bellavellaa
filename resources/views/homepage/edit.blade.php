@@ -7,8 +7,15 @@
   <nav class="flex items-center gap-2 text-sm text-gray-400 mb-8">
     <a href="{{ route('homepage.index') }}" class="hover:text-gray-600 transition-colors">Home Page Manager</a>
     <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-    <span class="text-gray-900 font-medium">Edit — {{ $homepage->content['name'] ?? $homepage->title }}</span>
+    <span class="text-gray-900 font-medium">Edit — {{ $homepage->name ?? $homepage->title }}</span>
   </nav>
+
+  @if(session('success'))
+    <div
+      class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-3.5 rounded-2xl text-sm font-medium mb-6">
+      <i data-lucide="check-circle" class="w-4 h-4"></i> {{ session('success') }}
+    </div>
+  @endif
 
   @if($errors->any())
   <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-2xl text-sm mb-6">
@@ -20,123 +27,111 @@
   </div>
   @endif
 
-  <form action="{{ route('homepage.update', $homepage->id) }}" method="POST" enctype="multipart/form-data" id="sectionForm" class="max-w-4xl mx-auto">
-    @csrf
-    @method('PUT')
+  <div class="flex flex-col gap-6">
 
-    <!-- Card 1: Basic Info -->
-    <div class="bg-white rounded-2xl sm:rounded-[2rem] shadow-[0_2px_20px_rgb(0,0,0,0.02)] p-6 sm:p-8 mb-6">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
-          <i data-lucide="settings-2" class="w-4 h-4 text-gray-400"></i>
-          Section Details
-        </h2>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-lg text-xs font-medium text-gray-500">
-          <i data-lucide="hash" class="w-3.5 h-3.5"></i>
-          Section #{{ $homepage->id }}
-        </span>
-      </div>
+    <form method="POST" action="{{ route('homepage.update', $homepage->id) }}" enctype="multipart/form-data" id="sectionForm">
+      @csrf
+      @method('PUT')
+      <input type="hidden" name="content_type" value="{{ old('content_type', $homepage->content_type ?? 'static') }}">
+      <input type="hidden" name="data_source" value="{{ old('data_source', $homepage->data_source ?? '') }}">
+      
+      <div class="flex flex-col gap-6">
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Section Name <span class="text-red-400">*</span></label>
-          <input type="text" name="name" required value="{{ old('name', $homepage->content['name'] ?? $homepage->title) }}"
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Section Key <span class="text-red-400">*</span></label>
-          <input type="text" value="{{ $homepage->section }}" readonly
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Content Type <span class="text-red-400">*</span></label>
-          <select required name="content_type" id="content-type"
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white">
-            @php $ctype = old('content_type', $homepage->content['content_type'] ?? 'static'); @endphp
-            <option value="static" {{ $ctype === 'static' ? 'selected' : '' }}>Static Content</option>
-            <option value="dynamic" {{ $ctype === 'dynamic' ? 'selected' : '' }}>Dynamic (Linked to Data)</option>
-          </select>
-        </div>
-        <div id="dynamic-source-wrap" class="{{ $ctype !== 'dynamic' ? 'hidden' : '' }}">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Data Source</label>
-          @php $dataSource = old('data_source', $homepage->content['data_source'] ?? ''); @endphp
-          <select name="data_source" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white">
-            <option value="">Select source...</option>
-            <option value="categories" {{ $dataSource === 'categories' ? 'selected' : '' }}>Categories Carousel</option>
-            <option value="featured_services" {{ $dataSource === 'featured_services' ? 'selected' : '' }}>Featured Services</option>
-            <option value="trending" {{ $dataSource === 'trending' ? 'selected' : '' }}>Trending Services</option>
-            <option value="packages" {{ $dataSource === 'packages' ? 'selected' : '' }}>Packages</option>
-            <option value="testimonials" {{ $dataSource === 'testimonials' ? 'selected' : '' }}>Reviews / Testimonials</option>
-            <option value="video_stories" {{ $dataSource === 'video_stories' ? 'selected' : '' }}>Video Stories (Media)</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-          <div class="flex items-center gap-3 mt-1">
-            <label class="toggle-switch">
-              <input type="checkbox" name="status" {{ $homepage->status === 'Active' ? 'checked' : '' }}>
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="text-sm text-gray-500 status-label">{{ $homepage->status }}</span>
+        <!-- CARD 1: SECTION DETAILS -->
+        <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden section-card max-w-4xl mx-auto w-full">
+          <div class="px-8 pt-7 pb-2">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">1
+                </div>
+                <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Section Details</h3>
+                <div class="flex-1 h-px bg-gray-100 ml-2"></div>
+              </div>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-lg text-xs font-medium text-gray-500">
+                <i data-lucide="hash" class="w-3.5 h-3.5"></i>
+                Section #{{ $homepage->id }}
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+          <div class="px-8 pb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-    <!-- Card 2: Content -->
-    <div class="bg-white rounded-2xl sm:rounded-[2rem] shadow-[0_2px_20px_rgb(0,0,0,0.02)] p-6 sm:p-8 mb-6">
-      <h2 class="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-        <i data-lucide="type" class="w-4 h-4 text-gray-400"></i>
-        Section Content
-      </h2>
+              <!-- Section Type (Locked — cannot be changed after creation) -->
+              <div class="sm:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Type</label>
+                <div class="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div class="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="lock" class="w-4 h-4 text-gray-500"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-800">{{ $homepage->name ?? $homepage->section }}</p>
+                    <p class="text-xs font-mono text-gray-400">{{ $homepage->section }}</p>
+                  </div>
+                  <span class="ml-auto text-xs text-gray-400 bg-white border border-gray-200 px-2.5 py-1 rounded-lg">Locked</span>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1 italic">Section type cannot be changed after creation.</p>
+              </div>
 
-      <div class="mb-5">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Section Title</label>
-        <input type="text" name="title" value="{{ old('title', $homepage->title) }}"
-          class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all">
-      </div>
-      <div class="mb-5">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Subtitle</label>
-        <input type="text" name="subtitle" value="{{ old('subtitle', $homepage->content['subtitle'] ?? '') }}"
-          class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all">
-      </div>
-      <div class="mb-5">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-        <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
-            <button type="button" onclick="execCmd('bold')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"><i data-lucide="bold" class="w-4 h-4"></i></button>
-            <button type="button" onclick="execCmd('italic')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"><i data-lucide="italic" class="w-4 h-4"></i></button>
-            <button type="button" onclick="execCmd('underline')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"><i data-lucide="underline" class="w-4 h-4"></i></button>
-            <div class="w-px h-5 bg-gray-200 mx-1"></div>
-            <button type="button" onclick="execCmd('insertUnorderedList')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"><i data-lucide="list" class="w-4 h-4"></i></button>
-            <button type="button" onclick="execCmd('createLink')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-black hover:bg-gray-200 transition-colors"><i data-lucide="link" class="w-4 h-4"></i></button>
+              <!-- Title -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Section Title <span class="text-red-400">*</span></label>
+                <input type="text" name="title" required
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
+                  placeholder="e.g. Welcome to Bellavella" value="{{ old('title', $homepage->title) }}">
+              </div>
+
+              <!-- Subtitle -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Subtitle <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
+                <input type="text" name="subtitle"
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
+                  placeholder="e.g. Premium Salon &amp; Beauty Experience" value="{{ old('subtitle', $homepage->subtitle ?? '') }}">
+              </div>
+
+              <!-- Media Type -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Media Type <span class="text-red-400">*</span></label>
+                <select name="media_type" required
+                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all bg-white cursor-pointer">
+                  <option value="">Select media type...</option>
+                  <option value="banner" {{ old('media_type', $homepage->media_type ?? '') === 'banner' ? 'selected' : '' }}>Banner (Image)</option>
+                  <option value="video" {{ old('media_type', $homepage->media_type ?? '') === 'video' ? 'selected' : '' }}>Video</option>
+                </select>
+              </div>
+
+              <!-- Status -->
+              <div class="flex items-start pt-1">
+                <div class="w-full py-3 px-4 bg-gray-50 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-900">Active Section</p>
+                    <p class="text-xs text-gray-400">Show this section on the homepage</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" name="status" {{ $homepage->status === 'Active' ? 'checked' : '' }}>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
           </div>
-          <div id="descEditor" contenteditable="true" class="min-h-[160px] px-4 py-4 text-sm text-gray-700 focus:outline-none leading-relaxed">{!! old('description', $homepage->content['description'] ?? '') !!}</div>
-          <input type="hidden" name="description" id="descHidden">
-        </div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Button Text <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-          <input type="text" name="btn_text" value="{{ old('btn_text', $homepage->content['btn_text'] ?? '') }}"
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all">
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Button Link <span class="text-xs text-gray-400 font-normal">(Optional)</span></label>
-          <input type="text" name="btn_link" value="{{ old('btn_link', $homepage->content['btn_link'] ?? '') }}"
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all">
-        </div>
-      </div>
-    </div>
 
-    <!-- Action Buttons -->
-    <div class="flex items-center gap-3">
-      <a href="{{ route('homepage.index') }}" class="px-6 py-3 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-white transition-colors">Cancel</a>
-      <button type="submit" onclick="syncDesc()" class="px-8 py-3 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm">
-        Update Section
-      </button>
-    </div>
-  </form>
+        </div>
+
+        <!-- STICKY ACTION BAR -->
+        <div
+          class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-end gap-3 mt-2 max-w-4xl mx-auto w-full">
+          <a href="{{ route('homepage.index') }}"
+            class="px-5 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-white transition-colors">Cancel</a>
+          <button type="submit" name="form_action" value="publish"
+            class="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-2">
+            <i data-lucide="globe" class="w-4 h-4"></i> Update Section
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
 
   <form id="delete-form" action="{{ route('homepage.destroy', $homepage->id) }}" method="POST" class="hidden">
     @csrf
@@ -146,47 +141,68 @@
 @endsection
 
 @push('styles')
-<style>
-  .toggle-switch { position: relative; display: inline-block; width: 38px; height: 22px; }
-  .toggle-switch input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; cursor: pointer; inset: 0;
-    background: #e5e7eb; border-radius: 999px; transition: 0.25s;
-  }
-  .toggle-slider:before {
-    content: ''; position: absolute;
-    width: 16px; height: 16px; left: 3px; bottom: 3px;
-    background: white; border-radius: 50%; transition: 0.25s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  }
-  input:checked + .toggle-slider { background: #000; }
-  input:checked + .toggle-slider:before { transform: translateX(16px); }
-</style>
+  <style>
+    .section-card {
+      transition: box-shadow 0.25s ease;
+    }
+
+    .section-card:hover {
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .sticky-bar {
+      position: sticky;
+      bottom: 0;
+      z-index: 30;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 22px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #e5e7eb;
+      border-radius: 999px;
+      transition: 0.25s;
+    }
+
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.25s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    input:checked+.toggle-slider {
+      background: #000;
+    }
+
+    input:checked+.toggle-slider:before {
+      transform: translateX(16px);
+    }
+  </style>
 @endpush
 
 @push('scripts')
-<script>
-  // Status toggle label sync
-  document.querySelector('input[name="status"]').addEventListener('change', function() {
-    document.querySelector('.status-label').textContent = this.checked ? 'Active' : 'Inactive';
-  });
-
-  document.getElementById('content-type').addEventListener('change', function() {
-    document.getElementById('dynamic-source-wrap').classList.toggle('hidden', this.value !== 'dynamic');
-  });
-
-  function execCmd(cmd) {
-    if (cmd === 'createLink') {
-      const url = prompt('Enter URL:');
-      if (url) document.execCommand('createLink', false, url);
-    } else {
-      document.execCommand(cmd, false, null);
-    }
-    document.getElementById('descEditor').focus();
-  }
-
-  function syncDesc() {
-    document.getElementById('descHidden').value = document.getElementById('descEditor').innerHTML;
-  }
-</script>
+  {{-- No client-side scripts needed for edit form --}}
 @endpush
