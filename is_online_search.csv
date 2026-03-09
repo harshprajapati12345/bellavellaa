@@ -1,0 +1,2 @@
+"LineNumber","Line","Path"
+"15","            $table->timestamp('last_seen')->nullable()->after('is_online');","C:\xampp\htdocs\bellavella\database\migrations\2026_03_07_132619_add_last_seen_to_professionals_table.php"

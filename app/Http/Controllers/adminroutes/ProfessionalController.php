@@ -225,6 +225,38 @@ class ProfessionalController extends Controller
         return view('professionals.history.index', compact('history'));
     }
 
+    public function deposits()
+    {
+        $transactions = \App\Models\WalletTransaction::with(['wallet.holder'])
+            ->whereHas('wallet', function($q) {
+                $q->where('holder_type', 'professional')->where('type', 'cash');
+            })
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($t) {
+                // Ensure balanced formatting, convert from paise if needed (assuming paise in Wallet balance)
+                $amountBase = $t->amount;
+                $balanceBase = $t->balance_after;
+                
+                return [
+                    'id' => 'TRX-' . (1000 + $t->id),
+                    'professional' => $t->wallet->holder->name ?? 'Unknown',
+                    'pro_id' => $t->wallet->holder->id ?? '—',
+                    'date' => $t->created_at->format('Y-m-d H:i:s'),
+                    'type' => ucfirst($t->type), // Credit/Debit
+                    'amount' => $amountBase / 100, // Assuming paise
+                    'balance_after' => $balanceBase / 100, // Assuming paise
+                    'source' => $t->source,
+                    'description' => $t->description,
+                ];
+            });
+
+        $totalDeposits = $transactions->where('type', 'Credit')->sum('amount');
+        $totalWithdrawals = $transactions->where('type', 'Debit')->sum('amount');
+
+        return view('professionals.deposits.index', compact('transactions', 'totalDeposits', 'totalWithdrawals'));
+    }
+
     public function destroy(Professional $professional)
     {
         $professional->delete();

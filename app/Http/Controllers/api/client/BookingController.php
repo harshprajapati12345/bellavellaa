@@ -18,7 +18,7 @@ class BookingController extends BaseController
 
     public function index(Request $request): JsonResponse
     {
-        $status = $request->query('status', 'Upcoming'); // Upcoming, Completed, Cancelled
+        $status = $request->query('status', 'all'); // all, Upcoming, Completed, Cancelled
         $customer = $this->guard()->user();
 
         $query = $customer->bookingsRel();

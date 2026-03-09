@@ -45,10 +45,11 @@ class DashboardController extends BaseController
         return $this->success([
             'recent_bookings'  => $recentBookings,
             'pending_requests' => $pendingRequestsWait,
-            'todays_earnings'  => Booking::where('professional_id', $professional->id)
+            'todays_earnings'  => (float) Booking::where('professional_id', $professional->id)
                                     ->where('date', $today)
                                     ->where('status', 'Completed')
-                                    ->sum('price'),
+                                    ->get()
+                                    ->sum(fn($b) => $b->price - ($b->commission ?? 0)),
             'total_earnings'   => $professional->earnings,
             'total_orders'     => $professional->orders,
             'kit_count'        => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
@@ -74,22 +75,71 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET /api/professionals/schedule
-     * Upcoming bookings formatted for a calendar/schedule view
+     * GET /api/professional/schedule?date=YYYY-MM-DD
+     * Bookings for a specific date (defaults to today) + slot availability
      */
     public function schedule(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
 
-        // Upcoming bookings (today and future)
-        $schedule = Booking::where('professional_id', $professional->id)
-            ->where('date', '>=', Carbon::today()->toDateString())
-            ->whereNotIn('status', ['Cancelled'])
-            ->orderBy('date', 'asc')
-            ->orderBy('slot', 'asc')
-            ->get();
+        $date = $request->query('date', Carbon::today()->toDateString());
 
-        return $this->success($schedule, 'Schedule retrieved.');
+        $bookings = Booking::where('professional_id', $professional->id)
+            ->where('date', $date)
+            ->whereNotIn('status', ['Cancelled'])
+            ->orderBy('slot', 'asc')
+            ->get()
+            ->map(fn($b) => [
+                'id'           => $b->id,
+                'slot'         => $b->slot,
+                'service_name' => $b->service_name,
+                'customer_name'=> $b->customer_name ?? 'Client',
+                'status'       => $b->status,
+                'price'        => $b->price,
+            ]);
+
+        // Slot availability stored in working_hours JSON on the professional
+        $wh = $professional->working_hours ?? [];
+        $slots = [
+            'morning'   => $wh['morning_slot']   ?? true,
+            'afternoon' => $wh['afternoon_slot']  ?? true,
+            'evening'   => $wh['evening_slot']    ?? false,
+        ];
+
+        return $this->success([
+            'date'      => $date,
+            'bookings'  => $bookings,
+            'slots'     => $slots,
+        ], 'Schedule retrieved.');
+    }
+
+    /**
+     * POST /api/professional/schedule/slots
+     * Toggle morning/afternoon/evening slot availability
+     */
+    public function updateSlots(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $validated = $request->validate([
+            'morning'   => 'sometimes|boolean',
+            'afternoon' => 'sometimes|boolean',
+            'evening'   => 'sometimes|boolean',
+        ]);
+
+        $wh = $professional->working_hours ?? [];
+        if (isset($validated['morning']))   $wh['morning_slot']   = $validated['morning'];
+        if (isset($validated['afternoon'])) $wh['afternoon_slot'] = $validated['afternoon'];
+        if (isset($validated['evening']))   $wh['evening_slot']   = $validated['evening'];
+
+        $professional->working_hours = $wh;
+        $professional->save();
+
+        return $this->success([
+            'morning'   => $wh['morning_slot']   ?? true,
+            'afternoon' => $wh['afternoon_slot']  ?? true,
+            'evening'   => $wh['evening_slot']    ?? false,
+        ], 'Slot availability updated.');
     }
 
     /**

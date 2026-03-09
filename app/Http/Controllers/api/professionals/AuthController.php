@@ -118,6 +118,7 @@ class AuthController extends BaseController
             'aadhar_front' => 'nullable|image|max:2048',
             'aadhar_back'  => 'nullable|image|max:2048',
             'pan_photo'    => 'nullable|image|max:2048',
+            'certificate'  => 'nullable|image|max:2048',
             'selfie'       => 'nullable|image|max:2048',
             'referral_code' => 'nullable|string|exists:professionals,referral_code',
         ]);
@@ -176,6 +177,10 @@ class AuthController extends BaseController
         if ($request->hasFile('pan_photo')) {
             $path = $request->file('pan_photo')->store('documents/pan', 'public');
             $data['pan_img'] = '/storage/' . $path;
+        }
+        if ($request->hasFile('certificate')) {
+            $path = $request->file('certificate')->store('documents/certificates', 'public');
+            $data['certificate_img'] = '/storage/' . $path;
         }
         if ($request->hasFile('selfie')) {
             $path = $request->file('selfie')->store('avatars', 'public');

@@ -60,6 +60,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('professionals/verification/{id}/request-changes', [ProfessionalController::class, 'requestVerificationChanges'])->name('professionals.verification.request-changes');
     Route::get('professionals/orders', [ProfessionalController::class, 'orders'])->name('professionals.orders');
     Route::get('professionals/history', [ProfessionalController::class, 'history'])->name('professionals.history');
+    Route::get('professionals/deposits', [ProfessionalController::class, 'deposits'])->name('professionals.deposits');
 
     // Kit Management
     Route::get('professionals/kit-products', [KitProductController::class, 'index'])->name('kit-products.index');

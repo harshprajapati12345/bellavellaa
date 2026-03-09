@@ -171,6 +171,12 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
                 <i data-lucide="history" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">History</span>
               </a>
+              <a href="{{ route('professionals.deposits') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/deposits*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="wallet" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Deposit History</span>
+              </a>
+
 
               <!-- Kit Management Submenu -->
               <div class="relative pt-1 border-t border-gray-100/50 mt-1">
