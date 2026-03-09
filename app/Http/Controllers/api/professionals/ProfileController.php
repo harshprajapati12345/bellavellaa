@@ -164,14 +164,26 @@ class ProfileController extends BaseController
     {
         $professional = $request->user('professional-api');
         
+        if ($professional->verification === 'Verified') {
+            return $this->error('Documents cannot be modified after verification.', 403);
+        }
+        
         $request->validate([
-            'aadhaar_front' => 'nullable|file|max:5120',
-            'aadhaar_back'  => 'nullable|file|max:5120',
-            'pan_img'       => 'nullable|file|max:5120',
+            'aadhaar_front'   => 'nullable|file|max:5120',
+            'aadhaar_back'    => 'nullable|file|max:5120',
+            'pan_img'         => 'nullable|file|max:5120',
+            'certificate_img' => 'nullable|file|max:5120',
+            'selfie'          => 'nullable|file|max:5120',
         ]);
 
         $updateData = [];
-        $docFields = ['aadhaar_front' => 'documents/aadhaar', 'aadhaar_back' => 'documents/aadhaar', 'pan_img' => 'documents/pan'];
+        $docFields = [
+            'aadhaar_front'   => 'documents/aadhaar', 
+            'aadhaar_back'    => 'documents/aadhaar', 
+            'pan_img'         => 'documents/pan',
+            'certificate_img' => 'documents/certificate',
+            'selfie'          => 'documents/selfies'
+        ];
 
         foreach ($docFields as $docField => $folder) {
             if ($request->hasFile($docField)) {
@@ -185,6 +197,82 @@ class ProfileController extends BaseController
         }
 
         return $this->success($professional->fresh(), 'Documents uploaded.');
+    }
+
+    public function updateBankDetails(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        if ($professional->payout_verification_status === 'Verified') {
+            return $this->error('Bank details cannot be modified after verification.', 403);
+        }
+
+        $request->validate([
+            'account_holder'   => 'required|string|max:255',
+            'bank_name'        => 'required|string|max:255',
+            'account_number'   => 'required|string|max:255',
+            'ifsc'             => 'required|string|max:255',
+            'branch'           => 'nullable|string|max:255',
+            'bank_proof_image' => 'nullable|file|max:5120',
+        ]);
+
+        $payout = is_array($professional->payout) ? $professional->payout : [];
+        $payout['account_holder'] = $request->account_holder;
+        $payout['bank_name'] = $request->bank_name;
+        $payout['account_number'] = $request->account_number;
+        $payout['ifsc'] = $request->ifsc;
+        $payout['branch'] = $request->branch;
+
+        $updateData = [
+            'payout' => $payout,
+            'payout_verification_status' => 'Pending',
+        ];
+
+        if ($request->hasFile('bank_proof_image')) {
+            if ($professional->bank_proof_image && str_starts_with($professional->bank_proof_image, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $professional->bank_proof_image));
+            }
+            $path = $request->file('bank_proof_image')->store('documents/payout', 'public');
+            $updateData['bank_proof_image'] = '/storage/' . $path;
+        }
+
+        $professional->update($updateData);
+
+        return $this->success($professional->fresh(), 'Bank details updated successfully.');
+    }
+
+    public function updateUPIDetails(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        if ($professional->payout_verification_status === 'Verified') {
+            return $this->error('UPI details cannot be modified after verification.', 403);
+        }
+
+        $request->validate([
+            'upi_id'         => 'required|string|max:255',
+            'upi_screenshot' => 'nullable|file|max:5120',
+        ]);
+
+        $payout = is_array($professional->payout) ? $professional->payout : [];
+        $payout['upi_id'] = $request->upi_id;
+
+        $updateData = [
+            'payout' => $payout,
+            'payout_verification_status' => 'Pending',
+        ];
+
+        if ($request->hasFile('upi_screenshot')) {
+            if ($professional->upi_screenshot && str_starts_with($professional->upi_screenshot, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $professional->upi_screenshot));
+            }
+            $path = $request->file('upi_screenshot')->store('documents/payout', 'public');
+            $updateData['upi_screenshot'] = '/storage/' . $path;
+        }
+
+        $professional->update($updateData);
+
+        return $this->success($professional->fresh(), 'UPI details updated successfully.');
     }
 
     /**

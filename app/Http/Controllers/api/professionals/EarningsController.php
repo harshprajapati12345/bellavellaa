@@ -35,17 +35,20 @@ class EarningsController extends BaseController
         $todaysEarnings = Booking::where('professional_id', $professional->id)
             ->where('status', 'Completed')
             ->where('date', $today)
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $weeklyEarnings = Booking::where('professional_id', $professional->id)
             ->where('status', 'Completed')
             ->whereBetween('date', [$startOfWeek, $today])
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $monthlyEarnings = Booking::where('professional_id', $professional->id)
             ->where('status', 'Completed')
             ->whereBetween('date', [$startOfMonth, $today])
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $totalJobs = Booking::where('professional_id', $professional->id)
             ->where('status', 'Completed')
@@ -187,6 +190,11 @@ class EarningsController extends BaseController
         $depositBalancePaise = max(0, $totalDepositPaise);
         $earningsBalancePaise = max(0, $totalCashBalancePaise - $depositBalancePaise);
 
+        $todayEarnings = Booking::where('professional_id', $professional->id)
+            ->where('status', 'Completed')
+            ->where('date', $today)
+            ->sum(DB::raw("price * {$commissionRate}"));
+
         return $this->success([
             'cash_balance'   => $totalCashBalancePaise / 100,
             'earnings_balance' => $earningsBalancePaise / 100,
@@ -196,6 +204,7 @@ class EarningsController extends BaseController
             'kit_count'      => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'active_balance' => $type === 'coin' ? $coinWallet->balance : ($totalCashBalancePaise / 100),
             'transactions'   => $transactions,
+            'today_earnings'  => $todayEarnings,
             'weekly_earnings' => $weeklyEarnings,
             'monthly_earnings' => $monthlyEarnings,
             'total_jobs'     => $totalJobs,

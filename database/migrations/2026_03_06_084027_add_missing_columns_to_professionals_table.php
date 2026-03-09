@@ -39,6 +39,9 @@ return new class extends Migration
             if (!Schema::hasColumn('professionals', 'working_hours')) {
                 $table->json('working_hours')->nullable()->after('portfolio');
             }
+            if (!Schema::hasColumn('professionals', 'is_online')) {
+                $table->boolean('is_online')->default(false)->after('working_hours');
+            }
         });
     }
 

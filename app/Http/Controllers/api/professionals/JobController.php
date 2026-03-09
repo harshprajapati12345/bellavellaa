@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Professionals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\ReferralService;
+use App\Services\BookingService;
 use App\Http\Requests\Professional\Job\ScanKitRequest;
 use App\Http\Requests\Professional\Job\CompleteJobRequest;
 use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
@@ -56,12 +57,7 @@ class JobController extends BaseController
         $booking = \App\Models\Booking::find($id);
 
         if ($booking) {
-            $booking->update(['status' => 'Completed']);
-
-            // Trigger referral reward check
-            if ($booking->customer) {
-                ReferralService::processFirstBookingCompletion($booking->customer);
-            }
+            BookingService::completeJob($booking);
         }
 
         return $this->success(null, 'Job marked as complete.');
@@ -126,13 +122,8 @@ class JobController extends BaseController
             return $this->error('Payment verification failed.', 422);
         }
 
-        // Mark as completed
-        $booking->update(['status' => 'Completed']);
-        
-        // Referral check
-        if ($booking->customer) {
-            ReferralService::processFirstBookingCompletion($booking->customer);
-        }
+        // Use BookingService to handle completion, wallet credits, and referral check
+        BookingService::completeJob($booking);
 
         return $this->success(null, 'Payment verified and job completed.');
     }

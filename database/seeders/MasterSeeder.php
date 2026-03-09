@@ -330,7 +330,6 @@ class MasterSeeder extends Seeder
                 'title' => $i <= 3 ? "Summer Sale Banner {$i}" : "Tutorial Video {$i}",
                 'url' => "https://placehold.co/1200x400?text=Banner+{$i}",
                 'thumbnail' => "https://placehold.co/300x100?text=Thumb+{$i}",
-                'linked_section' => ['services', 'packages', 'offers', 'services', 'packages'][$i - 1],
                 'status' => 'Active',
                 'order' => $i,
                 'created_at' => now(),

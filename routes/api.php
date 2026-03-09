@@ -169,8 +169,11 @@ Route::prefix('professional')->group(function () {
             Route::post('verify', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'verifyDeposit']);
         });
         Route::get('jobs-history', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'history']);
-        Route::get('schedule', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'schedule']);
+        Route::get('schedule', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'schedule']);
+        Route::post('schedule/slots', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'updateSlots']);
         Route::post('request-withdrawal', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'requestWithdrawal']);
+        Route::get('withdrawals/history', [\App\Http\Controllers\Api\Professionals\WithdrawalController::class, 'history']);
+        Route::post('withdrawals/request', [\App\Http\Controllers\Api\Professionals\WithdrawalController::class, 'store']);
 
         // Kit Store / Orders
         Route::get('kit-products', [\App\Http\Controllers\Api\Professionals\KitController::class, 'products']);
@@ -194,10 +197,18 @@ Route::prefix('professional')->group(function () {
         Route::post('upload-profile-image', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadProfileImage']);
         Route::post('upload-documents', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'uploadDocuments']);
         Route::put('change-password', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'changePassword']);
+        Route::post('update-bank-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'updateBankDetails']);
+        Route::post('update-upi-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'updateUPIDetails']);
+
 
         // Refer & Earn
         Route::get('referrals', [\App\Http\Controllers\Api\Professionals\ReferralController::class, 'index']);
         Route::post('referrals/submit', [\App\Http\Controllers\Api\Professionals\ReferralController::class, 'submit']);
+
+        // Leave Requests
+        Route::get('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'index']);
+        Route::post('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'store']);
+        Route::delete('leaves/{id}', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'destroy']);
     });
 });
 
@@ -268,6 +279,13 @@ Route::prefix('admin')->group(function () {
         Route::prefix('kit')->group(function () {
             Route::apiResource('products', App\Http\Controllers\Api\Admin\KitProductController::class);
             Route::apiResource('orders', App\Http\Controllers\Api\Admin\KitOrderController::class);
+        });
+
+        // Withdrawal Management
+        Route::prefix('withdrawals')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\Admin\WithdrawalController::class, 'index']);
+            Route::post('{id}/approve', [\App\Http\Controllers\Api\Admin\WithdrawalController::class, 'approve']);
+            Route::post('{id}/reject', [\App\Http\Controllers\Api\Admin\WithdrawalController::class, 'reject']);
         });
     });
 });

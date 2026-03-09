@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('professionals', function (Blueprint $table) {
-            $table->json('working_hours')->nullable()->after('bio');
+            if (!Schema::hasColumn('professionals', 'certificate_img')) {
+                $table->string('certificate_img')->nullable()->after('pan_img');
+            }
         });
     }
 
@@ -22,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn('working_hours');
+            $table->dropColumn('certificate_img');
         });
     }
 };
