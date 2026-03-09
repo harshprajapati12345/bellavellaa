@@ -8,24 +8,37 @@ use App\Services\ReferralService;
 use App\Http\Requests\Professional\Job\ScanKitRequest;
 use App\Http\Requests\Professional\Job\CompleteJobRequest;
 use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
+use Illuminate\Support\Str;
 
 class JobController extends BaseController
 {
-    /**
-     * POST /api/professional/jobs/{id}/arrived
-     */
     public function arrived(Request $request, $id): JsonResponse
     {
-        // Logic to mark arrival
+        $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update(['status' => 'Arrived']);
+        }
         return $this->success(null, 'Arrival marked successfully.');
     }
 
     /**
-     * POST /api/professional/jobs/{id}/start-service
+     * POST /api/professional/jobs/{id}/start-journey
      */
+    public function startJourney(Request $request, $id): JsonResponse
+    {
+        $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update(['status' => 'Started']); // or 'On The Way'
+        }
+        return $this->success(null, 'Journey started.');
+    }
+
     public function startService(Request $request, $id): JsonResponse
     {
-        // Logic to start service
+        $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update(['status' => 'In Progress']);
+        }
         return $this->success(null, 'Service started.');
     }
 
@@ -61,5 +74,66 @@ class JobController extends BaseController
     {
         // Logic for payment confirmation
         return $this->success(null, 'Payment confirmed.');
+    }
+
+    public function createPaymentOrder(Request $request, $id): JsonResponse
+    {
+        $booking = \App\Models\Booking::findOrFail($id);
+        $amountPaise = (int) round($booking->price * 100);
+
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $order = $api->order->create([
+                'receipt'  => 'booking_' . $id . '_' . Str::random(4),
+                'amount'   => $amountPaise,
+                'currency' => 'INR',
+                'notes'    => [
+                    'booking_id' => $id,
+                    'professional_id' => $request->user('professional-api')->id
+                ]
+            ]);
+            
+            return $this->success([
+                'order_id'     => $order['id'],
+                'amount'       => $amountPaise,
+                'currency'     => 'INR',
+                'receipt'      => $order['receipt'],
+            ], 'Razorpay order created.');
+        } catch (\Exception $e) {
+            return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function verifyPayment(Request $request, $id): JsonResponse
+    {
+        $booking = \App\Models\Booking::findOrFail($id);
+        
+        $validated = $request->validate([
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_order_id'   => 'required|string',
+            'razorpay_signature'  => 'required|string',
+        ]);
+
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $attributes = [
+                'razorpay_order_id'   => $validated['razorpay_order_id'],
+                'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                'razorpay_signature'  => $validated['razorpay_signature']
+            ];
+            $api->utility->verifyPaymentSignature($attributes);
+        } catch (\Exception $e) {
+            return $this->error('Payment verification failed.', 422);
+        }
+
+        // Mark as completed
+        $booking->update(['status' => 'Completed']);
+        
+        // Referral check
+        if ($booking->customer) {
+            ReferralService::processFirstBookingCompletion($booking->customer);
+        }
+
+        return $this->success(null, 'Payment verified and job completed.');
     }
 }

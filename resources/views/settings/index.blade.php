@@ -25,9 +25,9 @@
                     <div class="grid grid-cols-1 gap-6">
 
                         @php
-                            $primary = $settings->where('key', 'primary_color')->first()->value ?? '#000000';
-                            $secondary = $settings->where('key', 'secondary_color')->first()->value ?? '#6B7280';
-                            $background = $settings->where('key', 'background_color')->first()->value ?? '#FFFFFF';
+                            $primary = optional($settings->where('key', 'primary_color')->first())->value ?? '#000000';
+                            $secondary = optional($settings->where('key', 'secondary_color')->first())->value ?? '#6B7280';
+                            $background = optional($settings->where('key', 'background_color')->first())->value ?? '#FFFFFF';
                         @endphp
 
                         <!-- Primary Color -->

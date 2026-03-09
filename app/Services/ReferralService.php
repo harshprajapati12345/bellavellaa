@@ -16,8 +16,9 @@ class ReferralService
     public static function processFirstBookingCompletion(Customer $customer): void
     {
         // 1. Does the customer have a pending referral record?
-        $referral = Referral::where('referred_customer_id', $customer->id)
-            ->where('status', 'signed_up')
+        $referral = Referral::where('referred_id', $customer->id)
+            ->where('referred_type', 'client')
+            ->where('status', 'pending')
             ->first();
 
         if (!$referral) {
@@ -50,7 +51,7 @@ class ReferralService
             }
 
             // Grant bonus
-            $rewardAmount = $referral->reward_coins ?: 100;
+            $rewardAmount = $referral->reward_amount ?: 100;
 
             $coinWallet->credit(
                 $rewardAmount,
@@ -62,7 +63,7 @@ class ReferralService
 
             // Update referral status
             $referral->update([
-                'status' => 'rewarded',
+                'status' => 'success',
                 'reward_given_at' => now(),
             ]);
         });

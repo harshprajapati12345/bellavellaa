@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
   <style>
     body { font-family: 'Inter', sans-serif; background: #F6F6F6; }
-    ::-webkit-scrollbar { width: 0px; background: transparent; }
+    /* ::-webkit-scrollbar { width: 0px; background: transparent; } */
     .submenu { display: none; }
     .submenu.open { display: block; }
     .chevron-rotate { transform: rotate(180deg); }

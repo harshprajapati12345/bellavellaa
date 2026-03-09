@@ -6,6 +6,7 @@
 $professionals = $professionals ?? collect();
 $total     = $professionals->count();
 $verified  = $professionals->where('verification', 'Verified')->count();
+$online    = $online ?? $professionals->where('last_seen', '>=', now()->subMinutes(2))->count();
 $pending   = $professionals->where('verification', 'Pending')->count();
 $suspended = $professionals->where('status', 'Suspended')->count();
 @endphp
@@ -19,6 +20,11 @@ $suspended = $professionals->where('status', 'Suspended')->count();
           <p class="text-sm text-gray-400 mt-0.5">Manage all registered beauty professionals</p>
         </div>
         <div class="flex items-center gap-3">
+          <button onclick="window.location.reload()" 
+            class="flex items-center justify-center w-10 h-10 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-gray-400 hover:text-black shadow-sm"
+            title="Refresh Status">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
           <div class="relative">
             <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
             <input id="pro-search" type="text" placeholder="Name / Phone / City…" oninput="applyFilters()"
@@ -32,21 +38,25 @@ $suspended = $professionals->where('status', 'Suspended')->count();
       </div>
 
       <!-- Stat Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
-          <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total</p><p class="text-3xl font-bold text-gray-900">{{ $total }}</p><p class="text-xs text-gray-400 mt-0.5">Professionals</p></div>
+          <div><p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total</p><p class="text-3xl font-bold text-gray-900">{{ $total }}</p><p class="text-xs text-gray-400 mt-0.5">Registered</p></div>
           <div class="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center flex-shrink-0"><i data-lucide="users" class="w-5 h-5 text-gray-600"></i></div>
         </div>
-        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
-          <div><p class="text-xs font-semibold text-emerald-500 uppercase tracking-widest mb-1">Verified</p><p class="text-3xl font-bold text-gray-900">{{ $verified }}</p><p class="text-xs text-gray-400 mt-0.5">Approved</p></div>
-          <div class="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0"><i data-lucide="badge-check" class="w-5 h-5 text-emerald-500"></i></div>
+        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4 border-l-4 border-emerald-400">
+          <div><p class="text-xs font-semibold text-emerald-500 uppercase tracking-widest mb-1">Online</p><p class="text-3xl font-bold text-gray-900">{{ $online }}</p><p class="text-xs text-gray-400 mt-0.5">Currently Working</p></div>
+          <div class="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0"><i data-lucide="activity" class="w-5 h-5 text-emerald-500"></i></div>
         </div>
-        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
-          <div><p class="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-1">Pending</p><p class="text-3xl font-bold text-gray-900">{{ $pending }}</p><p class="text-xs text-gray-400 mt-0.5">Awaiting review</p></div>
+        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4 text-emerald-600">
+          <div><p class="text-xs font-semibold uppercase tracking-widest mb-1">Verified</p><p class="text-3xl font-bold text-gray-900">{{ $verified }}</p><p class="text-xs text-gray-400 mt-0.5">Approved</p></div>
+          <div class="w-11 h-11 rounded-2xl bg-emerald-50/50 flex items-center justify-center flex-shrink-0"><i data-lucide="badge-check" class="w-5 h-5 text-emerald-500"></i></div>
+        </div>
+        <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
+          <div><p class="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-1">Pending</p><p class="text-3xl font-bold text-gray-900">{{ $pending }}</p><p class="text-xs text-gray-400 mt-0.5">Waitlist</p></div>
           <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0"><i data-lucide="clock" class="w-5 h-5 text-amber-500"></i></div>
         </div>
         <div class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
-          <div><p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Suspended</p><p class="text-3xl font-bold text-gray-900">{{ $suspended }}</p><p class="text-xs text-gray-400 mt-0.5">Restricted</p></div>
+          <div><p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Blocked</p><p class="text-3xl font-bold text-gray-900">{{ $suspended }}</p><p class="text-xs text-gray-400 mt-0.5">Suspended</p></div>
           <div class="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center flex-shrink-0"><i data-lucide="ban" class="w-5 h-5 text-red-400"></i></div>
         </div>
       </div>
@@ -110,6 +120,9 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                     <div>
                       <div class="flex items-center gap-1.5">
                         <p class="text-sm font-semibold text-gray-900">{{ $pro->name }}</p>
+                        @if($pro->last_seen && $pro->last_seen >= now()->subMinutes(2))
+                          <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" title="Online Now"></span>
+                        @endif
                         @if(($pro->verification ?? '') === 'Verified')<i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500 fill-blue-50"></i>@endif
                       </div>
                       <p class="text-xs text-gray-400">{{ $pro->experience ?? '—' }} exp.</p>
@@ -223,6 +236,16 @@ $suspended = $professionals->where('status', 'Suspended')->count();
     });
   }
 
-  (function init() { visibleRows = Array.from(document.querySelectorAll('#pro-tbody tr.table-row')); renderPage(); })();
+  (function init() { 
+    visibleRows = Array.from(document.querySelectorAll('#pro-tbody tr.table-row')); 
+    renderPage(); 
+    
+    // Auto-refresh every 20 seconds to update online status
+    setInterval(function() {
+      // We could do a partial AJAX load here, but for now a full reload or simple check is fine.
+      // Re-fetching the entire page is safest for data consistency.
+      window.location.reload();
+    }, 20000);
+  })();
 </script>
 @endpush

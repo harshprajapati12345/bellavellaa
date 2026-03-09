@@ -30,6 +30,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 // ═══════════════════════════════════════════════════════════════════
+// IMAGE CORS PROXY
+// ═══════════════════════════════════════════════════════════════════
+
+Route::get('/images/{path}', function ($path) {
+    $path = str_replace('..', '', $path);
+    if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+    return response()->file(\Illuminate\Support\Facades\Storage::disk('public')->path($path));
+})->where('path', '.*');
+
+// ═══════════════════════════════════════════════════════════════════
 // CLIENT — Customer Mobile App
 // ═══════════════════════════════════════════════════════════════════
 
@@ -128,6 +140,7 @@ Route::prefix('professional')->group(function () {
         Route::get('dashboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'index']);
         Route::get('active-job', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'activeJob']);
         Route::post('toggle-availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'toggleAvailability']);
+        Route::post('update-online-status', [\App\Http\Controllers\Api\Professionals\DashboardController::class, 'updateOnlineStatus']);
 
         // Booking Requests
         Route::get('booking-requests', [\App\Http\Controllers\Api\Professionals\BookingController::class, 'requests']);
@@ -138,14 +151,23 @@ Route::prefix('professional')->group(function () {
 
         // Job Workflow
         Route::post('jobs/{id}/arrived', [\App\Http\Controllers\Api\Professionals\JobController::class, 'arrived']);
+        Route::post('jobs/{id}/start-journey', [\App\Http\Controllers\Api\Professionals\JobController::class, 'startJourney']);
         Route::post('jobs/{id}/start-service', [\App\Http\Controllers\Api\Professionals\JobController::class, 'startService']);
         Route::post('jobs/{id}/scan-kit', [\App\Http\Controllers\Api\Professionals\JobController::class, 'scanKit']);
         Route::post('jobs/{id}/complete', [\App\Http\Controllers\Api\Professionals\JobController::class, 'complete']);
         Route::post('jobs/{id}/payment-confirm', [\App\Http\Controllers\Api\Professionals\JobController::class, 'paymentConfirm']);
+        Route::prefix('jobs/{id}/payment')->group(function () {
+            Route::post('create-order', [\App\Http\Controllers\Api\Professionals\JobController::class, 'createPaymentOrder']);
+            Route::post('verify', [\App\Http\Controllers\Api\Professionals\JobController::class, 'verifyPayment']);
+        });
 
         // Earnings & Wallet
         Route::get('earnings', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'index']);
         Route::get('wallet', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'wallet']);
+        Route::prefix('wallet/deposit')->group(function () {
+            Route::post('create-order', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'createDepositOrder']);
+            Route::post('verify', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'verifyDeposit']);
+        });
         Route::get('jobs-history', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'history']);
         Route::get('schedule', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'schedule']);
         Route::post('request-withdrawal', [\App\Http\Controllers\Api\Professionals\EarningsController::class, 'requestWithdrawal']);

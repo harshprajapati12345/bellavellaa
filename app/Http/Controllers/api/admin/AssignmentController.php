@@ -7,6 +7,7 @@ use App\Models\Professional;
 use App\Http\Resources\Api\BookingResource;
 use App\Http\Resources\Api\ProfessionalResource;
 use App\Http\Requests\Api\Admin\StoreAssignmentRequest;
+use App\Models\ProfessionalNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,6 +43,21 @@ class AssignmentController extends BaseController
         $booking->update([
             'professional_id' => $request->professional_id,
             'status'          => 'Assigned',
+        ]);
+
+        // Create notification for the professional
+        ProfessionalNotification::create([
+            'professional_id' => $request->professional_id,
+            'type'            => 'booking_assigned',
+            'title'           => 'New Booking Assigned!',
+            'body'            => 'You have a new booking request from ' . ($booking->customer->name ?? 'Customer'),
+            'data'            => [
+                'booking_id'  => $booking->id,
+                'client_name' => $booking->customer->name ?? 'Customer',
+                'service'     => $booking->service->name ?? 'Service',
+                'location'    => $booking->address ?? 'Nearby',
+                'price'       => $booking->price,
+            ],
         ]);
 
         return $this->success(

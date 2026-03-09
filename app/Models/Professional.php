@@ -22,6 +22,7 @@ class Professional extends Authenticatable implements JWTSubject
         'portfolio'     => 'array',
         'working_hours' => 'array',
         'docs'          => 'boolean',
+        'last_seen'     => 'datetime',
     ];
 
     // ── JWT ────────────────────────────────────────────────────────

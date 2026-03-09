@@ -9,7 +9,7 @@ class SettingController extends Controller
 {
     public function index()
     {
-        $settings = Setting::all()->groupBy('group');
+        $settings = Setting::all();
         return view('settings.index', compact('settings'));
     }
 

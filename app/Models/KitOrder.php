@@ -7,7 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 class KitOrder extends Model
 {
     protected $fillable = [
-        'professional_id', 'kit_product_id', 'quantity', 'used_quantity', 'status', 'assigned_at', 'notes'
+        'professional_id',
+        'kit_product_id',
+        'quantity',
+        'total_amount',
+        'payment_id',
+        'razorpay_order_id',
+        'payment_status',
+        'payment_method',
+        'order_status',
+        'status',
+        'assigned_at',
+        'notes',
     ];
 
     public function professional()
@@ -15,8 +26,18 @@ class KitOrder extends Model
         return $this->belongsTo(Professional::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(Professional::class, 'professional_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(KitProduct::class, 'kit_product_id');
+    }
+
     public function kitProduct()
     {
-        return $this->belongsTo(KitProduct::class);
+        return $this->belongsTo(KitProduct::class, 'kit_product_id');
     }
 }

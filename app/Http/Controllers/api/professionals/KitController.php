@@ -37,27 +37,30 @@ class KitController extends BaseController
         $totalAmount = $product->price * $validated['quantity'];
         $amountPaise = (int) round($totalAmount * 100); // Razorpay uses paise
 
-        // Return the amount — client handles Razorpay JS checkout
-        // If you want server-side Razorpay order ID, install razorpay/razorpay PHP SDK
-        // and uncomment the block below.
-        /*
-        $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-        $order = $api->order->create([
-            'receipt'  => 'kit_' . Str::random(8),
-            'amount'   => $amountPaise,
-            'currency' => 'INR',
-        ]);
-        $razorpayOrderId = $order['id'];
-        */
-
-        return $this->success([
-            'amount'       => $amountPaise,
-            'amount_inr'   => $totalAmount,
-            'currency'     => 'INR',
-            'product_name' => $product->name,
-            'receipt'      => 'kit_' . Str::random(8),
-            // 'razorpay_order_id' => $razorpayOrderId,
-        ], 'Payment order details.');
+        // Create Razorpay Order server-side for security
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $order = $api->order->create([
+                'receipt'  => 'kit_' . Str::random(8),
+                'amount'   => $amountPaise,
+                'currency' => 'INR',
+                'notes'    => [
+                    'product_id' => $product->id,
+                    'professional_id' => $request->user('professional-api')->id
+                ]
+            ]);
+            
+            return $this->success([
+                'order_id'     => $order['id'],
+                'amount'       => $amountPaise,
+                'amount_inr'   => $totalAmount,
+                'currency'     => 'INR',
+                'product_name' => $product->name,
+                'receipt'      => $order['receipt'],
+            ], 'Razorpay order created.');
+        } catch (\Exception $e) {
+            return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+        }
     }
 
     /**
@@ -69,32 +72,34 @@ class KitController extends BaseController
         $professional = $request->user('professional-api');
 
         $validated = $request->validate([
-            'kit_product_id'     => 'required|exists:kit_products,id',
-            'quantity'           => 'required|integer|min:1',
-            'payment_id'         => 'required|string',
-            'razorpay_order_id'  => 'nullable|string',
-            'payment_method'     => 'nullable|string',
-            'notes'              => 'nullable|string',
+            'kit_product_id'      => 'required|exists:kit_products,id',
+            'quantity'            => 'required|integer|min:1',
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_order_id'   => 'required|string',
+            'razorpay_signature'  => 'required|string',
+            'payment_method'      => 'nullable|string',
+            'notes'               => 'nullable|string',
         ]);
 
-        $product     = KitProduct::findOrFail($validated['kit_product_id']);
+        $product = KitProduct::findOrFail($validated['kit_product_id']);
         $totalAmount = $product->price * $validated['quantity'];
 
         if ($product->total_stock < $validated['quantity']) {
             return $this->error('Insufficient stock for this product.', 400);
         }
 
-        // Signature verification (uncomment when using server-side Razorpay order ID)
-        /*
-        $generatedSignature = hash_hmac(
-            'sha256',
-            $validated['razorpay_order_id'] . '|' . $validated['payment_id'],
-            config('services.razorpay.secret')
-        );
-        if ($generatedSignature !== $request->razorpay_signature) {
-            return $this->error('Payment signature verification failed.', 422);
+        // Secure Signature Verification
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $attributes = [
+                'razorpay_order_id'   => $validated['razorpay_order_id'],
+                'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                'razorpay_signature'  => $validated['razorpay_signature']
+            ];
+            $api->utility->verifyPaymentSignature($attributes);
+        } catch (\Exception $e) {
+            return $this->error('Payment signature verification failed: ' . $e->getMessage(), 422);
         }
-        */
 
         $product->decrement('total_stock', $validated['quantity']);
 
@@ -103,17 +108,20 @@ class KitController extends BaseController
             'kit_product_id'    => $validated['kit_product_id'],
             'quantity'          => $validated['quantity'],
             'total_amount'      => $totalAmount,
-            'payment_id'        => $validated['payment_id'],
-            'razorpay_order_id' => $validated['razorpay_order_id'] ?? null,
+            'payment_id'        => $validated['razorpay_payment_id'],
+            'razorpay_order_id' => $validated['razorpay_order_id'],
             'payment_status'    => 'Paid',
-            'payment_method'    => $validated['payment_method'] ?? 'UPI',
+            'payment_method'    => $validated['payment_method'] ?? 'Razorpay',
             'order_status'      => 'Processing',
             'status'            => 'Assigned',
             'notes'             => $validated['notes'] ?? null,
             'assigned_at'       => now(),
         ]);
 
-        return $this->success($order->load('product'), 'Payment verified. Kit order placed.');
+        // Activate professional
+        $professional->update(['kit_purchased' => true]);
+
+        return $this->success($order->load('product'), 'Payment verified. Kit order placed and professional activated.');
     }
 
     /**
@@ -130,26 +138,36 @@ class KitController extends BaseController
         ]);
 
         $product = KitProduct::findOrFail($validated['kit_product_id']);
+        $totalAmount = $product->price * $validated['quantity'];
 
         if ($product->total_stock < $validated['quantity']) {
             return $this->error('Insufficient stock for this product.', 400);
         }
 
+        if ($professional->earnings_balance < $totalAmount) {
+            return $this->error('Insufficient wallet balance.', 400);
+        }
+
         $product->decrement('total_stock', $validated['quantity']);
+        $professional->decrement('earnings_balance', $totalAmount);
 
         $order = KitOrder::create([
             'professional_id' => $professional->id,
             'kit_product_id'  => $validated['kit_product_id'],
             'quantity'        => $validated['quantity'],
-            'total_amount'    => $product->price * $validated['quantity'],
+            'total_amount'    => $totalAmount,
             'status'          => 'Assigned',
             'order_status'    => 'Processing',
-            'payment_status'  => 'Pending',
+            'payment_status'  => 'Paid',
+            'payment_method'  => 'Wallet',
             'notes'           => $validated['notes'],
             'assigned_at'     => now(),
         ]);
 
-        return $this->success($order, 'Kit order placed successfully.');
+        // Activate professional
+        $professional->update(['kit_purchased' => true]);
+
+        return $this->success($order, 'Kit order placed successfully and professional activated.');
     }
 
     /**

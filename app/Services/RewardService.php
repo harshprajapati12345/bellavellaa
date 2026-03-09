@@ -107,7 +107,7 @@ class RewardService
             if ($exists) return 0;
 
             $wallet = $this->getOrCreateCoinWallet($user, $userType);
-            $wallet->credit($rule->coins, 'login_reward', 'Daily Login Bonus (' . now()->toDateString() . ')');
+            $wallet->credit($rule->coins, 'login_reward', 'Daily Login Bonus');
             return $rule->coins;
         });
     }

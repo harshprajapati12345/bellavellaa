@@ -21,7 +21,7 @@
       </div>
     @endif
 
-    <form method="POST" action="{{ route('kit-products.store') }}"
+    <form method="POST" action="{{ route('kit-products.store') }}" enctype="multipart/form-data"
       class="bg-white rounded-[2.5rem] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden">
       @csrf
       <div class="p-8 lg:p-10 border-b border-gray-100">
@@ -53,6 +53,15 @@
                 @endforeach
               </select>
             </div>
+            </div>
+            <div>
+              <label class="form-label font-semibold">Description</label>
+              <textarea name="description" placeholder="Describe the kit contents and benefits..." class="form-input h-32 py-3">{{ old('description') }}</textarea>
+            </div>
+            <div>
+              <label class="form-label font-semibold">Kit Image</label>
+              <input type="file" name="image" class="form-input py-2">
+              <p class="text-[10px] text-gray-400 mt-1">Recommended: 800x800px, Max 2MB (JPG, PNG, WebP)</p>
             </div>
           </div>
 

@@ -157,9 +157,14 @@
                                 <span class="text-xs font-mono font-bold text-gray-500">{{ $p->sku }}</span>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-semibold text-gray-900">{{ $p->name }}</span>
-                                    <span class="text-xs text-gray-400">{{ $p->brand }} · {{ $p->category?->name ?? 'Uncategorized' }}</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0 overflow-hidden shadow-sm">
+                                        <img src="{{ $p->image_url }}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-semibold text-gray-900">{{ $p->name }}</span>
+                                        <span class="text-xs text-gray-400">{{ $p->brand }} · {{ $p->category?->name ?? 'Uncategorized' }}</span>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">

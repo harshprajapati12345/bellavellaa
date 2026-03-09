@@ -27,6 +27,7 @@ function toggleSubmenu(submenuId, chevronId) {
 function toggleProfessionals() { toggleSubmenu('professionals-submenu', 'professionals-chevron'); }
 function toggleMedia() { toggleSubmenu('media-submenu', 'media-chevron'); }
 function toggleCRM() { toggleSubmenu('crm-submenu', 'crm-chevron'); }
+function toggleSettings() { toggleSubmenu('settings-submenu', 'settings-chevron'); }
 
 /* ── Image Preview ───────────────────────────────────────────────────────── */
 function previewImage(input, previewId = 'img-preview') {
@@ -125,8 +126,11 @@ function openSidebar(type, id) {
       if (editBtn) editBtn.onclick = () => window.location.href = `/${type}/${data.id}/edit`;
     })
     .catch(err => {
+      console.error('[Sidebar] Fetch error:', err);
       loader.classList.add('hidden');
       sidebarData.innerHTML = `<p class="text-red-500 text-center py-10 font-medium">Failed to load details.</p>`;
+      // Optional: Close after delay if it failed completely
+      // setTimeout(closeSidebar, 2000);
     });
 }
 

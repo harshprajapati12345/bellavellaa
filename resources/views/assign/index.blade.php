@@ -112,31 +112,31 @@
           <tbody id="assign-tbody">
             @foreach($bookings as $b)
               <tr class="table-row border-b border-gray-50" data-id="{{ $b->id }}"
-                data-customer="{{ strtolower($b->customer->name ?? $b->customer_name ?? '') }}"
-                data-display-name="{{ $b->customer->name ?? $b->customer_name }}"
-                data-service="{{ strtolower($b->service->name ?? $b->service_name ?? '') }}"
-                data-display-service="{{ $b->service->name ?? $b->service_name }}"
-                data-package="{{ $b->package->name ?? $b->package_name ?? '' }}" data-status="{{ $b->status }}"
-                data-avatar="{{ $b->customer->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
+                data-customer="{{ strtolower($b->customer?->name ?? $b->customer_name ?? '') }}"
+                data-display-name="{{ $b->customer?->name ?? $b->customer_name }}"
+                data-service="{{ strtolower($b->service?->name ?? $b->service_name ?? '') }}"
+                data-display-service="{{ $b->service?->name ?? $b->service_name }}"
+                data-package="{{ $b->package?->name ?? $b->package_name ?? '' }}" data-status="{{ $b->status }}"
+                data-avatar="{{ $b->customer?->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
                 data-city="{{ $b->city ?? '—' }}"
                 data-date="{{ $b->date ? \Carbon\Carbon::parse($b->date)->format('d M Y') : '—' }}"
                 data-slot="{{ $b->slot ?? '' }}"
-                data-professional="{{ $b->professional->name ?? $b->professional_name ?? '' }}">
+                data-professional="{{ $b->professional?->name ?? $b->professional_name ?? '' }}">
                 <td class="px-5 py-4"><span class="text-xs font-semibold text-gray-400">#{{ $b->id }}</span></td>
                 <td class="px-5 py-4">
                   <div class="flex items-center gap-3">
                     <img
-                      src="{{ $b->customer->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
+                      src="{{ $b->customer?->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
                       class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm" alt="">
                     <div>
-                      <p class="text-sm font-semibold text-gray-900">{{ $b->customer->name ?? $b->customer_name }}</p>
+                      <p class="text-sm font-semibold text-gray-900">{{ $b->customer?->name ?? $b->customer_name }}</p>
                       <p class="text-xs text-gray-400">{{ $b->city ?? '—' }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="px-5 py-4">
-                  <p class="text-sm font-medium text-gray-900">{{ $b->service->name ?? $b->service_name }}</p>
-                  <p class="text-xs text-gray-400 mt-0.5">{{ $b->package->name ?? $b->package_name ?? '' }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ $b->service?->name ?? $b->service_name }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ $b->package?->name ?? $b->package_name ?? '' }}</p>
                 </td>
                 <td class="px-5 py-4">
                   <p class="text-sm font-medium text-gray-900">
@@ -145,8 +145,8 @@
                   <p class="text-xs text-gray-400 mt-0.5">{{ $b->slot ?? '' }}</p>
                 </td>
                 <td class="px-5 py-4">
-                  @if($b->professional->name ?? $b->professional_name)
-                    <p class="text-sm font-medium text-gray-900">{{ $b->professional->name ?? $b->professional_name }}</p>
+                  @if($b->professional?->name ?? $b->professional_name)
+                    <p class="text-sm font-medium text-gray-900">{{ $b->professional?->name ?? $b->professional_name }}</p>
                   @else
                     <span class="text-xs text-gray-400 italic">Not assigned</span>
                   @endif
@@ -166,7 +166,16 @@
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     </button>
                     @if($b->status === 'Unassigned' || $b->status === 'Assigned')
-                      <button type="button" onclick="openAssignDrawer(this.closest('tr').dataset)"
+                      <button type="button" onclick="handleOpenDrawer(this)"
+                        data-booking-id="{{ $b->id }}"
+                        data-customer-name="{{ $b->customer?->name ?? $b->customer_name }}"
+                        data-customer-avatar="{{ $b->customer?->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
+                        data-service-name="{{ $b->service?->name ?? $b->service_name }}"
+                        data-package-name="{{ $b->package?->name ?? $b->package_name ?? '' }}"
+                        data-city="{{ $b->city ?? '—' }}"
+                        data-date="{{ $b->date ? \Carbon\Carbon::parse($b->date)->format('d M Y') : '—' }}"
+                        data-slot="{{ $b->slot ?? '' }}"
+                        data-status="{{ $b->status }}"
                         title="{{ $b->status === 'Unassigned' ? 'Assign Professional' : 'Reassign' }}"
                         class="manual-assign-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg {{ $b->status === 'Unassigned' ? 'bg-black text-white hover:bg-gray-800' : 'border border-gray-200 text-gray-600 hover:bg-gray-100' }} text-xs font-medium transition-all">
                         <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
@@ -218,7 +227,7 @@
   <div id="drawer-backdrop" class="fixed inset-0 z-[100] hidden bg-black/30 backdrop-blur-sm transition-opacity duration-300" onclick="closeAssignDrawer()">
   </div>
   <div id="drawer-panel"
-    class="drawer-panel closed fixed top-0 right-0 h-full w-full max-w-md bg-white z-[110] shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
+    class="drawer-panel fixed top-0 right-0 h-full w-full max-w-md bg-white z-[110] shadow-2xl flex flex-col transition-transform duration-300 ease-in-out">
 
     <div class="px-6 pt-6 pb-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
       <div>
@@ -257,15 +266,21 @@
 
     <!-- Professionals List -->
     <div class="flex-1 overflow-y-auto p-6 space-y-3" id="pro-list">
-      @foreach($professionals as $pro)
+      @forelse($professionals as $pro)
         <div
           class="pro-card p-4 rounded-2xl border-2 border-transparent bg-white shadow-sm ring-1 ring-gray-100 flex items-center gap-4 hover:shadow-md transition-all"
-          data-pro-name="{{ strtolower($pro->name) }}"
-          onclick="selectPro(this, {{ $pro->id }}, '{{ addslashes($pro->name) }}')">
+          data-pro-id="{{ $pro->id }}"
+          data-pro-name="{{ $pro->name }}"
+          onclick="handleSelectPro(this)">
           <div class="pro-checkbox">
             <i data-lucide="check" class="w-3 h-3 text-white"></i>
           </div>
-          <img src="{{ $pro->avatar }}" class="w-10 h-10 rounded-xl object-cover" alt="">
+          <div class="relative flex-shrink-0">
+            <img src="{{ $pro->avatar }}" class="w-10 h-10 rounded-xl object-cover" alt="">
+            @if($pro->last_seen && $pro->last_seen >= now()->subMinutes(2))
+              <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" title="Online Now"></span>
+            @endif
+          </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-bold text-gray-900 truncate">{{ $pro->name }}</p>
             <p class="text-xs text-gray-400">{{ $pro->category }} · {{ $pro->city }}</p>
@@ -278,7 +293,15 @@
             <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">{{ $pro->orders ?? 0 }} Orders</p>
           </div>
         </div>
-      @endforeach
+      @empty
+        <div class="py-10 text-center">
+          <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="users" class="w-6 h-6 text-gray-300"></i>
+          </div>
+          <p class="text-sm text-gray-500 font-medium">No active professionals found</p>
+          <p class="text-xs text-gray-400 mt-1">Make sure professionals are set to 'Active' status.</p>
+        </div>
+      @endforelse
     </div>
 
     <!-- Action Bar -->
@@ -310,12 +333,13 @@
       background: #fafafa;
     }
 
-     .drawer-panel {
-      transition: transform 0.3s ease-in-out;
+    .drawer-panel {
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateX(100%);
     }
 
-    .drawer-panel.closed {
-      transform: translateX(100%);
+    .drawer-panel.open {
+      transform: translateX(0);
     }
 
     .filter-tab {
@@ -495,34 +519,103 @@
     let currentBooking = null, selectedPros = [];
     const statusColors = { 'Unassigned': 'bg-amber-50 text-amber-600', 'Assigned': 'bg-blue-50 text-blue-600', 'In Progress': 'bg-violet-50 text-violet-600', 'Completed': 'bg-emerald-50 text-emerald-600' };
 
-    function openAssignDrawer(booking) {
-      if (document.getElementById('auto-assign-toggle').checked && booking.status === 'Unassigned') {
-        autoAssignProfessional(booking);
-        return;
-      }
-      currentBooking = booking; selectedPros = [];
-      document.getElementById('d-customer-avatar').src = booking.avatar || '';
-      document.getElementById('d-customer-name').textContent = booking.displayName || booking.customer || '';
-      document.getElementById('d-service-name').textContent = (booking.displayService || booking.service || '') + (booking.package ? ' · ' + booking.package : '');
-      document.getElementById('d-booking-date').textContent = (booking.date || '') + (booking.slot ? ' at ' + booking.slot : '') + (booking.city ? ' · ' + booking.city : '');
-      document.getElementById('d-booking-label').textContent = `Booking #${booking.id}`;
-
-      const status = booking.status || 'Unassigned';
-      const sb = document.getElementById('d-status-badge');
-      sb.textContent = status;
-      sb.className = 'text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ' + (statusColors[status] || 'bg-gray-100 text-gray-500');
-      document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
-      document.getElementById('pro-search').value = '';
-      filterPros(); updateConfirmBtn();
-      document.getElementById('drawer-backdrop').classList.remove('hidden');
-      document.getElementById('drawer-panel').classList.remove('closed');
-      document.body.style.overflow = 'hidden';
-      lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+    function handleOpenDrawer(btn) {
+      console.log('Opening drawer for button:', btn);
+      const data = btn.dataset;
+      openAssignDrawer({
+        id: data.bookingId,
+        customer: data.customerName,
+        avatar: data.customerAvatar,
+        service: data.serviceName,
+        package: data.packageName,
+        city: data.city,
+        date: data.date,
+        slot: data.slot,
+        status: data.status
+      });
     }
 
-    function closeAssignDrawer() { document.getElementById('drawer-panel').classList.add('closed'); document.getElementById('drawer-backdrop').classList.add('hidden'); document.body.style.overflow = ''; }
+    function openAssignDrawer(booking) {
+      console.log('[Assign] openAssignDrawer called with info:', booking);
+      if (!booking) { console.error('[Assign] No booking specified'); return; }
+      
+      try {
+        const toggle = document.getElementById('auto-assign-toggle');
+        if (toggle && toggle.checked && booking.status === 'Unassigned') {
+          console.log('[Assign] Auto-assign is active, calling autoAssignProfessional');
+          autoAssignProfessional(booking);
+          return;
+        }
+        
+        currentBooking = booking; 
+        selectedPros = [];
+
+        const updateEl = (id, val, attr = 'textContent') => {
+          const el = document.getElementById(id);
+          if (el) {
+            el[attr] = val;
+            return true;
+          }
+          console.warn(`[Assign] Element ${id} not found`);
+          return false;
+        };
+
+        updateEl('d-customer-avatar', booking.avatar || '', 'src');
+        updateEl('d-customer-name', booking.customer || 'Unknown Customer');
+        updateEl('d-service-name', (booking.service || 'Service') + (booking.package ? ' · ' + booking.package : ''));
+        updateEl('d-booking-date', (booking.date || '') + (booking.slot ? ' at ' + booking.slot : '') + (booking.city ? ' · ' + booking.city : ''));
+        updateEl('d-booking-label', `Booking #${booking.id}`);
+
+        const status = booking.status || 'Unassigned';
+        const sb = document.getElementById('d-status-badge');
+        if (sb) {
+          sb.textContent = status;
+          sb.className = 'text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ' + (statusColors[status] || 'bg-gray-100 text-gray-500');
+        }
+
+        document.querySelectorAll('.pro-card').forEach(c => c.classList.remove('selected'));
+        const searchInput = document.getElementById('pro-search');
+        if (searchInput) searchInput.value = '';
+        
+        filterPros(); 
+        updateConfirmBtn();
+
+        const backdrop = document.getElementById('drawer-backdrop');
+        const panel = document.getElementById('drawer-panel');
+        
+        console.log('[Assign] Showing backdrop and panel');
+        if (backdrop) backdrop.classList.remove('hidden');
+        
+        setTimeout(() => {
+          if (panel) {
+            panel.classList.add('open');
+            console.log('[Assign] Drawer panel opened');
+          }
+        }, 50);
+        
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+      } catch (e) {
+        console.error('[Assign] CRITICAL ERROR in openAssignDrawer:', e);
+        Swal.fire({ title: 'Application Error', text: 'An unexpected error occurred: ' + e.message, icon: 'error' });
+      }
+    }
+
+    function closeAssignDrawer() { 
+      const panel = document.getElementById('drawer-panel');
+      const backdrop = document.getElementById('drawer-backdrop');
+      if (panel) panel.classList.remove('open'); 
+      if (backdrop) backdrop.classList.add('hidden'); 
+      document.body.style.overflow = ''; 
+    }
 
     /* View Booking (DEPRECATED: Now using global view-drawer-btn) */
+
+    function handleSelectPro(el) {
+      const id = parseInt(el.dataset.proId);
+      const name = el.dataset.proName;
+      selectPro(el, id, name);
+    }
 
     function selectPro(el, id, name) {
       const idx = selectedPros.findIndex(p => p.id === id);
@@ -545,8 +638,60 @@
       const names = selectedPros.map(p => p.name);
       const namesList = names.length === 1 ? `<strong>${names[0]}</strong>` : names.slice(0, -1).map(n => `<strong>${n}</strong>`).join(', ') + ' and <strong>' + names[names.length - 1] + '</strong>';
       const proCount = names.length === 1 ? 'professional' : `${names.length} professionals`;
-      Swal.fire({ title: 'Confirm Assignment', html: `Assign ${namesList} to booking <strong>#${currentBooking.id}</strong> for <strong>${currentBooking.customer || currentBooking.customer_name}</strong>?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#000', cancelButtonColor: '#9ca3af', confirmButtonText: `Yes, Assign ${proCount}` })
-        .then(r => { if (r.isConfirmed) { closeAssignDrawer(); const msg = names.length === 1 ? `${names[0]} has been assigned to booking #${currentBooking.id}.` : `${names.length} professionals have been assigned to booking #${currentBooking.id}.`; Swal.fire({ title: 'Assigned!', text: msg, icon: 'success', confirmButtonColor: '#000', timer: 2500, showConfirmButton: false }); } });
+      
+      Swal.fire({ 
+        title: 'Confirm Assignment', 
+        html: `Assign ${namesList} to booking <strong>#${currentBooking.id}</strong>?`, 
+        icon: 'question', 
+        showCancelButton: true, 
+        confirmButtonColor: '#000', 
+        cancelButtonColor: '#9ca3af', 
+        confirmButtonText: `Yes, Assign` 
+      }).then(r => { 
+        if (r.isConfirmed) { 
+          // Show loading
+          Swal.fire({
+            title: 'Processing...',
+            didOpen: () => { Swal.showLoading(); }
+          });
+
+          // AJAX call to save assignment
+          fetch('{{ route("assign.update") }}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+              booking_id: currentBooking.id,
+              professional_id: selectedPros[0].id // Currently taking the first one if multiple
+            })
+          })
+          .then(async res => {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Server error');
+            return data;
+          })
+          .then(data => {
+             closeAssignDrawer();
+             Swal.fire({ 
+               title: 'Assigned!', 
+               text: 'Professional has been assigned successfully.', 
+               icon: 'success', 
+               confirmButtonColor: '#000', 
+               timer: 1500, 
+               showConfirmButton: false 
+             }).then(() => {
+               window.location.reload();
+             });
+          })
+          .catch(err => {
+            console.error('[Assign] Update failure:', err);
+            Swal.fire({ title: 'Assignment Failed', text: err.message || 'Failed to assign professional. Please try again.', icon: 'error' });
+          });
+        } 
+      });
     }
 
     /* Auto Assign logic */
@@ -640,6 +785,11 @@
         toggle.checked = autoEnabled;
         if (autoEnabled) document.body.classList.add('auto-assign-active');
       }
+
+      // Auto-refresh every 30 seconds to update online status and new bookings
+      setInterval(function() {
+        window.location.reload();
+      }, 30000);
     })();
   </script>
 @endpush

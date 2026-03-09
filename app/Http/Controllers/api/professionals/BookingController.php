@@ -84,14 +84,15 @@ class BookingController extends BaseController
 
         $booking = Booking::findOrFail($id);
 
-        if ($booking->professional_id) {
+        // Allow accept if it's unassigned OR if it's already assigned to THIS professional (admin assignment)
+        if ($booking->professional_id && $booking->professional_id !== $professional->id) {
             return $this->error('This booking has already been assigned to another professional.', 400);
         }
 
         $booking->update([
             'professional_id' => $professional->id,
             'professional_name' => $professional->name,
-            'status' => 'Assigned',
+            'status' => 'Accepted',
         ]);
 
         return $this->success($booking, 'Booking accepted successfully.');

@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class EarningsController extends BaseController
 {
@@ -147,12 +148,57 @@ class EarningsController extends BaseController
                 ];
             });
 
+        $today = Carbon::today()->toDateString();
+        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
+        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+        $commissionRate = (100 - ($professional->commission ?? 0)) / 100;
+
+        $weeklyEarnings = Booking::where('professional_id', $professional->id)
+            ->where('status', 'Completed')
+            ->whereBetween('date', [$startOfWeek, $today])
+            ->sum(DB::raw("price * {$commissionRate}"));
+
+        $monthlyEarnings = Booking::where('professional_id', $professional->id)
+            ->where('status', 'Completed')
+            ->whereBetween('date', [$startOfMonth, $today])
+            ->sum(DB::raw("price * {$commissionRate}"));
+
+        $totalJobs = Booking::where('professional_id', $professional->id)
+            ->where('status', 'Completed')
+            ->count();
+
+        $depositAmountPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('source', 'deposit')
+            ->where('type', 'credit')
+            ->sum('amount');
+            
+        $withdrawnDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('source', 'withdrawal')
+            ->where('reference_type', 'deposit') // Assuming we track this
+            ->sum('amount');
+            
+        // For now, simpler: anything from 'deposit' source is deposit.
+        // Everything else is earnings.
+        $totalDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('source', 'deposit')
+            ->sum(DB::raw('CASE WHEN type = "credit" THEN amount ELSE -amount END'));
+
+        $totalCashBalancePaise = $cashWallet->balance;
+        $depositBalancePaise = max(0, $totalDepositPaise);
+        $earningsBalancePaise = max(0, $totalCashBalancePaise - $depositBalancePaise);
+
         return $this->success([
-            'cash_balance'   => $cashWallet->balance / 100,
+            'cash_balance'   => $totalCashBalancePaise / 100,
+            'earnings_balance' => $earningsBalancePaise / 100,
+            'deposit_balance'  => $depositBalancePaise / 100,
+            'total_balance'    => $totalCashBalancePaise / 100,
             'coin_balance'   => $coinWallet->balance,
             'kit_count'      => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
-            'active_balance' => $type === 'coin' ? $coinWallet->balance : ($cashWallet->balance / 100),
-            'transactions'   => $transactions
+            'active_balance' => $type === 'coin' ? $coinWallet->balance : ($totalCashBalancePaise / 100),
+            'transactions'   => $transactions,
+            'weekly_earnings' => $weeklyEarnings,
+            'monthly_earnings' => $monthlyEarnings,
+            'total_jobs'     => $totalJobs,
         ], 'Wallet retrieved.');
     }
 
@@ -197,6 +243,89 @@ class EarningsController extends BaseController
             return $this->success([
                 'balance' => $wallet->balance / 100
             ], 'Withdrawal successful.');
+        });
+    }
+
+    /**
+     * POST /api/professional/wallet/deposit/create-order
+     */
+    public function createDepositOrder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $amountInPaise = (int) round($validated['amount'] * 100);
+
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $order = $api->order->create([
+                'receipt'  => 'dep_' . Str::random(8),
+                'amount'   => $amountInPaise,
+                'currency' => 'INR',
+                'notes'    => [
+                    'professional_id' => $request->user('professional-api')->id,
+                    'type' => 'wallet_deposit'
+                ]
+            ]);
+
+            return $this->success([
+                'order_id'   => $order['id'],
+                'amount'     => $amountInPaise,
+                'amount_inr' => $validated['amount'],
+                'currency'   => 'INR',
+                'receipt'    => $order['receipt'],
+            ], 'Deposit order created.');
+        } catch (\Exception $e) {
+            return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /api/professional/wallet/deposit/verify
+     */
+    public function verifyDeposit(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $validated = $request->validate([
+            'amount'              => 'required|numeric|min:1',
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_order_id'   => 'required|string',
+            'razorpay_signature'  => 'required|string',
+        ]);
+
+        $amountInPaise = (int) round($validated['amount'] * 100);
+
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            $attributes = [
+                'razorpay_order_id'   => $validated['razorpay_order_id'],
+                'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                'razorpay_signature'  => $validated['razorpay_signature']
+            ];
+            $api->utility->verifyPaymentSignature($attributes);
+        } catch (\Exception $e) {
+            return $this->error('Payment verification failed: ' . $e->getMessage(), 400);
+        }
+
+        return DB::transaction(function () use ($professional, $amountInPaise, $validated) {
+            $wallet = Wallet::firstOrCreate(
+                ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
+                ['balance' => 0]
+            );
+
+            $wallet->credit(
+                $amountInPaise,
+                'deposit',
+                'Wallet deposit via Razorpay',
+                $validated['razorpay_payment_id'],
+                'razorpay_payment'
+            );
+
+            return $this->success([
+                'balance' => $wallet->balance / 100
+            ], 'Deposit successful.');
         });
     }
 

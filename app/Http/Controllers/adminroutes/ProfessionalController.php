@@ -12,9 +12,10 @@ class ProfessionalController extends Controller
         $professionals = Professional::all();
         $total   = $professionals->count();
         $active  = $professionals->where('status', 'Active')->count();
+        $online  = $professionals->where('last_seen', '>=', now()->subMinutes(2))->count();
         $topPro  = $professionals->sortByDesc('bookings_count')->first();
 
-        return view('professionals.index', compact('professionals', 'total', 'active', 'topPro'));
+        return view('professionals.index', compact('professionals', 'total', 'active', 'online', 'topPro'));
     }
 
     public function create()

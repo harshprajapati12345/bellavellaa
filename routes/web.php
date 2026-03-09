@@ -86,6 +86,8 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('/assign/update', [AssignController::class, 'update'])->name('assign.update');
     Route::post('/assign/auto', [AssignController::class, 'autoAssign'])->name('assign.auto');
 
+
+
     // Settings
     Route::post('settings/update', [SettingController::class, 'update'])->name('settings.update');
     Route::resource('settings', SettingController::class)->except(['update']);
@@ -99,7 +101,5 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('referrals/{id}', [ReferralController::class, 'show'])->name('referrals.show');
     Route::post('referrals/{id}/toggle-status', [ReferralController::class, 'toggleStatus'])->name('referrals.toggle-status');
 
-    // Reward Settings
-    Route::get('settings/rewards', [RewardSettingController::class, 'index'])->name('settings.rewards');
-    Route::post('settings/rewards/update', [RewardSettingController::class, 'update'])->name('settings.rewards.update');
+
 });

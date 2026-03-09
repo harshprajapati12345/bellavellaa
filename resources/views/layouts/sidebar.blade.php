@@ -41,9 +41,34 @@ $pendingAssignCount = \App\Models\Booking::where('status', 'Unassigned')->count(
 // Count pending reviews for badge
 try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->count(); } catch (\Exception $e) { $pendingReviewsCount = 0; }
 @endphp
+@push('styles')
+<style>
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    /* Dark mode override */
+    html.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+    }
+    html.dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background: #52525b;
+    }
+</style>
+@endpush
+
 <aside id="sidebar"
-      class="w-72 fixed h-screen top-0 left-0 flex flex-col justify-between p-6 z-50 bg-[#F6F6F6] transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-gray-200 lg:border-none shadow-2xl lg:shadow-none">
-      <div>
+      class="w-72 fixed h-screen top-0 left-0 flex flex-col p-0 z-50 bg-[#F6F6F6] transition-transform duration-300 -translate-x-full lg:translate-x-0 border-r border-gray-200 lg:border-none shadow-2xl lg:shadow-none overflow-y-auto overflow-x-hidden sidebar-scroll">
+      <div class="p-6">
         <!-- Logo area -->
         <div class="flex items-center justify-between mb-10 px-2">
             <div class="flex items-center gap-3">
@@ -276,16 +301,11 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
                 id="settings-chevron"></i>
             </button>
             <!-- Submenu -->
-            <div id="settings-submenu" class="submenu{{ ($section === 'settings' || $section === 'settings.rewards') ? ' open' : '' }} pl-4 mt-1 space-y-1">
+            <div id="settings-submenu" class="submenu{{ ($section === 'settings') ? ' open' : '' }} pl-4 mt-1 space-y-1">
               <a href="{{ route('settings.index') }}"
                 class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.index' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="sliders" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">General Settings</span>
-              </a>
-              <a href="{{ route('settings.rewards') }}"
-                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.rewards' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
-                <i data-lucide="coins" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                <span class="font-normal text-sm text-black">Rewards Config</span>
               </a>
             </div>
           </div>

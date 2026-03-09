@@ -21,7 +21,7 @@
       </div>
     @endif
 
-    <form method="POST" action="{{ route('kit-products.update', $kitProduct->id) }}"
+    <form method="POST" action="{{ route('kit-products.update', $kitProduct->id) }}" enctype="multipart/form-data"
       class="bg-white rounded-[2.5rem] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden">
       @csrf
       @method('PUT')
@@ -53,6 +53,20 @@
                 @endforeach
               </select>
             </div>
+            </div>
+            <div>
+              <label class="form-label font-semibold">Description</label>
+              <textarea name="description" placeholder="Describe the kit contents and benefits..." class="form-input h-32 py-3">{{ old('description', $kitProduct->description) }}</textarea>
+            </div>
+            <div>
+              <label class="form-label font-semibold">Update Kit Image</label>
+              <div class="flex items-center gap-4 mt-1">
+                 @if($kitProduct->image)
+                    <img src="{{ $kitProduct->image_url }}" class="w-16 h-16 rounded-xl object-cover border border-gray-100 shadow-sm">
+                 @endif
+                 <input type="file" name="image" class="form-input py-2">
+              </div>
+              <p class="text-[10px] text-gray-400 mt-1">Leave empty to keep current image. Max 2MB (JPG, PNG, WebP)</p>
             </div>
           </div>
 

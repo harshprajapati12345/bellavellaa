@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('professional_name')->nullable();
             $table->date('date');
             $table->string('slot');
-            $table->enum('status', ['Unassigned', 'Pending', 'Confirmed', 'Assigned', 'In Progress', 'Completed', 'Cancelled'])->default('Unassigned');
+            $table->enum('status', ['Unassigned', 'Pending', 'Confirmed', 'Assigned', 'Started', 'Arrived', 'In Progress', 'Completed', 'Cancelled'])->default('Unassigned');
             $table->decimal('price', 15, 2)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();

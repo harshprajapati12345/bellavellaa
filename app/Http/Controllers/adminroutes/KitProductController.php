@@ -32,9 +32,19 @@ class KitProductController extends Controller
             'name' => 'required',
             'category_id' => 'required|exists:kit_categories,id',
             'total_stock' => 'required|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        KitProduct::create($request->all());
+        $data = $request->all();
+        
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('kits', 'public');
+            $data['image'] = $path;
+        }
+
+        KitProduct::create($data);
 
         return redirect()->route('kit-products.index')->with('success', 'Product added successfully.');
     }
@@ -52,9 +62,23 @@ class KitProductController extends Controller
             'name' => 'required',
             'category_id' => 'required|exists:kit_categories,id',
             'total_stock' => 'required|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $kitProduct->update($request->all());
+        $data = $request->all();
+
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($kitProduct->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($kitProduct->image)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($kitProduct->image);
+            }
+            $path = $request->file('image')->store('kits', 'public');
+            $data['image'] = $path;
+        }
+
+        $kitProduct->update($data);
 
         return redirect()->route('kit-products.index')->with('success', 'Product updated successfully.');
     }

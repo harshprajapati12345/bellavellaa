@@ -9,7 +9,7 @@ class Referral extends Model
 
     protected $casts = [
         'reward_given_at' => 'datetime',
-        'reward_coins' => 'integer',
+        'reward_amount' => 'integer',
     ];
 
     public function referrer()

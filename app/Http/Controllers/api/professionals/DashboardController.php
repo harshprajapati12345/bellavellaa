@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Professionals;
 
 use App\Models\Booking;
+use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -19,21 +20,30 @@ class DashboardController extends BaseController
         
         $today = Carbon::today()->toDateString();
 
-        // Today's bookings
-        $todaysBookings = Booking::where('professional_id', $professional->id)
-            ->where('date', $today)
-            ->whereNotIn('status', ['Cancelled', 'Completed'])
+        // All active bookings assigned to professional
+        $recentBookings = Booking::where('professional_id', $professional->id)
+            ->whereIn('status', ['Assigned', 'Accepted', 'Started', 'In Progress', 'Arrived'])
+            ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
             ->get();
 
-        // Pending Requests
-        $pendingRequestsWait = Booking::whereIn('status', ['Unassigned', 'Pending'])
-            ->whereNull('professional_id')
-            ->where('city', $professional->city)
-            ->count();
+        $cashWallet = Wallet::where('holder_type', 'professional')
+            ->where('holder_id', $professional->id)
+            ->where('type', 'cash')
+            ->first();
+        $balancePaise = $cashWallet ? $cashWallet->balance : 0;
+
+        // Pending Requests (Only show if deposit >= 1500)
+        $pendingRequestsWait = 0;
+        if ($balancePaise >= 150000) {
+            $pendingRequestsWait = Booking::whereIn('status', ['Unassigned', 'Pending'])
+                ->whereNull('professional_id')
+                ->where('city', $professional->city)
+                ->count();
+        }
 
         return $this->success([
-            'todays_bookings'  => $todaysBookings,
+            'recent_bookings'  => $recentBookings,
             'pending_requests' => $pendingRequestsWait,
             'todays_earnings'  => Booking::where('professional_id', $professional->id)
                                     ->where('date', $today)
@@ -44,7 +54,7 @@ class DashboardController extends BaseController
             'kit_count'        => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'rating'           => $professional->rating,
             'is_online'        => (bool) $professional->is_online,
-            'wallet_balance'   => (float) ($professional->wallet_balance ?? $professional->wallet ?? 0),
+            'wallet_balance'   => (float) ($balancePaise / 100),
         ], 'Dashboard summary retrieved.');
     }
 
@@ -105,11 +115,40 @@ class DashboardController extends BaseController
             'is_online' => 'required|boolean'
         ]);
 
+        if ($validated['is_online']) {
+            $wallet = Wallet::where('holder_type', 'professional')
+                ->where('holder_id', $professional->id)
+                ->where('type', 'cash')
+                ->first();
+
+            $balance = $wallet ? $wallet->balance : 0;
+            
+            if ($balance < 150000) { // 1500 * 100 paise
+                return $this->error('Minimum ₹1,500 deposit required to go online.', 422);
+            }
+        }
+
         $professional->is_online = $validated['is_online'];
         $professional->save();
 
         return $this->success([
             'is_online' => (bool) $professional->is_online
         ], 'Availability status updated.');
+    }
+
+    /**
+     * POST /api/professional/update-online-status
+     */
+    public function updateOnlineStatus(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        $professional->last_seen = now();
+        $professional->save();
+
+        return $this->success([
+            'status' => 'updated',
+            'last_seen' => $professional->last_seen
+        ], 'Heartbeat received.');
     }
 }
