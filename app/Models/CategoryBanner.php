@@ -12,6 +12,7 @@ class CategoryBanner extends Model
         'subtitle',
         'image',
         'link_url',
+        'banner_type',
         'sort_order',
         'status',
     ];

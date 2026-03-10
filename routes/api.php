@@ -54,6 +54,7 @@ Route::prefix('client')->group(function () {
     // Categories
     Route::get('categories', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'index']);
     Route::get('categories/{id}', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'show']);
+    Route::get('categories/{id}/screen', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'screenData']);
     Route::get('categories/{id}/page', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'pageData']);
     Route::get('categories/{id}/details', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'details']);
     Route::get('categories/{id}/service-groups', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'serviceGroups']);

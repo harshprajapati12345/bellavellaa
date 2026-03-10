@@ -157,11 +157,11 @@ class HomepageService
 
     protected static function resolveActiveBooking(): array
     {
-        if (!Auth::guard('api')->check()) {
+        if (!Auth::guard('client')->check() && !Auth::guard('api')->check()) {
             return [];
         }
 
-        $user = Auth::guard('api')->user();
+        $user = Auth::guard('client')->user() ?? Auth::guard('api')->user();
 
         if (!$user && auth()->check()) {
             $user = auth()->user();
