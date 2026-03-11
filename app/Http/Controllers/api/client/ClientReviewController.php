@@ -17,7 +17,8 @@ class ClientReviewController extends Controller
      */
     public function index($serviceId)
     {
-        $reviews = Review::whereHas('booking', fn($q) => $q->where('service_id', $serviceId))
+        $reviews = Review::with('customer')
+            ->whereHas('booking', fn($q) => $q->where('service_id', $serviceId))
             ->where('status', 'Approved')
             ->orderByDesc('created_at')
             ->paginate(10);
