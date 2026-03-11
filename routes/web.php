@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 use App\Http\Controllers\adminroutes\DashboardController;
 use App\Http\Controllers\adminroutes\AuthController;
@@ -24,6 +25,26 @@ use App\Http\Controllers\adminroutes\ServiceGroupController;
 use App\Http\Controllers\adminroutes\ServiceVariantController;
 use App\Http\Controllers\adminroutes\ServiceTypeController;
 use App\Http\Controllers\adminroutes\CategoryBannerController;
+
+// ─── Storage File Server ───────────────────────────────────────────────────────
+// Workaround for Windows + artisan serve: the public/storage symlink may not
+// work correctly on Windows. This route streams files directly from disk.
+Route::get('/storage/{path}', function (string $path) {
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+
+    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, [
+        'Content-Type'                => $mimeType,
+        'Access-Control-Allow-Origin' => '*',
+        'Cache-Control'               => 'public, max-age=86400',
+    ]);
+})->where('path', '.*');
+// ──────────────────────────────────────────────────────────────────────────────
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -79,6 +100,8 @@ Route::middleware(['auth:admin'])->group(function () {
     ]);
     Route::get('professionals/kit-orders', [KitOrderController::class, 'index'])->name('kit-orders.index');
     Route::post('professionals/kit-orders', [KitOrderController::class, 'store'])->name('kit-orders.store');
+    Route::get('professionals/kit-orders/history', [KitOrderController::class, 'history'])->name('kit-orders.history');
+    Route::patch('professionals/kit-orders/{kitOrder}/status', [KitOrderController::class, 'updateDeliveryStatus'])->name('kit-orders.update-status');
 
     // Leave Requests
     Route::get('professionals/leaves', [LeaveRequestController::class, 'index'])->name('leaves.index');
@@ -110,6 +133,8 @@ Route::middleware(['auth:admin'])->group(function () {
 
     // Settings
     Route::post('settings/update', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('settings/theme/save', [SettingController::class, 'saveTheme'])->name('settings.theme.save');
+    Route::post('settings/theme/reset', [SettingController::class, 'resetTheme'])->name('settings.theme.reset');
     Route::resource('settings', SettingController::class)->except(['update']);
 
     Route::post('homepage/reorder', [HomepageController::class, 'reorder'])->name('homepage.reorder');

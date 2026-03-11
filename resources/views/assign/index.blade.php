@@ -6,11 +6,11 @@
     $bookings = $bookings ?? collect();
     $professionals = $professionals ?? collect();
     $total = $bookings->count();
-    $unassigned = $bookings->where('status', 'Unassigned')->count();
+    $pending = $bookings->where('status', 'Pending')->count();
     $inProgress = $bookings->where('status', 'In Progress')->count();
     $completed = $bookings->where('status', 'Completed')->count();
-    $statusColors = ['Unassigned' => 'bg-amber-50 text-amber-600', 'Assigned' => 'bg-blue-50 text-blue-600', 'In Progress' => 'bg-violet-50 text-violet-600', 'Completed' => 'bg-emerald-50 text-emerald-600'];
-    $statusDots = ['Unassigned' => 'bg-amber-400', 'Assigned' => 'bg-blue-400', 'In Progress' => 'bg-violet-400', 'Completed' => 'bg-emerald-400'];
+    $statusColors = ['Pending' => 'bg-amber-50 text-amber-600', 'Assigned' => 'bg-blue-50 text-blue-600', 'In Progress' => 'bg-violet-50 text-violet-600', 'Completed' => 'bg-emerald-50 text-emerald-600'];
+    $statusDots = ['Pending' => 'bg-amber-400', 'Assigned' => 'bg-blue-400', 'In Progress' => 'bg-violet-400', 'Completed' => 'bg-emerald-400'];
   @endphp
 
   <div class="flex flex-col gap-6">
@@ -53,8 +53,8 @@
       <div
         class="stat-card bg-white rounded-2xl p-5 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-between gap-4">
         <div>
-          <p class="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-1">Unassigned</p>
-          <p class="text-3xl font-bold text-gray-900">{{ $unassigned }}</p>
+          <p class="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-1">Pending</p>
+          <p class="text-3xl font-bold text-gray-900">{{ $pending }}</p>
           <p class="text-xs text-gray-400 mt-0.5">Need action</p>
         </div>
         <div class="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center flex-shrink-0"><i
@@ -84,7 +84,7 @@
 
     <!-- Filter Tabs -->
     <div class="bg-white rounded-2xl p-3 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-wrap items-center gap-1.5">
-      @foreach(['all' => 'All', 'Unassigned' => 'Unassigned', 'Assigned' => 'Assigned', 'In Progress' => 'In Progress', 'Completed' => 'Completed'] as $k => $v)
+      @foreach(['all' => 'All', 'Pending' => 'Pending', 'Assigned' => 'Assigned', 'In Progress' => 'In Progress', 'Completed' => 'Completed'] as $k => $v)
         <button onclick="setTab('{{ $k }}')" id="tab-{{ Str::slug($k) }}"
           class="filter-tab text-sm font-medium px-4 py-2 {{ $k === 'all' ? 'active' : '' }}">
           {{ $v }}
@@ -165,7 +165,7 @@
                       data-type="assign" data-id="{{ $b->id }}">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     </button>
-                    @if($b->status === 'Unassigned' || $b->status === 'Assigned')
+                    @if($b->status === 'Pending' || $b->status === 'Assigned')
                       <button type="button" onclick="handleOpenDrawer(this)"
                         data-booking-id="{{ $b->id }}"
                         data-customer-name="{{ $b->customer?->name ?? $b->customer_name }}"
@@ -176,13 +176,13 @@
                         data-date="{{ $b->date ? \Carbon\Carbon::parse($b->date)->format('d M Y') : '—' }}"
                         data-slot="{{ $b->slot ?? '' }}"
                         data-status="{{ $b->status }}"
-                        title="{{ $b->status === 'Unassigned' ? 'Assign Professional' : 'Reassign' }}"
-                        class="manual-assign-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg {{ $b->status === 'Unassigned' ? 'bg-black text-white hover:bg-gray-800' : 'border border-gray-200 text-gray-600 hover:bg-gray-100' }} text-xs font-medium transition-all">
+                        title="{{ $b->status === 'Pending' ? 'Assign Professional' : 'Reassign' }}"
+                        class="manual-assign-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg {{ $b->status === 'Pending' ? 'bg-black text-white hover:bg-gray-800' : 'border border-gray-200 text-gray-600 hover:bg-gray-100' }} text-xs font-medium transition-all">
                         <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                        {{ $b->status === 'Unassigned' ? 'Assign' : 'Reassign' }}
+                        {{ $b->status === 'Pending' ? 'Assign' : 'Reassign' }}
                       </button>
 
-                      @if($b->status === 'Unassigned')
+                      @if($b->status === 'Pending')
                         <span
                           class="auto-assign-badge flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-xs font-medium border border-amber-100/50">
                           <i data-lucide="zap" class="w-3.5 h-3.5 fill-amber-500"></i> Auto Assigning...
@@ -517,7 +517,7 @@
 
     /* Assign Drawer */
     let currentBooking = null, selectedPros = [];
-    const statusColors = { 'Unassigned': 'bg-amber-50 text-amber-600', 'Assigned': 'bg-blue-50 text-blue-600', 'In Progress': 'bg-violet-50 text-violet-600', 'Completed': 'bg-emerald-50 text-emerald-600' };
+    const statusColors = { 'Pending': 'bg-amber-50 text-amber-600', 'Assigned': 'bg-blue-50 text-blue-600', 'In Progress': 'bg-violet-50 text-violet-600', 'Completed': 'bg-emerald-50 text-emerald-600' };
 
     function handleOpenDrawer(btn) {
       console.log('Opening drawer for button:', btn);
@@ -541,7 +541,7 @@
       
       try {
         const toggle = document.getElementById('auto-assign-toggle');
-        if (toggle && toggle.checked && booking.status === 'Unassigned') {
+        if (toggle && toggle.checked && booking.status === 'Pending') {
           console.log('[Assign] Auto-assign is active, calling autoAssignProfessional');
           autoAssignProfessional(booking);
           return;
@@ -566,7 +566,7 @@
         updateEl('d-booking-date', (booking.date || '') + (booking.slot ? ' at ' + booking.slot : '') + (booking.city ? ' · ' + booking.city : ''));
         updateEl('d-booking-label', `Booking #${booking.id}`);
 
-        const status = booking.status || 'Unassigned';
+        const status = booking.status || 'Pending';
         const sb = document.getElementById('d-status-badge');
         if (sb) {
           sb.textContent = status;
@@ -766,11 +766,11 @@
     }
 
     function bulkAutoAssignSweep() {
-      const unassigned = visibleRows.filter(r => r.dataset.status === 'Unassigned');
-      if (unassigned.length > 0) {
+      const pending = visibleRows.filter(r => r.dataset.status === 'Pending');
+      if (pending.length > 0) {
         // For now, we just suggest the user to refresh or process the first one
         // In a real scenario, we might want to batch this
-        console.log('Bulk sweep found %d unassigned bookings', unassigned.length);
+        console.log('Bulk sweep found %d pending bookings', pending.length);
       }
     }
 

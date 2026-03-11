@@ -11,6 +11,10 @@
             <p class="text-sm text-gray-400 mt-0.5">Manage professional kit purchases and stock tracking</p>
         </div>
         <div class="flex items-center gap-3">
+            <a href="{{ route('kit-orders.history') }}"
+               class="flex items-center gap-2 border border-gray-200 text-gray-600 px-5 py-2.5 rounded-full hover:bg-gray-50 transition-all font-medium text-sm">
+                <i data-lucide="clock-4" class="w-4 h-4"></i> Order History
+            </a>
             <button onclick="showAssignModal()" class="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-full hover:bg-gray-800 transition-all font-medium text-sm shadow-lg shadow-black/10">
                 <i data-lucide="plus" class="w-4 h-4"></i> Assign Kit
             </button>

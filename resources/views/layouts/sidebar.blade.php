@@ -186,21 +186,6 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
               </a>
 
 
-              <!-- Kit Management Submenu -->
-              <div class="relative pt-1 border-t border-gray-100/50 mt-1">
-                <div class="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kits & Inventory</div>
-                <a href="{{ route('kit-products.index') }}"
-                  class="flex items-center gap-3 px-4 py-2.5 {{ $section === 'kit-products' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
-                  <i data-lucide="package" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                  <span class="font-normal text-sm text-black">Kit Products</span>
-                </a>
-                <a href="{{ route('kit-orders.index') }}"
-                  class="flex items-center gap-3 px-4 py-2.5 {{ $section === 'kit-orders' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
-                  <i data-lucide="truck" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                  <span class="font-normal text-sm text-black">Kit Assignments</span>
-                </a>
-              </div>
-
               <!-- Leaves Submenu -->
               <div class="relative pt-1 border-t border-gray-100/50 mt-1">
                 <a href="{{ route('leaves.index') }}"
@@ -216,6 +201,37 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
                   @endif
                 </a>
               </div>
+            </div>
+          </div>
+
+          <!-- ─── Kits & Inventory (standalone dropdown) ─────────────────── -->
+          <div class="relative">
+            <button onclick="toggleKits()" id="kits-btn"
+              class="w-full flex items-center justify-between px-4 py-3 {{ $isKitActive ? 'bg-white shadow-sm ring-1 ring-gray-200' : 'hover:bg-white' }} rounded-xl text-black transition-all group sidebar-item-hover">
+              <div class="flex items-center gap-3">
+                <i data-lucide="package" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+                <span class="font-normal text-base text-black">Kits &amp; Inventory</span>
+              </div>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200 {{ $isKitActive ? 'chevron-rotate' : '' }}"
+                id="kits-chevron"></i>
+            </button>
+            <!-- Submenu -->
+            <div id="kits-submenu" class="submenu{{ $isKitActive ? ' open' : '' }} pl-4 mt-1 space-y-1">
+              <a href="{{ route('kit-products.index') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $section === 'kit-products' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="box" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Kit Products</span>
+              </a>
+              <a href="{{ route('kit-orders.index') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ ($section === 'kit-orders' && !request()->is('*/kit-orders/history*')) ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="truck" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Kit Assignments</span>
+              </a>
+              <a href="{{ route('kit-orders.history') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/kit-orders/history*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="clock-4" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Order History</span>
+              </a>
             </div>
           </div>
 

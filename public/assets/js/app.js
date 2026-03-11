@@ -28,6 +28,7 @@ function toggleProfessionals() { toggleSubmenu('professionals-submenu', 'profess
 function toggleMedia() { toggleSubmenu('media-submenu', 'media-chevron'); }
 function toggleCRM() { toggleSubmenu('crm-submenu', 'crm-chevron'); }
 function toggleSettings() { toggleSubmenu('settings-submenu', 'settings-chevron'); }
+function toggleKits() { toggleSubmenu('kits-submenu', 'kits-chevron'); }
 
 /* ── Image Preview ───────────────────────────────────────────────────────── */
 function previewImage(input, previewId = 'img-preview') {

@@ -135,6 +135,85 @@ class CartController extends BaseController
         return $this->success(null, 'Cart cleared.');
     }
 
+    public function sync(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.item_type' => 'required|in:service,package',
+            'items.*.item_id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        $customer = $this->guard()->user();
+        
+        // Clear existing cart
+        $customer->carts()->delete();
+
+        // Add new items
+        foreach ($validated['items'] as $item) {
+            Cart::create([
+                'customer_id' => $customer->id,
+                'item_type' => $item['item_type'],
+                'item_id' => $item['item_id'],
+                'quantity' => $item['quantity'],
+            ]);
+        }
+
+        return $this->success(null, 'Cart synced successfully.');
+    }
+
+    public function getSlotsFromCart(): JsonResponse
+    {
+        $customer = $this->guard()->user();
+        
+        // 1. Fetch category names for Services in the cart
+        $serviceCategoryNames = \DB::table('carts')
+            ->join('services', 'carts.item_id', '=', 'services.id')
+            ->join('categories', 'services.category_id', '=', 'categories.id')
+            ->where('carts.customer_id', $customer->id)
+            ->where('carts.item_type', 'service')
+            ->pluck('categories.name')
+            ->unique();
+
+        // 2. Fetch category names for Packages in the cart
+        $packageCategoryNames = \DB::table('carts')
+            ->join('packages', 'carts.item_id', '=', 'packages.id')
+            ->where('carts.customer_id', $customer->id)
+            ->where('carts.item_type', 'package')
+            ->pluck('packages.category')
+            ->unique();
+
+        $allCategoryNames = $serviceCategoryNames->merge($packageCategoryNames)->unique()->filter()->toArray();
+
+        // 3. Generate slots structure expected by Flutter app
+        $slotsMap = [];
+        $now = now();
+        
+        foreach ($allCategoryNames as $categoryName) {
+            $isBridal = str_contains(strtolower($categoryName), 'brid');
+            $dayRange = $isBridal ? 30 : 7;
+            
+            $availableDates = [];
+            for ($i = 0; $i < $dayRange; $i++) {
+                $date = $now->copy()->addDays($i);
+                $availableDates[] = [
+                    'date' => $date->format('Y-m-d'),
+                    'formatted' => $i === 0 ? 'Today' : $date->format('D, d M'),
+                    'is_available' => true
+                ];
+            }
+
+            $slotsMap[$categoryName] = [
+                'name' => $categoryName,
+                'available_dates' => $availableDates
+            ];
+        }
+
+        return $this->success([
+            'slots' => $slotsMap,
+        ], 'Slots fetched successfully based on cart.');
+    }
+
     public function checkout(Request $request): JsonResponse
     {
         $customer = $this->guard()->user();
@@ -249,17 +328,79 @@ class CartController extends BaseController
                 }
             }
 
-            $customer->carts()->delete();
+            // DO NOT clear cart here yet. It must wait for payment success.
             \DB::commit();
 
-            return $this->success([
+            $response = [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-            ], 'Order placed successfully.');
-        } catch (\Throwable $exception) {
+            ];
+
+            // If online payment, generate Razorpay order
+            if ($validated['payment_method'] === 'online') {
+                try {
+                    $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                    $razorpayOrder = $api->order->create([
+                        'receipt' => $order->order_number,
+                        'amount' => $totalPaise,
+                        'currency' => 'INR',
+                    ]);
+                    $response['razorpay_order_id'] = $razorpayOrder['id'];
+                    $response['amount'] = $totalPaise;
+                } catch (\Exception $e) {
+                    \DB::rollBack();
+                    return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+                }
+            }
+
+            // For non-online payments, clear the cart immediately
+            if ($validated['payment_method'] !== 'online') {
+                $customer->carts()->delete();
+            }
+
+            return $this->success($response, 'Order placed successfully.');
+
+        } catch (\Exception $e) {
             \DB::rollBack();
 
-            return $this->error('Failed to create order: ' . $exception->getMessage(), 500);
+            return $this->error('Failed to create order: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function verifyCheckout(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|integer|exists:orders,id',
+            'razorpay_payment_id' => 'required|string',
+            'razorpay_order_id' => 'required|string',
+            'razorpay_signature' => 'required|string',
+        ]);
+
+        try {
+            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+            
+            $attributes = array(
+                'razorpay_order_id' => $validated['razorpay_order_id'],
+                'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                'razorpay_signature' => $validated['razorpay_signature']
+            );
+            
+            $api->utility->verifyPaymentSignature($attributes);
+
+            $order = Order::findOrFail($validated['order_id']);
+            
+            // Mark order as confirmed and payment successful
+            $order->update(['status' => 'confirmed']);
+
+            // Clear the cart securely after payment success
+            $order->customer->carts()->delete();
+
+            return $this->success(null, 'Payment verified successfully.');
+
+        } catch (\Razorpay\Api\Errors\SignatureVerificationError $e) {
+            return $this->error('Invalid payment signature', 400);
+        } catch (\Exception $e) {
+            return $this->error('Verification failed: ' . $e->getMessage(), 500);
         }
     }
 }

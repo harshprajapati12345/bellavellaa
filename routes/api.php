@@ -44,8 +44,15 @@ Route::get('/images/{path}', function ($path) {
 })->where('path', '.*');
 
 // ═══════════════════════════════════════════════════════════════════
+// THEME — Public endpoint (no auth required)
+// ═══════════════════════════════════════════════════════════════════
+use App\Http\Controllers\Api\ThemeController;
+Route::get('theme', [ThemeController::class, 'index']);
+
+// ═══════════════════════════════════════════════════════════════════
 // CLIENT — Customer Mobile App
 // ═══════════════════════════════════════════════════════════════════
+
 
 Route::prefix('client')->group(function () {
     // Public Routes
@@ -119,7 +126,12 @@ Route::prefix('client')->group(function () {
         Route::put('cart/{cart}', [CartController::class, 'update']);
         Route::delete('cart/{cart}', [CartController::class, 'destroy']);
         Route::post('cart/clear', [CartController::class, 'clear']);
+        Route::post('cart/sync', [CartController::class, 'sync']);
         Route::post('cart/checkout', [CartController::class, 'checkout']);
+        Route::post('cart/checkout/verify', [CartController::class, 'verifyCheckout']);
+        
+        // Slots
+        Route::get('slots-from-cart', [CartController::class, 'getSlotsFromCart']);
 
         // Reviews
         Route::post('bookings/{bookingId}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class, 'store']);

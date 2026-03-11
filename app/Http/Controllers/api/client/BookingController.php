@@ -80,10 +80,32 @@ class BookingController extends BaseController
         }
 
         $city = $booking->city ?? 'Mumbai';
-        $capacity = \App\Models\Professional::where('city', $city)
+        $professionals = \App\Models\Professional::where('city', $city)
             ->where('status', 'Active')
             ->where('verification', 'Verified')
-            ->count();
+            ->get();
+            
+        $capacity = 0;
+        
+        // Determine slot period
+        $slot = $validated['slot'];
+        $isMorning = str_contains($slot, 'AM') || $slot === '12:00 PM'; // 12 PM is afternoon, wait
+        
+        $period = '';
+        if (in_array($slot, ['06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM'])) {
+            $period = 'morning';
+        } elseif (in_array($slot, ['12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM'])) {
+            $period = 'afternoon';
+        } else {
+            $period = 'evening';
+        }
+
+        foreach ($professionals as $pro) {
+            $wh = $pro->working_hours ?? [];
+            if ($period === 'morning' && ($wh['morning_slot'] ?? true) === true) $capacity++;
+            if ($period === 'afternoon' && ($wh['afternoon_slot'] ?? true) === true) $capacity++;
+            if ($period === 'evening' && ($wh['evening_slot'] ?? false) === true) $capacity++;
+        }
 
         $occupied = \App\Models\Booking::whereDate('date', $validated['date'])
             ->where('slot', $validated['slot'])
@@ -92,8 +114,8 @@ class BookingController extends BaseController
             ->where('id', '!=', $booking->id)
             ->count();
 
-        if ($occupied >= $capacity) {
-            return $this->error('This slot is already full. Please choose another time.', 422);
+        if ($occupied >= $capacity || $capacity === 0) {
+            return $this->error('This slot is already full or unavailable. Please choose another time.', 422);
         }
 
         $booking->update([

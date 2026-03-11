@@ -21,18 +21,14 @@ class BookingController extends BaseController
             return $this->success([], 'Verify your account to see booking requests.');
         }
 
-        // Available requests: Unassigned bookings in the professional's city
-        // (In a real app, you might also filter by category or services)
-        $query = Booking::whereIn('status', ['Unassigned', 'Pending'])
-            ->whereNull('professional_id');
-            
-        if ($professional->city) {
-            $query->where('city', $professional->city);
-        }
+        // Fetch bookings assigned to this professional by the admin
+        $bookings = Booking::with(['customer', 'service', 'package'])
+            ->where('professional_id', $professional->id)
+            ->where('status', 'Assigned')
+            ->latest('date')
+            ->get();
 
-        $bookings = $query->latest('date')->get();
-
-        return $this->success($bookings, 'Booking requests retrieved.');
+        return $this->success($bookings, 'Incoming requests retrieved.');
     }
 
     /**
@@ -84,14 +80,11 @@ class BookingController extends BaseController
 
         $booking = Booking::findOrFail($id);
 
-        // Allow accept if it's unassigned OR if it's already assigned to THIS professional (admin assignment)
-        if ($booking->professional_id && $booking->professional_id !== $professional->id) {
-            return $this->error('This booking has already been assigned to another professional.', 400);
+        if ($booking->professional_id !== $professional->id || $booking->status !== 'Assigned') {
+            return $this->error('This booking is not available for you to accept.', 400);
         }
 
         $booking->update([
-            'professional_id' => $professional->id,
-            'professional_name' => $professional->name,
             'status' => 'Accepted',
         ]);
 
@@ -103,9 +96,20 @@ class BookingController extends BaseController
      */
     public function reject(Request $request, $id): JsonResponse
     {
-        // For a pool-based system, reject usually just hides it from the professional.
-        // We'll return success to let the app remove it from the UI.
-        return $this->success(null, 'Booking request dismissed.');
+        $professional = $request->user('professional-api');
+        
+        $booking = Booking::findOrFail($id);
+
+        if ($booking->professional_id !== $professional->id) {
+            return $this->error('Unauthorized access.', 403);
+        }
+
+        $booking->update([
+            'professional_id' => null,
+            'status' => 'Pending' // Revert to pending so admin can reassign
+        ]);
+
+        return $this->success(null, 'Booking request rejected.');
     }
 
     /**

@@ -38,7 +38,11 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'In Progress']);
+            $updateData = ['status' => 'In Progress'];
+            if (!$booking->service_started_at) {
+                $updateData['service_started_at'] = now();
+            }
+            $booking->update($updateData);
         }
         return $this->success(null, 'Service started.');
     }
