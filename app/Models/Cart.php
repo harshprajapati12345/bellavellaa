@@ -12,8 +12,11 @@ class Cart extends Model
         'customer_id',
         'item_type',
         'item_id',
+        'service_id',
+        'service_variant_id',
+        'package_id',
         'quantity',
-        'meta'
+        'meta',
     ];
 
     protected $casts = [
@@ -29,5 +32,25 @@ class Cart extends Model
     public function item(): MorphTo
     {
         return $this->morphTo('item', 'item_type', 'item_id');
+    }
+
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ServiceVariant::class, 'service_variant_id');
+    }
+
+    public function package(): BelongsTo
+    {
+        return $this->belongsTo(Package::class);
+    }
+
+    public function getSellableItemAttribute()
+    {
+        return $this->variant ?? $this->service ?? $this->package ?? $this->item;
     }
 }

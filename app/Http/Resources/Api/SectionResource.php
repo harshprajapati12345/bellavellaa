@@ -12,6 +12,7 @@ class SectionResource extends JsonResource
         return [
             'id'           => $this['id'] ?? null,
             'type'         => $this['type'] ?? 'unknown',
+            'key'          => $this['key'] ?? $this['name'] ?? null,
             'name'         => $this['name'] ?? null,
             'title'        => $this['title'] ?? null,
             'subtitle'     => $this['subtitle'] ?? null,

@@ -117,12 +117,12 @@
       </div>
 
       <div class="flex items-center justify-between px-10 py-6 bg-[#F9F9F9]/50">
-        <form method="POST" action="{{ route('service-groups.destroy', $serviceGroup->id) }}" onsubmit="return confirm('Delete this group?')">
-          @csrf @method('DELETE')
-          <button type="submit" class="btn btn-danger text-sm px-6">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Group
-          </button>
-        </form>
+        <button type="button" 
+          onclick="if(confirm('Move this group to trash? This will affect all associated services.')) { document.getElementById('delete-group-form').submit(); }"
+          class="btn btn-danger text-sm px-6">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Group
+        </button>
+
         <div class="flex gap-3">
           <a href="{{ route('service-groups.index') }}" class="btn btn-secondary px-8">Cancel</a>
           <button type="submit" class="btn btn-primary lg:px-12 shadow-lg shadow-black/10">
@@ -130,6 +130,11 @@
           </button>
         </div>
       </div>
+    </form>
+
+    {{-- Separate hidden form for deletion to avoid nested forms --}}
+    <form id="delete-group-form" method="POST" action="{{ route('service-groups.destroy', $serviceGroup->id) }}" class="hidden">
+      @csrf @method('DELETE')
     </form>
   </div>
 @endsection

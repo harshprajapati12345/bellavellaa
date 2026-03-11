@@ -2,128 +2,150 @@
 
 namespace App\Http\Controllers\adminroutes;
 
-use App\Models\Category;
 use App\Models\Service;
-use App\Models\ServiceGroup;
+use App\Models\ServiceType;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class ServiceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $services = Service::with('category', 'serviceGroup')->get();
+        $categories = \App\Models\Category::where('type', 'services')->orderBy('name')->get(['id', 'name']);
+        $groups = \App\Models\ServiceGroup::orderBy('name')->get(['id', 'category_id', 'name']);
+        $types = ServiceType::orderBy('name')->get(['id', 'service_group_id', 'name']);
 
-        $totalServices    = $services->count();
-        $activeServices   = $services->where('status', 'Active')->count();
+        $services = Service::with(['category', 'serviceGroup', 'serviceType.serviceGroup.category', 'variants'])
+            ->when($request->filled('category_id'), function ($query) use ($request) {
+                $categoryId = $request->integer('category_id');
+                $query->where(function ($inner) use ($categoryId) {
+                    $inner->where('category_id', $categoryId)
+                        ->orWhereHas('serviceType.serviceGroup', fn ($serviceTypeQuery) => $serviceTypeQuery->where('category_id', $categoryId));
+                });
+            })
+            ->when($request->filled('service_group_id'), function ($query) use ($request) {
+                $groupId = $request->integer('service_group_id');
+                $query->where(function ($inner) use ($groupId) {
+                    $inner->where('service_group_id', $groupId)
+                        ->orWhereHas('serviceType', fn ($serviceTypeQuery) => $serviceTypeQuery->where('service_group_id', $groupId));
+                });
+            })
+            ->when($request->filled('service_type_id'), fn ($query) => $query->where('service_type_id', $request->integer('service_type_id')))
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('sort_order')
+            ->get();
+
+        $totalServices = $services->count();
+        $activeServices = $services->where('status', 'Active')->count();
         $inactiveServices = $totalServices - $activeServices;
-        $mostBooked       = $services->sortByDesc('bookings')->first();
-
-        $categories = Category::where('type', 'services')->get();
+        $mostBooked = $services->sortByDesc('bookings')->first();
 
         return view('services.index', compact(
-            'services', 'totalServices', 'activeServices', 'inactiveServices', 'mostBooked', 'categories'
+            'services',
+            'totalServices',
+            'activeServices',
+            'inactiveServices',
+            'mostBooked',
+            'categories',
+            'groups',
+            'types'
         ));
     }
 
     public function create()
     {
-        // Only service-type categories in the dropdown
-        $categories = Category::where('type', 'services')
+        $serviceTypes = ServiceType::with('serviceGroup.category')
             ->where('status', 'Active')
-            ->orderBy('sort_order')
+            ->whereHas('serviceGroup', fn ($query) => $query->where('status', 'Active')->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('status', 'Active')))
+            ->orderBy('name')
             ->get();
-        return view('services.create', compact('categories'));
+
+        return view('services.create', compact('serviceTypes'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name'             => 'required|string|max:255',
-            'category_id'      => ['required', Rule::in(Category::where('type', 'services')->pluck('id'))],
-            'service_group_id' => 'nullable|exists:service_groups,id',
-            'sort_order'       => 'nullable|integer|min:0',
-            'has_variants'     => 'nullable|boolean',
+        $validated = $request->validate([
+            'service_type_id' => 'required|integer|exists:service_types,id',
+            'name' => 'required|string|max:255',
+            'duration_minutes' => 'nullable|integer|min:0',
+            'base_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lte:base_price',
+            'sort_order' => 'nullable|integer|min:0',
+            'description' => 'nullable|string',
+            'desc_title' => 'nullable|string|max:255',
+            'has_variants' => 'nullable|boolean',
+            'allow_direct_booking_with_variants' => 'nullable|boolean',
+            'service_image' => 'nullable|image|max:2048',
         ]);
 
-        // Integrity: category must be services-type
-        $category = Category::whereKey($request->category_id)
-            ->where('type', 'services')
-            ->firstOrFail();
+        $serviceType = ServiceType::with('serviceGroup.category')->findOrFail($validated['service_type_id']);
+        $hasVariants = $request->boolean('has_variants');
+        $basePrice = $validated['base_price'] ?? null;
 
-        // Integrity: if a group is selected, it must belong to the selected category
-        if ($request->filled('service_group_id')) {
-            ServiceGroup::whereKey($request->service_group_id)
-                ->where('category_id', $category->id)
-                ->firstOrFail();
+        if (!$hasVariants && $basePrice === null) {
+            return back()->withErrors(['base_price' => 'Base price is required for services without variants.'])->withInput();
         }
 
-        // Handle main image upload
         $imagePath = null;
         if ($request->hasFile('service_image')) {
-            $stored    = $request->file('service_image')->store('services', 'public');
-            $imagePath = asset('storage/' . $stored);
+            $imagePath = $request->file('service_image')->store('services', 'public');
         }
 
-        // Build service_types JSON from parallel arrays
-        $serviceTypes = [];
-        $names   = $request->input('service_types', []);
-        $prices  = $request->input('service_prices', []);
-        $reviews = $request->input('service_reviews', []);
-        foreach ($names as $i => $name) {
-            if (trim($name) !== '') {
-                $serviceTypes[] = [
-                    'name'    => trim($name),
-                    'price'   => $prices[$i] ?? 0,
-                    'reviews' => $reviews[$i] ?? 0,
-                ];
-            }
-        }
-
-        $mainPrice = $request->price ?? ($serviceTypes[0]['price'] ?? 0);
-
-        // Generate slug
-        $base = Str::slug($request->name);
-        $slug = $base;
-        $i = 1;
+        $slugBase = Str::slug($validated['name']);
+        $slug = $slugBase;
+        $counter = 1;
         while (Service::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i++;
+            $slug = $slugBase . '-' . $counter++;
         }
 
         Service::create([
-            'name'             => $request->name,
-            'slug'             => $slug,
-            'category_id'      => $category->id,
-            'service_group_id' => $request->service_group_id,
-            'duration'         => $request->duration ?? 0,
-            'price'            => $mainPrice,
-            'description'      => $request->description,
-            'desc_title'       => $request->desc_title,
-            'service_types'    => !empty($serviceTypes) ? json_encode($serviceTypes) : null,
-            'status'           => $request->form_action === 'publish' ? 'Active' : 'Inactive',
-            'has_variants'     => $request->has('has_variants'),
-            'featured'         => $request->has('featured') ? 1 : 0,
-            'sort_order'       => $request->sort_order ?? 0,
-            'image'            => $imagePath,
+            'service_type_id' => $serviceType->id,
+            'service_group_id' => $serviceType->service_group_id,
+            'category_id' => $serviceType->serviceGroup?->category_id,
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'duration' => $validated['duration_minutes'] ?? null,
+            'base_price' => $basePrice,
+            'sale_price' => $validated['sale_price'] ?? null,
+            'price' => $basePrice,
+            'description' => $validated['description'] ?? null,
+            'short_description' => $validated['description'] ?? null,
+            'long_description' => $validated['description'] ?? null,
+            'desc_title' => $validated['desc_title'] ?? null,
+            'service_types' => null,
+            'has_variants' => $hasVariants,
+            'is_bookable' => true,
+            'allow_direct_booking_with_variants' => $request->boolean('allow_direct_booking_with_variants'),
+            'status' => $request->input('form_action') === 'publish' ? 'Active' : 'Inactive',
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'image' => $imagePath,
         ]);
 
-        return redirect()->route('services.index')
-            ->with('success', 'Service created successfully!');
+        return redirect()->route('services.index')->with('success', 'Service created successfully.');
     }
 
     public function show(Service $service)
     {
         return response()->json([
-            'id'          => $service->id,
-            'name'        => $service->name,
-            'category'    => $service->category?->name,
-            'group'       => $service->serviceGroup?->name,
-            'price'       => number_format($service->price),
-            'duration'    => $service->duration,
-            'status'      => $service->status,
+            'id' => $service->id,
+            'name' => $service->name,
+            'category' => $service->resolved_category?->name ?? $service->category?->name,
+            'group' => $service->resolved_service_group?->name ?? $service->serviceGroup?->name,
+            'type' => $service->serviceType?->name,
+            'price' => number_format($service->display_price),
+            'duration' => $service->resolved_duration_minutes,
+            'status' => $service->status,
             'description' => strip_tags($service->description ?? 'No description available.'),
-            'image'       => $service->image
+            'image' => $service->image
                 ? (str_starts_with($service->image, 'http') ? $service->image : asset('storage/' . $service->image))
                 : null,
         ]);
@@ -131,95 +153,82 @@ class ServiceController extends Controller
 
     public function edit(Service $service)
     {
-        $categories = Category::where('type', 'services')
+        $serviceTypes = ServiceType::with('serviceGroup.category')
             ->where('status', 'Active')
-            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
-        // Pre-load groups for the currently selected category
-        $serviceGroups = $service->category_id
-            ? ServiceGroup::where('category_id', $service->category_id)
-                ->where('status', 'Active')
-                ->orderBy('sort_order')
-                ->get()
-            : collect();
+        $service->load(['serviceType.serviceGroup.category', 'variants']);
 
-        $service->load('variants');
-
-        return view('services.edit', compact('service', 'categories', 'serviceGroups'));
+        return view('services.edit', compact('service', 'serviceTypes'));
     }
 
     public function update(Request $request, Service $service)
     {
-        $request->validate([
-            'name'             => 'required|string|max:255',
-            'category_id'      => ['required', Rule::in(Category::where('type', 'services')->pluck('id'))],
-            'service_group_id' => 'nullable|exists:service_groups,id',
-            'sort_order'       => 'nullable|integer|min:0',
-            'has_variants'     => 'nullable|boolean',
+        $validated = $request->validate([
+            'service_type_id' => 'required|integer|exists:service_types,id',
+            'name' => 'required|string|max:255',
+            'duration_minutes' => 'nullable|integer|min:0',
+            'base_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lte:base_price',
+            'sort_order' => 'nullable|integer|min:0',
+            'description' => 'nullable|string',
+            'desc_title' => 'nullable|string|max:255',
+            'has_variants' => 'nullable|boolean',
+            'allow_direct_booking_with_variants' => 'nullable|boolean',
+            'service_image' => 'nullable|image|max:2048',
         ]);
 
-        $category = Category::whereKey($request->category_id)
-            ->where('type', 'services')
-            ->firstOrFail();
+        $serviceType = ServiceType::with('serviceGroup.category')->findOrFail($validated['service_type_id']);
+        $hasVariants = $request->boolean('has_variants');
+        $basePrice = $validated['base_price'] ?? null;
 
-        if ($request->filled('service_group_id')) {
-            ServiceGroup::whereKey($request->service_group_id)
-                ->where('category_id', $category->id)
-                ->firstOrFail();
+        if (!$hasVariants && $basePrice === null) {
+            return back()->withErrors(['base_price' => 'Base price is required for services without variants.'])->withInput();
         }
 
         $imagePath = $service->image;
         if ($request->hasFile('service_image')) {
-            $stored    = $request->file('service_image')->store('services', 'public');
-            $imagePath = asset('storage/' . $stored);
+            $imagePath = $request->file('service_image')->store('services', 'public');
         }
-
-        $serviceTypes = [];
-        $names   = $request->input('service_types', []);
-        $prices  = $request->input('service_prices', []);
-        $reviews = $request->input('service_reviews', []);
-        foreach ($names as $i => $name) {
-            if (trim($name) !== '') {
-                $serviceTypes[] = [
-                    'name'    => trim($name),
-                    'price'   => $prices[$i] ?? 0,
-                    'reviews' => $reviews[$i] ?? 0,
-                ];
-            }
-        }
-
-        $mainPrice = $request->price ?? ($serviceTypes[0]['price'] ?? $service->price);
 
         $service->update([
-            'name'             => $request->name,
-            'category_id'      => $category->id,
-            'service_group_id' => $request->service_group_id,
-            'duration'         => $request->duration ?? $service->duration,
-            'price'            => $mainPrice,
-            'description'      => $request->description,
-            'desc_title'       => $request->desc_title,
-            'service_types'    => !empty($serviceTypes) ? json_encode($serviceTypes) : null,
-            'status'           => $request->form_action === 'publish' ? 'Active' : 'Inactive',
-            'has_variants'     => $request->has('has_variants'),
-            'sort_order'       => $request->sort_order ?? $service->sort_order,
-            'image'            => $imagePath,
+            'service_type_id' => $serviceType->id,
+            'service_group_id' => $serviceType->service_group_id,
+            'category_id' => $serviceType->serviceGroup?->category_id,
+            'name' => $validated['name'],
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'duration' => $validated['duration_minutes'] ?? null,
+            'base_price' => $basePrice,
+            'sale_price' => $validated['sale_price'] ?? null,
+            'price' => $basePrice,
+            'description' => $validated['description'] ?? null,
+            'short_description' => $validated['description'] ?? null,
+            'long_description' => $validated['description'] ?? null,
+            'desc_title' => $validated['desc_title'] ?? null,
+            'service_types' => null,
+            'has_variants' => $hasVariants,
+            'is_bookable' => true,
+            'allow_direct_booking_with_variants' => $request->boolean('allow_direct_booking_with_variants'),
+            'status' => $request->input('form_action') === 'publish' ? 'Active' : 'Inactive',
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'image' => $imagePath,
         ]);
 
-        return redirect()->route('services.index')
-            ->with('success', 'Service updated successfully!');
+        return redirect()->route('services.index')->with('success', 'Service updated successfully.');
     }
 
     public function destroy(Service $service)
     {
         $service->delete();
-        return redirect()->route('services.index')
-            ->with('success', 'Service deleted.');
+
+        return redirect()->route('services.index')->with('success', 'Service deleted.');
     }
 
     public function toggleStatus(Request $request, Service $service)
     {
         $service->update(['status' => $request->status]);
+
         return response()->json(['success' => true]);
     }
 }

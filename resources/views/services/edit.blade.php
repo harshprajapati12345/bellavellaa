@@ -1,825 +1,201 @@
 @extends('layouts.app')
 
 @section('content')
+  @php
+    $selectedType = old('service_type_id', $service->service_type_id);
+  @endphp
+
   <div class="flex flex-col gap-6">
-
-    @if(session('success'))
-      <div
-        class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-3.5 rounded-2xl text-sm font-medium">
-        <i data-lucide="check-circle" class="w-4 h-4"></i> {{ session('success') }}
-      </div>
-    @endif
-    @if($errors->any())
-      <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-2xl text-sm">
-        <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-      </div>
-    @endif
-
-    <!-- Page Header -->
     <div class="flex items-center gap-4">
-      <a href="{{ route('services.index') }}"
-        class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
-        <i data-lucide="arrow-left" class="w-4 h-4 text-gray-600"></i>
+      <a href="{{ route('services.index') }}" class="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50">
+        <i data-lucide="arrow-left" class="h-4 w-4 text-gray-600"></i>
       </a>
       <div class="flex-1">
         <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Edit Service</h2>
         <p class="text-sm text-gray-400 mt-0.5">{{ $service->name }}</p>
       </div>
-      <span
-        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $service->status === 'Active' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-gray-100 text-gray-600' }}">{{ $service->status }}</span>
+      <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $service->status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">{{ $service->status }}</span>
     </div>
 
-    <form method="POST" action="{{ route('services.update', $service->id) }}" enctype="multipart/form-data"
-      id="serviceForm">
-      @csrf @method('PUT')
+    @if(session('success'))
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+    @if($errors->any())
+      <div class="rounded-2xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm text-red-700">
+        <ul class="list-disc list-inside">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+      </div>
+    @endif
 
-      <!-- ━━━ SECTION 1 · BASIC DETAILS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-      <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-        <div class="px-8 pt-7 pb-2">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">1
+    <form method="POST" action="{{ route('services.update', $service) }}" enctype="multipart/form-data" class="grid gap-6 lg:grid-cols-[1.3fr_.7fr]">
+      @csrf
+      @method('PUT')
+
+      <div class="space-y-6">
+        <div class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+          <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Hierarchy</h3>
+          <p class="mt-1 text-sm text-gray-400">This service now belongs to a level 3 service type. Category and group stay inferred.</p>
+
+          <div class="mt-6 grid gap-5">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700">Service Type <span class="text-red-400">*</span></label>
+              <select name="service_type_id" id="serviceTypeSelect" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none" required>
+                <option value="">Select service type</option>
+                @foreach($serviceTypes as $type)
+                  <option value="{{ $type->id }}" data-group="{{ $type->serviceGroup?->name }}" data-category="{{ $type->serviceGroup?->category?->name }}" @selected((string) $selectedType === (string) $type->id)>
+                    {{ $type->name }} @if($type->serviceGroup?->name) - {{ $type->serviceGroup->name }} @endif
+                  </option>
+                @endforeach
+              </select>
             </div>
-            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Basic Details</h3>
-            <div class="flex-1 h-px bg-gray-100 ml-2"></div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-4">
+                <div class="text-xs font-semibold uppercase tracking-widest text-gray-400">Category</div>
+                <div id="selectedCategory" class="mt-2 text-sm font-semibold text-gray-900">Select a service type</div>
+              </div>
+              <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-4">
+                <div class="text-xs font-semibold uppercase tracking-widest text-gray-400">Service Group</div>
+                <div id="selectedGroup" class="mt-2 text-sm font-semibold text-gray-900">Select a service type</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="px-8 pb-8">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="space-y-5">
-              <div>
-                <label class="form-label">Service Name <span class="text-red-400">*</span></label>
-                <input type="text" name="name" value="{{ old('name', $service->name) }}" class="form-input" required>
-              </div>
-              <div>
-                <label class="form-label">Category <span class="text-red-400">*</span></label>
-                <select name="category_id" id="categorySelect" class="form-input cursor-pointer" onchange="loadServiceGroups(this)" required>
-                  <option value="">Select category</option>
-                  @foreach($categories as $cat)
-                    <option value="{{ $cat->id }}" {{ old('category_id', $service->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                  @endforeach
-                </select>
-              </div>
-              <div>
-                <label class="form-label">Service Group <span class="text-gray-400 font-normal text-xs">(Optional)</span></label>
-                <select name="service_group_id" id="serviceGroupSelect" class="form-input cursor-pointer">
-                  <option value="">— No group (direct service) —</option>
-                  {{-- populated by JS on load if category is set --}}
-                </select>
-                <p id="groupHint" class="text-xs text-gray-400 mt-1 hidden">Loading groups…</p>
-              </div>
-              <div>
-                <label class="form-label">Duration <span class="text-red-400">*</span></label>
-                <select name="duration" class="form-input cursor-pointer md:w-1/2" required>
-                  <option value="">Select Duration</option>
-                  @for($d = 5; $d <= 180; $d += 5)
-                    <option value="{{ $d }}" {{ old('duration', $service->duration) == $d ? 'selected' : '' }}>{{ $d }} min</option>
-                  @endfor
-                </select>
-                <p class="text-[11px] text-gray-400 mt-1.5 ml-1">This duration applies to all service variations</p>
-              </div>
-              <div>
-                <label class="form-label">Sort Order</label>
-                <input type="number" name="sort_order" value="{{ old('sort_order', $service->sort_order ?? 0) }}" min="0" class="form-input" placeholder="0">
-              </div>
-              <div class="pt-2">
-                <label class="flex items-center gap-3 cursor-pointer group">
-                  <div class="relative flex items-center">
-                    <input type="checkbox" name="has_variants" value="1" {{ old('has_variants', $service->has_variants) ? 'checked' : '' }}
-                      class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-300 checked:border-black checked:bg-black transition-all">
-                    <i data-lucide="check" class="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 left-0.5 pointer-events-none transition-opacity"></i>
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium text-gray-900 group-hover:text-black">Service has variants?</span>
-                    <span class="text-[11px] text-gray-400">Enable this if the service has different types (e.g. Aloe Wax, Milk Wax)</span>
-                  </div>
-                </label>
-              </div>
+
+        <div class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+          <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Service Details</h3>
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700">Service Name <span class="text-red-400">*</span></label>
+              <input type="text" name="name" value="{{ old('name', $service->name) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none" required>
             </div>
             <div>
-              <label class="form-label">Service Image <span class="text-red-400">*</span></label>
-              <div id="dropZone1"
-                class="drop-zone relative flex flex-col items-center justify-center w-full h-56 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all group"
-                onclick="document.getElementById('serviceImageInput').click()"
-                ondragover="event.preventDefault(); this.classList.add('dragover')"
-                ondragleave="this.classList.remove('dragover')"
-                ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event,'serviceImageInput','serviceImgPreview')">
-                <div id="uploadPlaceholder1" class="flex flex-col items-center {{ $service->image ? 'hidden' : '' }}">
-                  <div
-                    class="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3 group-hover:bg-gray-200 transition-colors">
-                    <i data-lucide="upload-cloud" class="w-6 h-6 text-gray-400"></i>
-                  </div>
-                  <p class="text-sm font-medium text-gray-600">Click to upload or drag & drop</p>
-                  <p class="text-xs text-gray-400 mt-1">JPG, PNG up to 2MB</p>
-                </div>
-                <input type="file" name="service_image" id="serviceImageInput" accept="image/*" class="hidden"
-                  onchange="previewImg(this,'serviceImgPreview','uploadPlaceholder1','removeBtn1')">
+              <label class="mb-2 block text-sm font-medium text-gray-700">Duration Minutes</label>
+              <input type="number" name="duration_minutes" min="0" value="{{ old('duration_minutes', $service->duration_minutes ?? $service->duration) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700">Sort Order</label>
+              <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $service->sort_order ?? 0) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700">Base Price @if(!$service->has_variants)<span class="text-red-400">*</span>@endif</label>
+              <input type="number" name="base_price" min="0" step="0.01" value="{{ old('base_price', $service->base_price ?? $service->price) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700">Sale Price</label>
+              <input type="number" name="sale_price" min="0" step="0.01" value="{{ old('sale_price', $service->sale_price) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+            </div>
+            <div class="md:col-span-2 space-y-3 rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <label class="flex items-start gap-3">
+                <input type="checkbox" name="has_variants" id="hasVariantsToggle" value="1" @checked(old('has_variants', $service->has_variants)) class="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black">
+                <span>
+                  <span class="block text-sm font-medium text-gray-900">This service has level 5 variants</span>
+                  <span class="block text-xs text-gray-500">If enabled, booking should usually happen on variants instead of this service.</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3">
+                <input type="checkbox" name="allow_direct_booking_with_variants" value="1" @checked(old('allow_direct_booking_with_variants', $service->allow_direct_booking_with_variants)) class="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black">
+                <span>
+                  <span class="block text-sm font-medium text-gray-900">Allow direct booking when variants exist</span>
+                  <span class="block text-xs text-gray-500">Only enable if both the service and variants should be sellable.</span>
+                </span>
+              </label>
+              <div id="variantNotice" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 hidden">
+                Use the variant list below to confirm the actual level 5 sellable items.
               </div>
-              <div class="relative mt-3 {{ $service->image ? '' : 'hidden' }}" id="serviceImgPreviewWrap">
-                <img id="serviceImgPreview" class="w-full h-48 object-cover rounded-2xl border border-gray-100"
-                  src="{{ $service->image }}" alt="">
-                <button type="button" id="removeBtn1"
-                  class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
-                  onclick="removeImage('serviceImageInput','serviceImgPreview','serviceImgPreviewWrap','uploadPlaceholder1','dropZone1')">
-                  <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-              </div>
-
-              <div class="mt-5">
-                <label class="form-label">Description</label>
-                <textarea name="description" rows="4"
-                  class="form-input resize-none">{{ old('description', $service->description) }}</textarea>
-              </div>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700">Description</label>
+              <textarea name="description" rows="5" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">{{ old('description', $service->long_description ?? $service->description) }}</textarea>
+            </div>
+            <div class="md:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700">Description Title</label>
+              <input type="text" name="desc_title" value="{{ old('desc_title', $service->desc_title) }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ━━━ SECTION 2 · VARIANTS MANAGEMENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-      <div id="variantsSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ $service->has_variants ? '' : 'hidden' }}">
-        <div class="px-8 pt-7 pb-2 text-white">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">V</div>
-            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Variants</h3>
-            <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-            <button type="button" onclick="openVariantModal()" class="btn btn-primary py-1.5 px-3 text-xs">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Variant
-            </button>
+        <div id="variantsSection" class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Level 5 Variants</h3>
+              <p class="mt-1 text-sm text-gray-400">These remain the sellable items when variant mode is enabled.</p>
+            </div>
+            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">{{ $service->variants->count() }} variants</span>
           </div>
-        </div>
-        <div class="px-8 pb-8">
-            <div id="variantsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50/70 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  <th class="px-4 py-3">Name</th>
+                  <th class="px-4 py-3">Price</th>
+                  <th class="px-4 py-3">Duration</th>
+                  <th class="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
                 @forelse($service->variants as $variant)
-                    <div class="variant-card p-4 rounded-2xl border border-gray-100 bg-gray-50/30 flex gap-4 items-center group relative h-24"
-                         data-id="{{ $variant->id }}"
-                         data-name="{{ $variant->name }}"
-                         data-price="{{ $variant->price }}"
-                         data-duration="{{ $variant->duration_minutes }}"
-                         data-status="{{ $variant->status }}"
-                         data-sort="{{ $variant->sort_order }}"
-                         data-image="{{ $variant->image }}">
-                        <div class="w-16 h-16 rounded-xl bg-gray-200 overflow-hidden shrink-0 shadow-sm">
-                            <img src="{{ $variant->image ? (str_starts_with($variant->image, 'http') ? $variant->image : asset('storage/' . $variant->image)) : 'https://placehold.co/100?text=No+Img' }}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="text-sm font-semibold text-gray-900 truncate">{{ $variant->name }}</h4>
-                            <p class="text-[11px] text-gray-500 font-medium">₹{{ number_format($variant->price, 2) }} <span class="mx-1 text-gray-300">|</span> {{ $variant->duration_minutes ?? '?' }} min</p>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded-full {{ $variant->status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500' }}">{{ $variant->status }}</span>
-                        </div>
-                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <button type="button" onclick="editVariant({{ $variant->id }})" class="p-1.5 rounded-lg bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-                            <button type="button" onclick="deleteVariant({{ $variant->id }})" class="p-1.5 rounded-lg bg-white border border-gray-100 text-red-500 hover:bg-red-50 shadow-sm"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                        </div>
-                    </div>
+                  <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ $variant->name }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ number_format($variant->display_price ?? $variant->price, 2) }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ $variant->duration_minutes ?? $service->duration_minutes ?? $service->duration }} min</td>
+                    <td class="px-4 py-3"><span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $variant->status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">{{ $variant->status }}</span></td>
+                  </tr>
                 @empty
-                    <div class="col-span-full py-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                        <p class="text-sm text-gray-400">No variants added yet.</p>
-                    </div>
+                  <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-400">No variants yet. Variant CRUD stays on the existing service variant endpoints after this service is saved.</td>
+                  </tr>
                 @endforelse
-            </div>
-        </div>
-      </div>
-
-      <!-- ━━━ SECTION 3 · SERVICE PREVIEW (Legacy - Hidden if variants active) ━━━ -->
-      <div id="legacyTypesSection" class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card {{ $service->has_variants ? 'hidden' : '' }}">
-        <div class="px-8 pt-7 pb-2">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">2
-            </div>
-            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Quick Service Types</h3>
-            <div class="flex-1 h-px bg-gray-100 ml-2"></div>
-          </div>
-        </div>
-        <div class="px-8 pb-8 space-y-6">
-          <div>
-            <label class="form-label">Service Types</label>
-            <div id="serviceTypesContainer" class="space-y-4">
-              @php
-                $serviceTypes = is_array($service->service_types) ? $service->service_types : (json_decode($service->service_types ?? '[]', true) ?: [['name' => '', 'price' => '', 'reviews' => '']]);
-              @endphp
-              @foreach($serviceTypes as $idx => $type)
-                <div class="service-type-row dyn-item rounded-2xl border border-gray-200 p-5">
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 rounded-full bg-gray-900"></div>
-                      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider svc-label">Service
-                        {{ $idx + 1 }}</span>
-                    </div>
-                    <button type="button" onclick="removeServiceCard(this)"
-                      class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center">
-                      <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                  </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Service
-                        Name</label>
-                      <input type="text" name="service_types[]" value="{{ $type['name'] ?? '' }}" class="form-input">
-                    </div>
-                    <div>
-                      <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹)
-                        *</label>
-                      <input type="number" name="service_prices[]" value="{{ $type['price'] ?? '' }}" min="0" step="0.01"
-                        class="form-input text-right svc-price">
-                    </div>
-                  </div>
-                  <div class="mb-4">
-                    <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Reviews</label>
-                    <input type="number" name="service_reviews[]" value="{{ $type['reviews'] ?? '' }}" min="0"
-                      class="form-input">
-                  </div>
-                  <div class="inline-upload-wrap">
-                    <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Image</label>
-                    <label
-                      class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
-                        <line x1="16" x2="22" y1="5" y2="5" />
-                        <line x1="19" x2="19" y1="2" y2="8" />
-                        <circle cx="9" cy="9" r="2" />
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                      </svg>
-                      <p class="text-xs text-gray-400 mt-1.5">Upload image</p>
-                      <input type="file" name="image" class="hidden" onchange="previewImage(this)" accept="image/*">
-                    </label>
-                    <div class="relative mt-2">
-                      <img class="inline-img-preview hidden w-full h-24 object-cover rounded-xl border border-gray-100"
-                        src="" alt="">
-                      <button type="button"
-                        class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm"
-                        onclick="removeInlineImg(this)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M18 6 6 18" />
-                          <path d="m6 6 12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              @endforeach
-            </div>
-            <button type="button" onclick="addServiceType()"
-              class="mt-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div
-                class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              </div>
-              Add Another Service
-            </button>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- ━━━ SECTION 3 · SERVICE DESCRIPTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-      <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6 section-card">
-        <div class="px-8 pt-7 pb-2">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">3
-            </div>
-            <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-widest">Service Description</h3>
-            <div class="flex-1 h-px bg-gray-100 ml-2"></div>
+      <div class="space-y-6">
+        <div class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+          <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Media</h3>
+          @if($service->image)
+            <img src="{{ str_starts_with($service->image, 'http') ? $service->image : asset('storage/' . $service->image) }}" alt="{{ $service->name }}" class="mt-6 h-48 w-full rounded-2xl object-cover border border-gray-100">
+          @endif
+          <div class="mt-6">
+            <label class="mb-2 block text-sm font-medium text-gray-700">Replace Image</label>
+            <input type="file" name="service_image" accept="image/*" class="block w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-800">
           </div>
         </div>
-        <div class="px-8 pb-8 space-y-5">
-          <div>
-            <label class="form-label">Description Title</label>
-            <input type="text" name="desc_title" value="{{ old('desc_title', $service->desc_title ?? '') }}"
-              class="form-input">
-          </div>
-          <div>
-            <label class="form-label">Description Images <span
-                class="text-gray-400 font-normal text-xs">(Optional)</span></label>
-            <div id="descImagesContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <!-- slots added by JS -->
-            </div>
-            <button type="button" onclick="addDescImage()"
-              class="mt-3 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors group">
-              <div
-                class="w-7 h-7 rounded-lg border border-dashed border-gray-300 flex items-center justify-center group-hover:border-black transition-colors">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              </div>
-              Add More Image
-            </button>
+
+        <div class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
+          <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Publish</h3>
+          <div class="mt-6 flex flex-col gap-3">
+            <a href="{{ route('services.index') }}" class="rounded-xl border border-gray-200 px-4 py-3 text-center text-sm text-gray-600">Cancel</a>
+            <button type="submit" name="form_action" value="draft" class="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700">Save as Draft</button>
+            <button type="submit" name="form_action" value="publish" class="rounded-xl bg-black px-4 py-3 text-sm font-medium text-white">Publish Service</button>
           </div>
         </div>
       </div>
-
-      <!-- ━━━ STICKY ACTION BAR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-      <div
-        class="sticky-bar rounded-2xl border border-gray-100 shadow-lg px-8 py-4 flex items-center justify-between mt-2">
-        <button type="button" onclick="confirmDelete()" class="btn btn-danger text-sm"><i data-lucide="trash-2"
-            class="w-4 h-4"></i> Delete</button>
-        <div class="flex gap-3">
-          <a href="{{ route('services.index') }}" class="btn btn-secondary">Cancel</a>
-          <button type="submit" name="form_action" value="draft" class="btn btn-secondary"><i data-lucide="file-text"
-              class="w-4 h-4"></i> Save as Draft</button>
-          <button type="submit" name="form_action" value="publish" class="btn btn-primary"><i data-lucide="globe"
-              class="w-4 h-4"></i> Publish Service</button>
-        </div>
-      </div>
-
-    </form>
-    
-    <form action="{{ route('services.destroy', $service->id) }}" method="POST" class="hidden" id="deleteForm">
-      @csrf @method('DELETE')
     </form>
   </div>
 @endsection
 
-@push('styles')
-  <style>
-    .section-card {
-      transition: box-shadow 0.25s ease;
-    }
-
-    .section-card:hover {
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
-    }
-
-    .dyn-item {
-      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .drop-zone.dragover {
-      border-color: #000 !important;
-      background: #fafafa;
-    }
-
-    .sticky-bar {
-      position: sticky;
-      bottom: 0;
-      z-index: 30;
-      backdrop-filter: blur(12px);
-      background: rgba(255, 255, 255, 0.85);
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border-radius: 0.75rem;
-      border: 1px solid #e5e7eb;
-      outline: none;
-      transition: all 0.2s;
-      background: white;
-      font-size: 0.875rem;
-    }
-
-    .form-input:focus {
-      border-color: #000;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.5rem;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.75rem;
-      font-weight: 500;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-    }
-
-    .btn-primary {
-      background: #000;
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #1f2937;
-    }
-
-    .btn-secondary {
-      background: #fff;
-      color: #374151;
-      border: 1px solid #e5e7eb;
-    }
-
-    .btn-secondary:hover {
-      background: #f9fafb;
-    }
-
-    .btn-danger {
-      background: #fef2f2;
-      color: #ef4444;
-      border: 1px solid #fee2e2;
-    }
-
-    .btn-danger:hover {
-      background: #fee2e2;
-    }
-  </style>
-@endpush
-
 @push('scripts')
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
-    /* ── Image helpers ──────────────────────────────────────────────────── */
-    function previewImg(input, previewId, placeholderId, removeBtnId) {
-      if (!input.files || !input.files[0]) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = document.getElementById(previewId);
-        img.src = e.target.result;
-        const wrap = img.closest('[id$="PreviewWrap"]') || img.parentElement;
-        wrap.classList.remove('hidden');
-        document.getElementById(placeholderId).classList.add('hidden');
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
+<script>
+  function updateServiceTypeContext() {
+    const select = document.getElementById('serviceTypeSelect');
+    const option = select.options[select.selectedIndex];
+    document.getElementById('selectedCategory').textContent = option?.dataset.category || 'Select a service type';
+    document.getElementById('selectedGroup').textContent = option?.dataset.group || 'Select a service type';
+  }
 
-    function removeImage(inputId, previewId, wrapId, placeholderId, dropZoneId) {
-      document.getElementById(inputId).value = '';
-      document.getElementById(wrapId).classList.add('hidden');
-      document.getElementById(placeholderId).classList.remove('hidden');
-    }
+  function toggleVariantPricingState() {
+    const hasVariants = document.getElementById('hasVariantsToggle').checked;
+    document.getElementById('variantNotice').classList.toggle('hidden', !hasVariants);
+  }
 
-    function handleDrop(e, inputId, previewId) {
-      const dt = e.dataTransfer;
-      if (dt.files && dt.files[0]) {
-        const input = document.getElementById(inputId);
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change'));
-      }
-    }
-
-    function previewInlineImg(input) {
-      const preview = input.closest('.inline-upload-wrap').querySelector('.inline-img-preview');
-      const placeholder = input.closest('.inline-upload-wrap').querySelector('.inline-upload-placeholder');
-      const removeBtn = input.closest('.inline-upload-wrap').querySelector('.inline-remove-btn');
-      if (!input.files || !input.files[0]) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-        if (removeBtn) removeBtn.classList.remove('hidden');
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-
-    function removeInlineImg(btn) {
-      const wrap = btn.closest('.inline-upload-wrap');
-      wrap.querySelector('input[type="file"]').value = '';
-      wrap.querySelector('.inline-img-preview').classList.add('hidden');
-      wrap.querySelector('.inline-img-preview').src = '';
-      wrap.querySelector('.inline-upload-placeholder').classList.remove('hidden');
-      btn.classList.add('hidden');
-    }
-
-    /* ── Service Variations ────────────────────────────────────────────── */
-    let svcCount = document.querySelectorAll('.service-type-row').length;
-
-    function addServiceType() {
-      svcCount++;
-      const container = document.getElementById('serviceTypesContainer');
-      const div = document.createElement('div');
-      div.className = 'service-type-row dyn-item rounded-2xl border border-gray-200 p-5';
-      div.innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-gray-900"></div>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider svc-label">Service ${svcCount}</span>
-          </div>
-          <button type="button" onclick="removeServiceCard(this)" class="w-8 h-8 rounded-xl border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Service Name</label>
-            <input type="text" name="service_types[]" placeholder="e.g. Jawline Thread" class="form-input">
-          </div>
-          <div>
-            <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Price (₹) *</label>
-            <input type="number" name="service_prices[]" placeholder="0.00" min="0" step="0.01" class="form-input text-right svc-price">
-          </div>
-        </div>
-        <div class="mb-4">
-          <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Reviews</label>
-          <input type="number" name="service_reviews[]" placeholder="e.g. 120" min="0" class="form-input">
-        </div>
-        <div class="inline-upload-wrap">
-          <label class="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-1 block">Image</label>
-          <label class="inline-upload-placeholder flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-            <p class="text-xs text-gray-400 mt-1.5">Upload image</p>
-            <input type="file" name="service_images[]" accept="image/*" class="hidden" onchange="previewInlineImg(this)">
-          </label>
-          <div class="relative mt-2">
-            <img class="inline-img-preview hidden w-full h-24 object-cover rounded-xl border border-gray-100" src="" alt="">
-            <button type="button" class="inline-remove-btn hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm" onclick="removeInlineImg(this)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          </div>
-        </div>
-      `;
-      container.appendChild(div);
-    }
-
-    function removeServiceCard(btn) {
-      const rows = document.querySelectorAll('#serviceTypesContainer .service-type-row');
-      if (rows.length > 1) {
-        btn.closest('.service-type-row').remove();
-        renumberServices();
-      }
-    }
-
-    function renumberServices() {
-      document.querySelectorAll('#serviceTypesContainer .service-type-row').forEach((card, i) => {
-        const label = card.querySelector('.svc-label');
-        if (label) label.textContent = `Service ${i + 1}`;
-      });
-      svcCount = document.querySelectorAll('#serviceTypesContainer .service-type-row').length;
-    }
-
-    /* ── Description Images ────────────────────────────────────────────── */
-    function buildDescSlot() {
-      const slot = document.createElement('div');
-      slot.className = 'desc-img-slot dyn-item relative group';
-      slot.innerHTML = `
-        <label class="desc-upload-label flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-gray-400 hover:bg-gray-50/60 transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><line x1="16" x2="22" y1="5" y2="5"/><line x1="19" x2="19" y1="2" y2="8"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-          <p class="text-xs text-gray-400 mt-2">Upload image</p>
-          <input type="file" name="desc_images[]" accept="image/*" class="hidden" onchange="previewDescImg(this)">
-        </label>
-        <img class="desc-preview hidden absolute inset-0 w-full h-full object-cover rounded-2xl border border-gray-100" src="" alt="">
-        <button type="button" onclick="removeDescSlot(this)" class="desc-slot-remove hidden absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all shadow-sm z-10">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      `;
-      return slot;
-    }
-
-    function addDescImage() {
-      document.getElementById('descImagesContainer').appendChild(buildDescSlot());
-      lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
-      updateDescRemoveButtons();
-    }
-
-    function previewDescImg(input) {
-      const slot = input.closest('.desc-img-slot');
-      const label = slot.querySelector('.desc-upload-label');
-      const preview = slot.querySelector('.desc-preview');
-      const removeBtn = slot.querySelector('.desc-slot-remove');
-      if (!input.files || !input.files[0]) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
-        label.classList.add('hidden');
-        removeBtn.classList.remove('hidden');
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-
-    function removeDescSlot(btn) {
-      const container = document.getElementById('descImagesContainer');
-      const slots = container.querySelectorAll('.desc-img-slot');
-      if (slots.length > 1) {
-        btn.closest('.desc-img-slot').remove();
-      } else {
-        const slot = btn.closest('.desc-img-slot');
-        slot.querySelector('input[type="file"]').value = '';
-        slot.querySelector('.desc-preview').classList.add('hidden');
-        slot.querySelector('.desc-preview').src = '';
-        slot.querySelector('.desc-upload-label').classList.remove('hidden');
-        btn.classList.add('hidden');
-      }
-      updateDescRemoveButtons();
-    }
-
-    function updateDescRemoveButtons() {
-      document.querySelectorAll('#descImagesContainer .desc-img-slot').forEach(slot => {
-        const btn = slot.querySelector('.desc-slot-remove');
-        const hasImage = !slot.querySelector('.desc-preview').classList.contains('hidden');
-        if (hasImage) btn.classList.remove('hidden');
-      });
-    }
-
-    // Init: add one empty slot on load
-    addDescImage();
-
-    /* ── Service Group AJAX ─────────────────────────────────────────── */
-    function loadServiceGroups(selectEl, preselectId = null) {
-      const catId = selectEl.value;
-      const groupSel = document.getElementById('serviceGroupSelect');
-      const hint = document.getElementById('groupHint');
-      groupSel.innerHTML = '<option value="">— No group (direct service) —</option>';
-      if (!catId) return;
-      hint.textContent = 'Loading groups…'; hint.classList.remove('hidden');
-      fetch(`/categories/${catId}/service-groups`)
-        .then(r => r.json())
-        .then(groups => {
-          hint.classList.add('hidden');
-          groups.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.id; opt.textContent = g.name;
-            if (preselectId && g.id == preselectId) opt.selected = true;
-            groupSel.appendChild(opt);
-          });
-          if (groups.length === 0) {
-            hint.textContent = 'No groups — flat service list.';
-            hint.classList.remove('hidden');
-          }
-        })
-        .catch(() => { hint.textContent = 'Could not load groups.'; hint.classList.remove('hidden'); });
-    }
-
-    // Preload groups for current service on page load
-    const catSel = document.getElementById('categorySelect');
-    if (catSel && catSel.value) {
-      loadServiceGroups(catSel, {{ old('service_group_id', $service->service_group_id ?? 'null') }});
-    }
-
-    /* ── Delete confirmation ────────────────────────────────────── */
-    // Toggle Variants Section
-    const hasVariantsCheckbox = document.querySelector('input[name="has_variants"]');
-    if(hasVariantsCheckbox) {
-        hasVariantsCheckbox.addEventListener('change', function() {
-            document.getElementById('variantsSection').classList.toggle('hidden', !this.checked);
-            document.getElementById('legacyTypesSection').classList.toggle('hidden', this.checked);
-        });
-    }
-
-    /* ── Service Variant AJAX Handlers ──────────────────────────────── */
-    function openVariantModal(variant = null) {
-        const title = variant ? 'Edit Service Variant' : 'Add Service Variant';
-        const confirmText = variant ? 'Update Variant' : 'Save Variant';
-        
-        Swal.fire({
-            title: title,
-            html: `
-                <div class="text-left space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Variant Name</label>
-                        <input type="text" id="v_name" class="swal2-input !m-0 !w-full" placeholder="e.g. Aloe Wax" value="${variant ? variant.name : ''}">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Price (₹)</label>
-                            <input type="number" id="v_price" class="swal2-input !m-0 !w-full" placeholder="0.00" step="0.01" value="${variant ? variant.price : ''}">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Duration (min)</label>
-                            <input type="number" id="v_duration" class="swal2-input !m-0 !w-full" placeholder="30" value="${variant ? variant.duration_minutes : ''}">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Status</label>
-                            <select id="v_status" class="swal2-select !m-0 !w-full !flex">
-                                <option value="Active" ${variant && variant.status === 'Active' ? 'selected' : ''}>Active</option>
-                                <option value="Inactive" ${variant && variant.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Sort Order</label>
-                            <input type="number" id="v_sort" class="swal2-input !m-0 !w-full" placeholder="0" value="${variant ? variant.sort_order : ''}">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Image</label>
-                        <input type="file" id="v_image" class="swal2-file !m-0 !w-full" accept="image/*">
-                        ${variant && variant.image ? `<p class="text-[10px] text-gray-400 mt-1">Leave empty to keep current image</p>` : ''}
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: confirmText,
-            confirmButtonColor: '#000',
-            preConfirm: () => {
-                const name = document.getElementById('v_name').value;
-                const price = document.getElementById('v_price').value;
-                if (!name || !price) {
-                    Swal.showValidationMessage('Name and Price are required');
-                    return false;
-                }
-                return {
-                    name: name,
-                    price: price,
-                    duration: document.getElementById('v_duration').value,
-                    status: document.getElementById('v_status').value,
-                    sort_order: document.getElementById('v_sort').value,
-                    image: document.getElementById('v_image').files[0]
-                };
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                saveVariant(result.value, variant ? variant.id : null);
-            }
-        });
-    }
-
-    function editVariant(id) {
-        // Find existing data from DOM or fetch (here we'll just parse the data-attributes we add)
-        const card = document.querySelector(`.variant-card[data-id="${id}"]`);
-        const variantData = {
-            id: id,
-            name: card.dataset.name,
-            price: card.dataset.price,
-            duration_minutes: card.dataset.duration,
-            status: card.dataset.status,
-            sort_order: card.dataset.sort,
-            image: card.dataset.image
-        };
-        openVariantModal(variantData);
-    }
-
-    function saveVariant(data, variantId = null) {
-        const formData = new FormData();
-        formData.append('name', data.name);
-        formData.append('price', data.price);
-        formData.append('duration_minutes', data.duration || 0);
-        formData.append('status', data.status);
-        formData.append('sort_order', data.sort_order || 0);
-        
-        if (data.image) formData.append('image', data.image);
-        formData.append('_token', '{{ csrf_token() }}');
-
-        if (variantId) {
-            formData.append('_method', 'PATCH');
-        }
-
-        Swal.fire({ title: variantId ? 'Updating...' : 'Saving...', didOpen: () => Swal.showLoading() });
-
-        const url = variantId 
-            ? `/service-variants/${variantId}` 
-            : `{{ route('services.variants.store', $service->id) }}`;
-
-        fetch(url, {
-            method: 'POST', // Use POST with _method=PATCH for multipart/form-data support in PHP
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(r => r.json())
-        .then(res => {
-            if(res.status === 'success') {
-                Swal.fire('Saved!', 'Variant added successfully', 'success').then(() => location.reload());
-            } else {
-                Swal.fire('Error', res.message || 'Could not save variant', 'error');
-            }
-        })
-        .catch(() => Swal.fire('Error', 'Connection failed', 'error'));
-    }
-
-    function deleteVariant(id) {
-        Swal.fire({
-            title: 'Delete Variant?',
-            text: 'This variant will be permanently removed.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Yes, delete'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(`/service-variants/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if(res.status === 'success') location.reload();
-                    else Swal.fire('Error', 'Delete failed', 'error');
-                });
-            }
-        });
-    }
-
-    function confirmDelete() {
-      Swal.fire({
-        title: 'Delete this service?',
-        text: 'This action cannot be undone.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#e11d48',
-        cancelButtonColor: '#9ca3af',
-        confirmButtonText: 'Yes, delete',
-      }).then(r => {
-        if (r.isConfirmed) document.getElementById('deleteForm').submit();
-      });
-    }
-  </script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('serviceTypeSelect').addEventListener('change', updateServiceTypeContext);
+    document.getElementById('hasVariantsToggle').addEventListener('change', toggleVariantPricingState);
+    updateServiceTypeContext();
+    toggleVariantPricingState();
+  });
+</script>
 @endpush

@@ -2,22 +2,26 @@
 
 namespace App\Http\Controllers\Api\Client;
 
-use App\Http\Controllers\Api\Client\BaseController;
-use App\Http\Controllers\Api\Client\ProfileController;
 use App\Http\Resources\Api\CartResource;
 use App\Models\Cart;
-use App\Models\Service;
-use App\Models\Package;
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\Package;
 use App\Models\Promotion;
-use Illuminate\Support\Str;
+use App\Models\Service;
+use App\Models\ServiceVariant;
+use App\Services\SellableServiceResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class CartController extends BaseController
 {
+    public function __construct(
+        protected SellableServiceResolver $sellableResolver
+    ) {
+    }
+
     protected function guard()
     {
         return Auth::guard('api');
@@ -25,55 +29,77 @@ class CartController extends BaseController
 
     public function index(): JsonResponse
     {
-        $cartItems = $this->guard()->user()->carts()->with('item')->get();
+        $cartItems = $this->guard()->user()->carts()->with(['item', 'service', 'variant.service', 'package'])->get();
 
-        $total = $cartItems->sum(function ($cart) {
-            return $cart->quantity * ($cart->item->price ?? 0);
-        });
+        $total = $cartItems->sum(fn ($cart) => $cart->quantity * (($cart->sellable_item->display_price ?? $cart->sellable_item->price) ?? 0));
 
         return $this->success([
             'items' => CartResource::collection($cartItems),
-            'total' => (int) $total,
+            'total' => (float) $total,
         ], 'Cart retrieved successfully.');
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'item_type' => 'required|in:service,package',
+            'item_type' => 'required|in:service,variant,package',
             'item_id' => 'required|integer',
-            'quantity' => 'integer|min:1',
+            'service_id' => 'nullable|integer|exists:services,id',
+            'service_variant_id' => 'nullable|integer|exists:service_variants,id',
+            'quantity' => 'nullable|integer|min:1',
         ]);
 
         $customerId = $this->guard()->id();
+        $quantity = $validated['quantity'] ?? 1;
 
-        // check if item exists
-        if ($validated['item_type'] === 'service') {
-            if (!Service::find($validated['item_id']))
-                return $this->error('Service not found.', 404);
-        } else {
-            if (!Package::find($validated['item_id']))
+        if ($validated['item_type'] === 'package') {
+            $package = Package::find($validated['item_id']);
+            if (!$package) {
                 return $this->error('Package not found.', 404);
-        }
+            }
 
-        $cart = Cart::where([
-            'customer_id' => $customerId,
-            'item_type' => $validated['item_type'],
-            'item_id' => $validated['item_id'],
-        ])->first();
-
-        if ($cart) {
-            $cart->increment('quantity', $validated['quantity'] ?? 1);
-        } else {
-            $cart = Cart::create([
+            $cart = Cart::firstOrCreate([
                 'customer_id' => $customerId,
-                'item_type' => $validated['item_type'],
-                'item_id' => $validated['item_id'],
-                'quantity' => $validated['quantity'] ?? 1,
+                'item_type' => 'package',
+                'item_id' => $package->id,
+            ], [
+                'package_id' => $package->id,
+                'quantity' => 0,
+            ]);
+        } else {
+            $service = Service::with('variants')->find($validated['service_id'] ?? ($validated['item_type'] === 'service' ? $validated['item_id'] : null));
+            $variant = null;
+
+            if ($validated['item_type'] === 'variant') {
+                $variant = ServiceVariant::with('service')->find($validated['service_variant_id'] ?? $validated['item_id']);
+                if (!$variant) {
+                    return $this->error('Variant not found.', 404);
+                }
+                $service = $service ?? $variant->service;
+            }
+
+            if (!$service) {
+                return $this->error('Service not found.', 404);
+            }
+
+            $resolved = $this->sellableResolver->resolveForService($service, $variant);
+            $itemType = $resolved['bookable_type'] === 'variant' ? 'variant' : 'service';
+            $itemId = $resolved['bookable_type'] === 'variant' ? $resolved['variant']->id : $service->id;
+
+            $cart = Cart::firstOrCreate([
+                'customer_id' => $customerId,
+                'item_type' => $itemType,
+                'item_id' => $itemId,
+            ], [
+                'service_id' => $service->id,
+                'service_variant_id' => $resolved['variant']?->id,
+                'quantity' => 0,
             ]);
         }
 
-        return $this->success(new CartResource($cart->refresh()), 'Item added to cart.');
+        $cart->increment('quantity', $quantity);
+
+        return $this->success(new CartResource($cart->fresh(['item', 'service', 'variant.service', 'package'])), 'Item added to cart.');
     }
 
     public function update(Request $request, Cart $cart): JsonResponse
@@ -88,7 +114,7 @@ class CartController extends BaseController
 
         $cart->update($validated);
 
-        return $this->success(new CartResource($cart), 'Cart updated.');
+        return $this->success(new CartResource($cart->fresh(['item', 'service', 'variant.service', 'package'])), 'Cart updated.');
     }
 
     public function destroy(Cart $cart): JsonResponse
@@ -105,13 +131,14 @@ class CartController extends BaseController
     public function clear(): JsonResponse
     {
         $this->guard()->user()->carts()->delete();
+
         return $this->success(null, 'Cart cleared.');
     }
 
     public function checkout(Request $request): JsonResponse
     {
         $customer = $this->guard()->user();
-        $cartItems = $customer->carts()->with('item')->get();
+        $cartItems = $customer->carts()->with(['item', 'service', 'variant.service', 'package'])->get();
 
         if ($cartItems->isEmpty()) {
             return $this->error('Cart is empty.', 422);
@@ -121,16 +148,19 @@ class CartController extends BaseController
             'address' => 'required|string',
             'scheduled_date' => 'required|date|after_or_equal:today',
             'scheduled_slot' => 'required|string',
-            'payment_method' => 'required|string', // online, cod, wallet
+            'payment_method' => 'required|string',
             'coupon_code' => 'nullable|string',
             'coins_used' => 'nullable|integer|min:0',
             'tip_amount_paise' => 'nullable|integer|min:0',
         ]);
 
         \DB::beginTransaction();
+
         try {
             $subtotalPaise = $cartItems->sum(function ($cart) {
-                return $cart->quantity * ($cart->item->price ?? 0) * 100;
+                $price = ($cart->sellable_item->display_price ?? $cart->sellable_item->price ?? 0) * 100;
+
+                return $cart->quantity * (int) round($price);
             });
 
             $discountPaise = 0;
@@ -151,15 +181,13 @@ class CartController extends BaseController
                 }
             }
 
-            $totalPaise = $subtotalPaise - $discountPaise + ($validated['tip_amount_paise'] ?? 0);
-            if ($totalPaise < 0)
-                $totalPaise = 0;
+            $totalPaise = max(0, $subtotalPaise - $discountPaise + ($validated['tip_amount_paise'] ?? 0));
 
             $order = Order::create([
                 'order_number' => 'ORD-' . strtoupper(Str::random(8)),
                 'customer_id' => $customer->id,
                 'address' => $validated['address'],
-                'city' => $customer->city ?? 'Mumbai', // Added city for capacity tracking
+                'city' => $customer->city ?? 'Mumbai',
                 'scheduled_date' => $validated['scheduled_date'],
                 'scheduled_slot' => $validated['scheduled_slot'],
                 'subtotal_paise' => $subtotalPaise,
@@ -170,20 +198,35 @@ class CartController extends BaseController
                 'promotion_id' => $promotionId,
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'status' => 'pending',
-                'customer_notes' => ($validated['tip_amount_paise'] ?? 0) > 0 ? "Tip included: ₹" . ($validated['tip_amount_paise'] / 100) : null,
+                'customer_notes' => ($validated['tip_amount_paise'] ?? 0) > 0 ? 'Tip included: Rs ' . (($validated['tip_amount_paise'] ?? 0) / 100) : null,
             ]);
 
             foreach ($cartItems as $cart) {
+                $sellable = $cart->sellable_item;
+                $displayPrice = (float) ($sellable->display_price ?? $sellable->price ?? 0);
+                $durationMinutes = $sellable->resolved_duration_minutes ?? $sellable->duration_minutes ?? $sellable->duration ?? 0;
+                $itemName = $sellable->name ?? 'Item';
+
                 $order->items()->create([
                     'item_type' => $cart->item_type,
                     'item_id' => $cart->item_id,
-                    'item_name' => $cart->item->name,
+                    'item_name' => $itemName,
                     'quantity' => $cart->quantity,
-                    'unit_price_paise' => ($cart->item->price ?? 0) * 100,
-                    'total_price_paise' => ($cart->quantity * ($cart->item->price ?? 0)) * 100,
+                    'unit_price_paise' => (int) round($displayPrice * 100),
+                    'total_price_paise' => (int) round($cart->quantity * $displayPrice * 100),
+                    'duration_minutes' => (int) $durationMinutes,
+                    'service_id' => $cart->service_id,
+                    'service_variant_id' => $cart->service_variant_id,
+                    'package_id' => $cart->package_id,
+                    'sellable_type' => $cart->item_type,
+                    'sellable_id' => $cart->item_id,
+                    'meta' => $cart->meta,
                 ]);
 
-                // Create a Booking for each cart item
+                if ($cart->item_type === 'package') {
+                    continue;
+                }
+
                 for ($i = 0; $i < $cart->quantity; $i++) {
                     \App\Models\Booking::create([
                         'order_id' => $order->id,
@@ -191,31 +234,32 @@ class CartController extends BaseController
                         'customer_name' => $customer->name,
                         'customer_phone' => $customer->mobile,
                         'city' => $customer->city ?? 'Mumbai',
-                        'service_id' => $cart->item_type === 'service' ? $cart->item_id : null,
-                        'service_name' => $cart->item_type === 'service' ? $cart->item->name : null,
-                        'package_id' => $cart->item_type === 'package' ? $cart->item_id : null,
-                        'package_name' => $cart->item_type === 'package' ? $cart->item->name : null,
+                        'service_id' => $cart->service_id,
+                        'service_variant_id' => $cart->service_variant_id,
+                        'service_name' => $cart->service?->name,
+                        'package_id' => $cart->package_id,
+                        'package_name' => $cart->package?->name,
+                        'sellable_type' => $cart->item_type,
+                        'sellable_id' => $cart->item_id,
                         'date' => $order->scheduled_date,
                         'slot' => $order->scheduled_slot,
                         'status' => 'Pending',
-                        'price' => $cart->item->price ?? 0,
+                        'price' => $displayPrice,
                     ]);
                 }
             }
 
-            // Clear cart
             $customer->carts()->delete();
-
             \DB::commit();
 
             return $this->success([
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
             ], 'Order placed successfully.');
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $exception) {
             \DB::rollBack();
-            return $this->error('Failed to create order: ' . $e->getMessage(), 500);
+
+            return $this->error('Failed to create order: ' . $exception->getMessage(), 500);
         }
     }
 }

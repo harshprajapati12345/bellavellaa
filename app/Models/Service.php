@@ -12,15 +12,25 @@ class Service extends Model
     protected $casts = [
         'service_types' => 'array',
         'has_variants' => 'boolean',
+        'is_bookable' => 'boolean',
+        'allow_direct_booking_with_variants' => 'boolean',
+        'base_price' => 'float',
+        'sale_price' => 'float',
     ];
 
-
-
-    // ─── Relationships ───────────────────────────────────────────────
+    public function serviceType()
+    {
+        return $this->belongsTo(ServiceType::class);
+    }
 
     public function variants()
     {
         return $this->hasMany(ServiceVariant::class)->orderBy('sort_order');
+    }
+
+    public function activeVariants()
+    {
+        return $this->variants()->where('status', 'Active');
     }
 
     public function includedItems()
@@ -38,10 +48,6 @@ class Service extends Model
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * The service group (Luxe, Prime, Ayurveda) this service belongs to.
-     * Null for categories without a group layer (e.g. Hair Studio).
-     */
     public function serviceGroup()
     {
         return $this->belongsTo(ServiceGroup::class);
@@ -52,19 +58,62 @@ class Service extends Model
         return $this->hasMany(Booking::class);
     }
 
-    /**
-     * Packages that include this service (via pivot).
-     */
     public function packages()
     {
         return $this->belongsToMany(Package::class, 'package_service');
     }
 
-    // ─── Computed attributes ─────────────────────────────────────────
+    public function getResolvedCategoryAttribute()
+    {
+        return $this->serviceType?->serviceGroup?->category ?? $this->category;
+    }
 
-    /**
-     * Average rating from approved reviews linked via bookings.
-     */
+    public function getResolvedServiceGroupAttribute()
+    {
+        return $this->serviceType?->serviceGroup ?? $this->serviceGroup;
+    }
+
+    public function getDisplayPriceAttribute(): float
+    {
+        return (float) ($this->sale_price ?: ($this->base_price ?: $this->price ?: 0));
+    }
+
+    public function getOriginalPriceAttribute(): float
+    {
+        return (float) ($this->base_price ?: $this->price ?: 0);
+    }
+
+    public function getIsDiscountedAttribute(): bool
+    {
+        return $this->sale_price !== null && $this->sale_price < $this->original_price;
+    }
+
+    public function getResolvedDurationMinutesAttribute(): ?int
+    {
+        return $this->duration_minutes ?? $this->duration;
+    }
+
+    public function canBeBookedDirectly(): bool
+    {
+        if ($this->status !== 'Active' || !$this->is_bookable) {
+            return false;
+        }
+
+        if (!$this->has_variants) {
+            return true;
+        }
+
+        $activeVariantsCount = $this->relationLoaded('variants')
+            ? $this->variants->where('status', 'Active')->count()
+            : $this->activeVariants()->count();
+
+        if ($activeVariantsCount === 0) {
+            return true;
+        }
+
+        return (bool) $this->allow_direct_booking_with_variants;
+    }
+
     public function getAverageRatingAttribute(): float
     {
         return (float) DB::table('reviews')
@@ -74,9 +123,6 @@ class Service extends Model
             ->avg('rating') ?? 0.0;
     }
 
-    /**
-     * Total count of approved reviews.
-     */
     public function getTotalReviewsAttribute(): int
     {
         return (int) DB::table('reviews')

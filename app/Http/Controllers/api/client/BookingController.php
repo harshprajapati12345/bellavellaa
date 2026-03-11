@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Client;
 
-use App\Http\Controllers\Api\Client\BaseController;
 use App\Http\Resources\Api\BookingResource;
 use App\Models\Booking;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +17,7 @@ class BookingController extends BaseController
 
     public function index(Request $request): JsonResponse
     {
-        $status = $request->query('status', 'all'); // all, Upcoming, Completed, Cancelled
+        $status = $request->query('status', 'all');
         $customer = $this->guard()->user();
 
         $query = $customer->bookingsRel();
@@ -31,7 +30,10 @@ class BookingController extends BaseController
             $query->where('status', 'Cancelled');
         }
 
-        $bookings = $query->with(['service', 'professional'])->latest()->get();
+        $bookings = $query
+            ->with(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])
+            ->latest()
+            ->get();
 
         return $this->success(BookingResource::collection($bookings), 'Bookings retrieved successfully.');
     }
@@ -42,7 +44,8 @@ class BookingController extends BaseController
             return $this->error('Unauthorized.', 403);
         }
 
-        $booking->load(['service', 'professional', 'package']);
+        $booking->load(['customer', 'order', 'service', 'variant.service', 'professional', 'package']);
+
         return $this->success(new BookingResource($booking), 'Booking details retrieved successfully.');
     }
 
@@ -58,7 +61,7 @@ class BookingController extends BaseController
 
         $booking->update(['status' => 'Cancelled']);
 
-        return $this->success(new BookingResource($booking), 'Booking cancelled successfully.');
+        return $this->success(new BookingResource($booking->fresh(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])), 'Booking cancelled successfully.');
     }
 
     public function reschedule(Request $request, Booking $booking): JsonResponse
@@ -76,7 +79,6 @@ class BookingController extends BaseController
             return $this->error('Cannot reschedule a ' . strtolower($booking->status) . ' booking.', 422);
         }
 
-        // Check capacity for the new slot
         $city = $booking->city ?? 'Mumbai';
         $capacity = \App\Models\Professional::where('city', $city)
             ->where('status', 'Active')
@@ -87,7 +89,7 @@ class BookingController extends BaseController
             ->where('slot', $validated['slot'])
             ->where('city', $city)
             ->where('status', '!=', 'Cancelled')
-            ->where('id', '!=', $booking->id) // Exclude self
+            ->where('id', '!=', $booking->id)
             ->count();
 
         if ($occupied >= $capacity) {
@@ -96,9 +98,9 @@ class BookingController extends BaseController
 
         $booking->update([
             'date' => $validated['date'],
-            'slot' => $validated['slot']
+            'slot' => $validated['slot'],
         ]);
 
-        return $this->success(new BookingResource($booking), 'Booking rescheduled successfully.');
+        return $this->success(new BookingResource($booking->fresh(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])), 'Booking rescheduled successfully.');
     }
 }

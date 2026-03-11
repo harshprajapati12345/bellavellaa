@@ -9,15 +9,30 @@ use Illuminate\Validation\Rule;
 
 class ServiceGroupController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $groups = ServiceGroup::with('category')->orderBy('sort_order')->get();
-        return view('service-groups.index', compact('groups'));
+        $categories = Category::where('type', 'services')->orderBy('name')->get(['id', 'name']);
+
+        $groups = ServiceGroup::with('category')
+            ->withCount(['serviceTypes', 'services'])
+            ->when($request->filled('category_id'), fn ($query) => $query->where('category_id', $request->integer('category_id')))
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('sort_order')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('service-groups.index', compact('groups', 'categories'));
     }
 
     public function create()
     {
-        // Only 'services' type categories can have service groups
         $categories = Category::where('type', 'services')
             ->where('status', 'Active')
             ->orderBy('sort_order')
@@ -35,12 +50,10 @@ class ServiceGroupController extends Controller
             'sort_order'  => 'nullable|integer|min:0',
         ]);
 
-        // Verify category is services-type
         $category = Category::whereKey($request->category_id)
             ->where('type', 'services')
             ->firstOrFail();
 
-        // Auto-generate globally unique slug from category slug + group name
         $slug = ServiceGroup::generateSlug($category, $request->name);
 
         $imagePath = null;
@@ -86,7 +99,6 @@ class ServiceGroupController extends Controller
             ->where('type', 'services')
             ->firstOrFail();
 
-        // Regenerate slug if name or category changed
         $needsNewSlug = $request->name !== $serviceGroup->name
             || (int) $request->category_id !== (int) $serviceGroup->category_id;
 
@@ -124,12 +136,6 @@ class ServiceGroupController extends Controller
             ->with('success', 'Service group deleted.');
     }
 
-    /**
-     * AJAX helper: returns active service groups for a given category.
-     * Called by the service create/edit form JS to populate group dropdown.
-     *
-     * GET /admin/categories/{category}/service-groups
-     */
     public function byCategory(Category $category)
     {
         $groups = $category->serviceGroups()

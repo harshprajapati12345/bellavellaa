@@ -20,6 +20,7 @@ class MasterSeeder extends Seeder
         DB::table('addresses')->truncate();
         DB::table('package_service')->truncate();
         DB::table('packages')->truncate();
+        DB::table('service_types')->truncate();
         DB::table('services')->truncate();
         DB::table('service_groups')->truncate();
         DB::table('categories')->truncate();
@@ -27,6 +28,7 @@ class MasterSeeder extends Seeder
         DB::table('bookings')->truncate();
         DB::table('reviews')->truncate();
         DB::table('media')->truncate();
+        DB::table('category_banners')->truncate();
         DB::table('offers')->truncate();
         DB::table('homepage_contents')->truncate();
         DB::table('kit_products')->truncate();

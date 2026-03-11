@@ -20,7 +20,17 @@ class Category extends Model
      */
     public function serviceGroups()
     {
-        return $this->hasMany(ServiceGroup::class);
+        return $this->hasMany(ServiceGroup::class)->orderBy('sort_order');
+    }
+
+    public function serviceTypes()
+    {
+        return $this->hasManyThrough(
+            ServiceType::class,
+            ServiceGroup::class,
+            'category_id',
+            'service_group_id'
+        );
     }
 
     /**
@@ -36,7 +46,7 @@ class Category extends Model
      */
     public function services()
     {
-        return $this->hasMany(Service::class);
+        return $this->hasMany(Service::class)->orderBy('sort_order');
     }
 
     /**
@@ -45,7 +55,9 @@ class Category extends Model
      */
     public function directServices()
     {
-        return $this->hasMany(Service::class)->whereNull('service_group_id');
+        return $this->hasMany(Service::class)
+            ->whereNull('service_group_id')
+            ->orderBy('sort_order');
     }
 
     /**

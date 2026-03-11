@@ -3,26 +3,19 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // ── OTP Rate Limiter (5 requests/min per mobile) ──────────
         RateLimiter::for('otp', function (Request $request) {
             return Limit::perMinute(5)->by($request->input('mobile', $request->ip()));
         });
@@ -39,13 +32,13 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        // ── Polymorphic Relation Morph Map ────────────────────────
-        \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
-            'service'      => \App\Models\Service::class,
-            'package'      => \App\Models\Package::class,
+        Relation::morphMap([
+            'service' => \App\Models\Service::class,
+            'variant' => \App\Models\ServiceVariant::class,
+            'package' => \App\Models\Package::class,
             'professional' => \App\Models\Professional::class,
-            'customer'     => \App\Models\Customer::class,
-            'client'       => \App\Models\Customer::class,
+            'customer' => \App\Models\Customer::class,
+            'client' => \App\Models\Customer::class,
         ]);
     }
 }

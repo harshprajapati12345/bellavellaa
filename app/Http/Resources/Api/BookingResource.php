@@ -7,22 +7,30 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class BookingResource extends JsonResource
 {
-    /**
-     * Transform the booking into an array.
-     */
     public function toArray(Request $request): array
     {
+        $sellable = $this->sellable_item;
+
         return [
             'id' => $this->id,
             'customer' => new CustomerResource($this->whenLoaded('customer')),
             'service' => new ServiceResource($this->whenLoaded('service')),
+            'variant' => new ServiceVariantResource($this->whenLoaded('variant')),
             'package' => new PackageResource($this->whenLoaded('package')),
             'professional' => new ProfessionalResource($this->whenLoaded('professional')),
             'booking_date' => $this->date,
             'booking_time' => $this->slot,
             'status' => $this->status,
+            'sellable_type' => $this->sellable_type,
+            'sellable_id' => $this->sellable_id,
+            'sellable_name' => $this->sellable_name,
+            'service_name' => $this->service?->name ?? $this->service_name,
+            'variant_name' => $this->variant?->name,
+            'display_name' => $this->sellable_name,
             'total_amount' => $this->price,
-            'address' => $this->address,
+            'display_price' => $sellable->display_price ?? $sellable->price ?? $this->price,
+            'duration_minutes' => $sellable->resolved_duration_minutes ?? $sellable->duration_minutes ?? $sellable->duration ?? null,
+            'address' => $this->order?->address,
             'notes' => $this->notes,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

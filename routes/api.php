@@ -53,15 +53,16 @@ Route::prefix('client')->group(function () {
 
     // Categories
     Route::get('categories', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'index']);
-    Route::get('categories/{id}', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'show']);
-    Route::get('categories/{id}/screen', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'screenData']);
-    Route::get('categories/{id}/page', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'pageData']);
-    Route::get('categories/{id}/details', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'details']);
-    Route::get('categories/{id}/service-groups', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'serviceGroups']);
+    Route::get('categories/{slug}', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'show']);
+    Route::get('categories/{slug}/screen', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'screenData']);
+    Route::get('categories/{slug}/page', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'pageData']);
+    Route::get('categories/{slug}/details', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'details']);
+    Route::get('categories/{slug}/service-groups', [\App\Http\Controllers\api\client\ClientCategoryController::class, 'serviceGroups']);
 
     // Dedicated Resource Details
     Route::get('service-groups/{id}', [\App\Http\Controllers\api\client\ClientServiceGroupController::class, 'show']);
     Route::get('services/{id}', [\App\Http\Controllers\api\client\ClientServiceController::class, 'show']);
+    Route::get('service-hierarchy/{nodeKey}', [\App\Http\Controllers\Api\Client\ClientServiceHierarchyController::class, 'show']);
     Route::get('services/{id}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class, 'index']);
 
     // Original (Legacy Compatibility)
@@ -309,3 +310,5 @@ Route::prefix('admin')->group(function () {
         });
     });
 });
+
+
