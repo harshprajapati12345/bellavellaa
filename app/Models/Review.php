@@ -13,4 +13,6 @@ class Review extends Model
 
     public function customer() { return $this->belongsTo(Customer::class); }
     public function booking() { return $this->belongsTo(Booking::class); }
+    public function service() { return $this->belongsTo(Service::class); }
+    public function variant() { return $this->belongsTo(ServiceVariant::class, 'service_variant_id'); }
 }

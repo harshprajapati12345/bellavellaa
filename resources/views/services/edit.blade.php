@@ -115,12 +115,42 @@
         </div>
 
         <div id="variantsSection" class="rounded-[2rem] border border-gray-100 bg-white p-8 shadow-sm">
-          <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-900">Level 5 Variants</h3>
               <p class="mt-1 text-sm text-gray-400">These remain the sellable items when variant mode is enabled.</p>
             </div>
-            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">{{ $service->variants->count() }} variants</span>
+            <div class="flex items-center gap-3">
+              <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">{{ $service->variants->count() }} variants</span>
+              <button type="button" id="addVariantToggle" class="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white">Add Variant</button>
+            </div>
+          </div>
+
+          <div id="variantFeedback" class="mt-4 hidden rounded-xl border px-4 py-3 text-sm"></div>
+
+          <div id="createVariantForm" class="mt-6 hidden rounded-2xl border border-gray-200 bg-gray-50 p-5">
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Variant Name <span class="text-red-400">*</span></label>
+                <input type="text" data-variant-field="name" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Price <span class="text-red-400">*</span></label>
+                <input type="number" data-variant-field="price" min="0" step="0.01" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Duration Minutes</label>
+                <input type="number" data-variant-field="duration_minutes" min="0" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700">Image</label>
+                <input type="file" data-variant-field="image" accept="image/*" class="block w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-800">
+              </div>
+            </div>
+            <div class="mt-4 flex items-center justify-end gap-3">
+              <button type="button" id="cancelAddVariant" class="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700">Cancel</button>
+              <button type="button" id="saveVariantButton" class="rounded-xl bg-black px-4 py-3 text-sm font-medium text-white">Save Variant</button>
+            </div>
           </div>
 
           <div class="mt-6 overflow-hidden rounded-2xl border border-gray-100">
@@ -131,19 +161,59 @@
                   <th class="px-4 py-3">Price</th>
                   <th class="px-4 py-3">Duration</th>
                   <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
                 @forelse($service->variants as $variant)
-                  <tr>
+                  <tr class="variant-row" data-variant-id="{{ $variant->id }}">
                     <td class="px-4 py-3 font-medium text-gray-900">{{ $variant->name }}</td>
                     <td class="px-4 py-3 text-gray-700">{{ number_format($variant->display_price ?? $variant->price, 2) }}</td>
                     <td class="px-4 py-3 text-gray-700">{{ $variant->duration_minutes ?? $service->duration_minutes ?? $service->duration }} min</td>
                     <td class="px-4 py-3"><span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $variant->status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">{{ $variant->status }}</span></td>
+                    <td class="px-4 py-3">
+                      <div class="flex justify-end gap-2">
+                        <button type="button" class="edit-variant rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700">Edit</button>
+                        <button type="button" class="delete-variant rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="variant-edit-row hidden bg-gray-50/60" data-variant-id="{{ $variant->id }}">
+                    <td colspan="5" class="px-4 py-4">
+                      <div class="editVariantForm grid gap-4 md:grid-cols-4" data-variant-id="{{ $variant->id }}">
+                        <div>
+                          <label class="mb-2 block text-xs font-medium uppercase tracking-wider text-gray-500">Name</label>
+                          <input type="text" data-variant-field="name" value="{{ $variant->name }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+                        </div>
+                        <div>
+                          <label class="mb-2 block text-xs font-medium uppercase tracking-wider text-gray-500">Price</label>
+                          <input type="number" data-variant-field="price" min="0" step="0.01" value="{{ $variant->price }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+                        </div>
+                        <div>
+                          <label class="mb-2 block text-xs font-medium uppercase tracking-wider text-gray-500">Duration</label>
+                          <input type="number" data-variant-field="duration_minutes" min="0" value="{{ $variant->duration_minutes }}" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+                        </div>
+                        <div>
+                          <label class="mb-2 block text-xs font-medium uppercase tracking-wider text-gray-500">Status</label>
+                          <select data-variant-field="status" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 focus:border-black/40 focus:outline-none">
+                            <option value="Active" @selected($variant->status === 'Active')>Active</option>
+                            <option value="Inactive" @selected($variant->status === 'Inactive')>Inactive</option>
+                          </select>
+                        </div>
+                        <div class="md:col-span-3">
+                          <label class="mb-2 block text-xs font-medium uppercase tracking-wider text-gray-500">Replace Image</label>
+                          <input type="file" data-variant-field="image" accept="image/*" class="block w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-gray-800">
+                        </div>
+                        <div class="flex items-end justify-end gap-3">
+                          <button type="button" class="cancel-edit rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700">Cancel</button>
+                          <button type="button" class="save-edit rounded-xl bg-black px-4 py-3 text-sm font-medium text-white">Update</button>
+                        </div>
+                      </div>
+                    </td>
                   </tr>
                 @empty
-                  <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-400">No variants yet. Variant CRUD stays on the existing service variant endpoints after this service is saved.</td>
+                  <tr id="noVariantsRow">
+                    <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-400">No variants yet. Add the first variant here.</td>
                   </tr>
                 @endforelse
               </tbody>
@@ -179,6 +249,8 @@
 
 @push('scripts')
 <script>
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
   function updateServiceTypeContext() {
     const select = document.getElementById('serviceTypeSelect');
     const option = select.options[select.selectedIndex];
@@ -191,9 +263,158 @@
     document.getElementById('variantNotice').classList.toggle('hidden', !hasVariants);
   }
 
+  function showVariantFeedback(message, type = 'success') {
+    const feedback = document.getElementById('variantFeedback');
+    feedback.textContent = message;
+    feedback.classList.remove('hidden', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700', 'border-red-200', 'bg-red-50', 'text-red-700');
+    if (type === 'error') {
+      feedback.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
+    } else {
+      feedback.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
+    }
+  }
+
+  function toggleCreateVariantForm(force) {
+    document.getElementById('createVariantForm').classList.toggle('hidden', force === undefined ? !document.getElementById('createVariantForm').classList.contains('hidden') : !force);
+  }
+
+  async function submitVariantForm(url, formData, method = 'POST') {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'Accept': 'application/json',
+      },
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message = payload.message || Object.values(payload.errors || {}).flat().join(' ') || 'Variant request failed.';
+      throw new Error(message);
+    }
+
+    return payload;
+  }
+
+  function validateVariantFields(fields) {
+    if (!fields.name || !fields.name.trim()) {
+      throw new Error('Variant name is required.');
+    }
+
+    if (fields.price === '' || fields.price === null || fields.price === undefined) {
+      throw new Error('Variant price is required.');
+    }
+
+    if (Number(fields.price) < 0) {
+      throw new Error('Variant price must be 0 or more.');
+    }
+
+    if (fields.duration_minutes !== '' && Number(fields.duration_minutes) < 0) {
+      throw new Error('Duration must be 0 or more.');
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('serviceTypeSelect').addEventListener('change', updateServiceTypeContext);
     document.getElementById('hasVariantsToggle').addEventListener('change', toggleVariantPricingState);
+
+    document.getElementById('addVariantToggle')?.addEventListener('click', () => toggleCreateVariantForm(true));
+    document.getElementById('cancelAddVariant')?.addEventListener('click', () => {
+      document.querySelectorAll('#createVariantForm [data-variant-field]').forEach((input) => {
+        if (input.type === 'file' || input.type === 'text' || input.type === 'number') {
+          input.value = '';
+        }
+      });
+      toggleCreateVariantForm(false);
+    });
+
+    document.getElementById('saveVariantButton')?.addEventListener('click', async () => {
+      try {
+        const panel = document.getElementById('createVariantForm');
+        const formData = new FormData();
+        const fields = {};
+        panel.querySelectorAll('[data-variant-field]').forEach((input) => {
+          if (input.type === 'file') {
+            if (input.files.length > 0) {
+              formData.append(input.dataset.variantField, input.files[0]);
+            }
+            return;
+          }
+          const key = input.dataset.variantField;
+          fields[key] = input.value;
+          formData.append(key, input.value);
+        });
+        validateVariantFields(fields);
+        await submitVariantForm(@json(route('services.variants.store', $service)), formData);
+        showVariantFeedback('Variant created successfully. Refreshing list...');
+        window.location.reload();
+      } catch (error) {
+        showVariantFeedback(error.message, 'error');
+      }
+    });
+
+    document.querySelectorAll('.edit-variant').forEach((button) => {
+      button.addEventListener('click', () => {
+        const row = button.closest('[data-variant-id]');
+        document.querySelector(`.variant-edit-row[data-variant-id="${row.dataset.variantId}"]`)?.classList.remove('hidden');
+      });
+    });
+
+    document.querySelectorAll('.cancel-edit').forEach((button) => {
+      button.addEventListener('click', () => {
+        button.closest('.variant-edit-row').classList.add('hidden');
+      });
+    });
+
+    document.querySelectorAll('.save-edit').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          const currentForm = button.closest('.editVariantForm');
+          const formData = new FormData();
+          const fields = {};
+          currentForm.querySelectorAll('[data-variant-field]').forEach((field) => {
+            if (field.type === 'file') {
+              if (field.files.length > 0) {
+                formData.append(field.dataset.variantField, field.files[0]);
+              }
+              return;
+            }
+            const key = field.dataset.variantField;
+            fields[key] = field.value;
+            formData.append(key, field.value);
+          });
+          validateVariantFields(fields);
+          formData.append('_method', 'PATCH');
+          await submitVariantForm(@json(url('service-variants')) + '/' + currentForm.dataset.variantId, formData, 'POST');
+          showVariantFeedback('Variant updated successfully. Refreshing list...');
+          window.location.reload();
+        } catch (error) {
+          showVariantFeedback(error.message, 'error');
+        }
+      });
+    });
+
+    document.querySelectorAll('.delete-variant').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('[data-variant-id]');
+        if (!confirm('Delete this variant?')) {
+          return;
+        }
+
+        try {
+          const formData = new FormData();
+          formData.append('_method', 'DELETE');
+          await submitVariantForm(@json(url('service-variants')) + '/' + row.dataset.variantId, formData, 'POST');
+          showVariantFeedback('Variant deleted successfully. Refreshing list...');
+          window.location.reload();
+        } catch (error) {
+          showVariantFeedback(error.message, 'error');
+        }
+      });
+    });
+
     updateServiceTypeContext();
     toggleVariantPricingState();
   });

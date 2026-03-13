@@ -15,10 +15,18 @@ class ClientReviewController extends Controller
     /**
      * Fetch paginated reviews for a specific service.
      */
-    public function index($serviceId)
+    public function index(Request $request, $serviceId)
     {
+        $variantId = $request->integer('service_variant_id');
+
         $reviews = Review::with('customer')
-            ->whereHas('booking', fn($q) => $q->where('service_id', $serviceId))
+            ->whereHas('booking', function ($query) use ($serviceId, $variantId) {
+                $query->where('service_id', $serviceId);
+
+                if ($variantId) {
+                    $query->where('service_variant_id', $variantId);
+                }
+            })
             ->where('status', 'Approved')
             ->orderByDesc('created_at')
             ->paginate(10);
@@ -64,7 +72,8 @@ class ClientReviewController extends Controller
             $review = Review::create([
                 'booking_id' => $bookingId,
                 'customer_id' => $request->user()->id,
-                'service_id' => $booking->service_id, // Explicitly linking service for easier lookup
+                'service_id' => $booking->service_id,
+                'service_variant_id' => $booking->service_variant_id,
                 'rating' => $request->rating,
                 'comment' => $request->comment,
                 'video_path' => $request->video_path,

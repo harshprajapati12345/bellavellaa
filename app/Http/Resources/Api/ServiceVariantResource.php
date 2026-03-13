@@ -29,6 +29,10 @@ class ServiceVariantResource extends JsonResource
             'bookable_type' => $this->isBookable() ? 'variant' : null,
             'sku' => $this->sku,
             'sort_order' => $this->sort_order,
+            'average_rating' => $this->average_rating,
+            'rating_avg' => $this->average_rating,
+            'total_reviews' => $this->total_reviews,
+            'review_count' => $this->total_reviews,
         ];
     }
 }
