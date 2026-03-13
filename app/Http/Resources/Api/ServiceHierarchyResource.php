@@ -17,6 +17,7 @@ class ServiceHierarchyResource extends JsonResource
         $item = $this->resource['item'] ?? null;
         $level = $this->resource['level'] ?? 'unknown';
         $children = collect($this->resource['children'] ?? []);
+        $banners = $this->resource['banners'] ?? [];
 
         return [
             'level' => $level,
@@ -43,6 +44,17 @@ class ServiceHierarchyResource extends JsonResource
             'has_variants' => $this->resource['has_variants'] ?? false,
             'is_bookable' => (bool) ($this->resource['is_bookable'] ?? false),
             'bookable_type' => $this->resource['bookable_type'] ?? null,
+            'banners' => [
+                'page_header' => HierarchyBannerResource::collection(
+                    collect($banners['page_header'] ?? [])
+                ),
+                'promo_banner' => HierarchyBannerResource::collection(
+                    collect($banners['promo_banner'] ?? [])
+                ),
+                'popup_banner' => HierarchyBannerResource::collection(
+                    collect($banners['popup_banner'] ?? [])
+                ),
+            ],
         ];
     }
 

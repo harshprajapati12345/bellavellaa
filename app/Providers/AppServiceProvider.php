@@ -33,6 +33,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Relation::morphMap([
+            'category' => \App\Models\Category::class,
+            'service_group' => \App\Models\ServiceGroup::class,
+            'service_type' => \App\Models\ServiceType::class,
             'service' => \App\Models\Service::class,
             'variant' => \App\Models\ServiceVariant::class,
             'package' => \App\Models\Package::class,

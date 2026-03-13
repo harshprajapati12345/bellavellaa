@@ -25,6 +25,7 @@ use App\Http\Controllers\adminroutes\ServiceGroupController;
 use App\Http\Controllers\adminroutes\ServiceVariantController;
 use App\Http\Controllers\adminroutes\ServiceTypeController;
 use App\Http\Controllers\adminroutes\CategoryBannerController;
+use App\Http\Controllers\adminroutes\HierarchyBannerController;
 
 // ─── Storage File Server ───────────────────────────────────────────────────────
 // Workaround for Windows + artisan serve: the public/storage symlink may not
@@ -62,6 +63,8 @@ Route::middleware(['auth:admin'])->group(function () {
 
     Route::resource('category-banners', CategoryBannerController::class);
     Route::patch('category-banners/{category_banner}/toggle-status', [CategoryBannerController::class, 'toggleStatus'])->name('category-banners.toggle-status');
+    Route::resource('hierarchy-banners', HierarchyBannerController::class)->except(['show']);
+    Route::patch('hierarchy-banners/{hierarchy_banner}/toggle-status', [HierarchyBannerController::class, 'toggleStatus'])->name('hierarchy-banners.toggle-status');
 
     // Service Groups (sub-tier under service-type categories)
     Route::resource('service-groups', ServiceGroupController::class);
@@ -148,5 +151,3 @@ Route::middleware(['auth:admin'])->group(function () {
 
 
 });
-
-

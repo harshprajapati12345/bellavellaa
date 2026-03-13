@@ -56,6 +56,7 @@ class MasterSeeder extends Seeder
         DB::table('promotion_usages')->truncate();
         DB::table('service_options')->truncate();
         DB::table('service_variants')->truncate();
+        DB::table('hierarchy_banners')->truncate();
         DB::table('tags')->truncate();
         DB::table('service_tag')->truncate();
         DB::table('kit_categories')->truncate();

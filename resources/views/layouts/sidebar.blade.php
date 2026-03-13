@@ -5,6 +5,7 @@ $section = '';
 if (str_starts_with($routeName, 'dashboard')) $section = 'dashboard';
 elseif (str_starts_with($routeName, 'categories')) $section = 'categories';
 elseif (str_starts_with($routeName, 'category-banners')) $section = 'category-banners';
+elseif (str_starts_with($routeName, 'hierarchy-banners')) $section = 'hierarchy-banners';
 elseif (str_starts_with($routeName, 'services')) $section = 'services';
 elseif (str_starts_with($routeName, 'service-groups')) $section = 'service-groups';
 elseif (str_starts_with($routeName, 'packages')) $section = 'packages';
@@ -116,6 +117,12 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->cou
             class="flex items-center gap-3 px-4 py-3 {{ $section === 'category-banners' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
             <i data-lucide="images" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
             <span class="font-normal text-base text-black">Category Banners</span>
+          </a>
+
+          <a href="{{ route('hierarchy-banners.index') }}"
+            class="flex items-center gap-3 px-4 py-3 {{ $section === 'hierarchy-banners' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+            <i data-lucide="gallery-horizontal-end" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+            <span class="font-normal text-base text-black">Service Flow Banners</span>
           </a>
 
           <!-- Services -->

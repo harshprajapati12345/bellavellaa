@@ -11,6 +11,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ServiceHierarchyService
 {
+    public function __construct(
+        protected HierarchyBannerService $bannerService
+    ) {
+    }
+
     public function resolveNode(string $nodeKey, ?string $level = null): array
     {
         $level = $this->normalizeLevel($level);
@@ -55,6 +60,7 @@ class ServiceHierarchyService
             'breadcrumbs' => [$category],
             'is_bookable' => false,
             'bookable_type' => null,
+            'banners' => $this->bannerService->forTarget($category),
         ];
     }
 
@@ -77,6 +83,7 @@ class ServiceHierarchyService
             'breadcrumbs' => [$group->category, $group],
             'is_bookable' => false,
             'bookable_type' => null,
+            'banners' => $this->bannerService->forTarget($group),
         ];
     }
 
@@ -95,6 +102,7 @@ class ServiceHierarchyService
             'breadcrumbs' => [$type->serviceGroup?->category, $type->serviceGroup, $type],
             'is_bookable' => false,
             'bookable_type' => null,
+            'banners' => $this->bannerService->forTarget($type),
         ];
     }
 
@@ -124,6 +132,7 @@ class ServiceHierarchyService
             'is_bookable' => $service->canBeBookedDirectly(),
             'bookable_type' => $service->canBeBookedDirectly() ? 'service' : null,
             'has_variants' => $hasVariants,
+            'banners' => $this->bannerService->forTarget($service),
         ];
     }
 
@@ -145,6 +154,7 @@ class ServiceHierarchyService
             ],
             'is_bookable' => $variant->isBookable(),
             'bookable_type' => $variant->isBookable() ? 'variant' : null,
+            'banners' => $this->bannerService->forTarget($variant),
         ];
     }
 
