@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MasterSeeder::class,
             ServiceHierarchySeeder::class,
+            HairColourHierarchySeeder::class,
             CategoryBannerSeeder::class,
             HomepageContentSeeder::class,
             HierarchyBannerSeeder::class,
