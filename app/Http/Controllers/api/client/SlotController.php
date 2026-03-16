@@ -59,7 +59,7 @@ class SlotController extends BaseController
         // 2. Count occupied slots from Bookings (not Cancelled) in this city
         $bookingCounts = \App\Models\Booking::whereDate('date', $date)
             ->where('city', $city)
-            ->where('status', '!=', 'Cancelled')
+            ->where('status', '!=', 'cancelled')
             ->select('slot', \DB::raw('count(*) as count'))
             ->groupBy('slot')
             ->pluck('count', 'slot')

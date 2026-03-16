@@ -21,11 +21,17 @@ class DashboardController extends BaseController
         $today = Carbon::today()->toDateString();
 
         // All active bookings assigned to professional
-        $recentBookings = Booking::where('professional_id', $professional->id)
-            ->whereIn('status', ['Assigned', 'Accepted', 'Started', 'In Progress', 'Arrived'])
+        $recentBookings = Booking::with('customer')
+            ->where('professional_id', $professional->id)
+            ->whereIn('status', ['assigned', 'accepted', 'in_progress', 'arrived'])
             ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
-            ->get();
+            ->get()
+            ->map(function (\App\Models\Booking $b) {
+                $arr = $b->toArray();
+                $arr['customer_phone'] = $b->customer?->phone ?? $b->customer?->mobile ?? null;
+                return $arr;
+            });
 
         $cashWallet = Wallet::where('holder_type', 'professional')
             ->where('holder_id', $professional->id)
@@ -36,7 +42,7 @@ class DashboardController extends BaseController
         // Pending Requests (Only show if deposit >= 1500)
         $pendingRequestsWait = 0;
         if ($balancePaise >= 150000) {
-            $pendingRequestsWait = Booking::whereIn('status', ['Unassigned', 'Pending'])
+            $pendingRequestsWait = Booking::whereIn('status', ['unassigned', 'pending'])
                 ->whereNull('professional_id')
                 ->where('city', $professional->city)
                 ->count();
@@ -47,7 +53,7 @@ class DashboardController extends BaseController
             'pending_requests' => $pendingRequestsWait,
             'todays_earnings'  => (float) Booking::where('professional_id', $professional->id)
                                     ->where('date', $today)
-                                    ->where('status', 'Completed')
+                                    ->where('status', 'completed')
                                     ->get()
                                     ->sum(fn($b) => $b->price - ($b->commission ?? 0)),
             'total_earnings'   => $professional->earnings,
@@ -66,12 +72,27 @@ class DashboardController extends BaseController
     {
         $professional = $request->user('professional-api');
 
-        // Logic to find current started/in-progress job
-        $activeJob = Booking::where('professional_id', $professional->id)
-            ->whereIn('status', ['Started', 'In Progress'])
+        // Safety check for professional object and offline status
+        if (!$professional || !$professional->is_online) {
+            return $this->success(null, 'Professional is offline or not found.');
+        }
+
+        // We include all active workflow statuses so the card stays visible
+        $booking = Booking::with('customer')
+            ->where('professional_id', $professional->id)
+            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'in_progress', 'payment_pending'])
+            ->latest()
             ->first();
 
-        return $this->success($activeJob, 'Active job retrieved.');
+        if (!$booking) {
+            return $this->success(null, 'No active job.');
+        }
+
+        // Append customer phone so Flutter can open the dialer
+        $data = $booking->toArray();
+        $data['customer_phone'] = $booking->customer?->phone ?? $booking->customer?->mobile ?? null;
+
+        return $this->success($data, 'Active job retrieved.');
     }
 
     /**
@@ -86,7 +107,7 @@ class DashboardController extends BaseController
 
         $bookings = Booking::where('professional_id', $professional->id)
             ->where('date', $date)
-            ->whereNotIn('status', ['Cancelled'])
+            ->whereNotIn('status', ['cancelled'])
             ->orderBy('slot', 'asc')
             ->get()
             ->map(fn($b) => [

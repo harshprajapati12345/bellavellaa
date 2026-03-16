@@ -9,15 +9,24 @@ use App\Services\BookingService;
 use App\Http\Requests\Professional\Job\ScanKitRequest;
 use App\Http\Requests\Professional\Job\CompleteJobRequest;
 use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
+use App\Services\FirebaseService;
 use Illuminate\Support\Str;
+use App\Events\JobUpdate;
 
 class JobController extends BaseController
 {
+    protected $firebase;
+
+    public function __construct(FirebaseService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
     public function arrived(Request $request, $id): JsonResponse
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'Arrived']);
+            $booking->update(['status' => 'arrived']);
+            $this->sendDashboardUpdate($booking);
         }
         return $this->success(null, 'Arrival marked successfully.');
     }
@@ -29,7 +38,8 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'Started']); // or 'On The Way'
+            $booking->update(['status' => 'on_the_way']);
+            $this->sendDashboardUpdate($booking);
         }
         return $this->success(null, 'Journey started.');
     }
@@ -38,13 +48,24 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $updateData = ['status' => 'In Progress'];
+            $updateData = ['status' => 'in_progress'];
             if (!$booking->service_started_at) {
                 $updateData['service_started_at'] = now();
             }
             $booking->update($updateData);
+            $this->sendDashboardUpdate($booking);
         }
         return $this->success(null, 'Service started.');
+    }
+
+    public function finishService(Request $request, $id): JsonResponse
+    {
+        $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update(['status' => 'completed']);
+            $this->sendDashboardUpdate($booking);
+        }
+        return $this->success(null, 'Service finished and completed.');
     }
 
     /**
@@ -82,6 +103,16 @@ class JobController extends BaseController
         $amountPaise = (int) round($booking->price * 100);
 
         try {
+            if (config('services.razorpay.mock')) {
+                return $this->success([
+                    'order_id'     => 'order_mock_' . strtolower(Str::random(14)),
+                    'amount'       => $amountPaise,
+                    'currency'     => 'INR',
+                    'receipt'      => 'booking_mock_' . $id . '_' . Str::random(4),
+                    'is_mock'      => true,
+                ], 'Razorpay mock order created.');
+            }
+
             $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
             $order = $api->order->create([
                 'receipt'  => 'booking_' . $id . '_' . Str::random(4),
@@ -115,13 +146,15 @@ class JobController extends BaseController
         ]);
 
         try {
-            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-            $attributes = [
-                'razorpay_order_id'   => $validated['razorpay_order_id'],
-                'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                'razorpay_signature'  => $validated['razorpay_signature']
-            ];
-            $api->utility->verifyPaymentSignature($attributes);
+            if (!config('services.razorpay.mock')) {
+                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                $attributes = [
+                    'razorpay_order_id'   => $validated['razorpay_order_id'],
+                    'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                    'razorpay_signature'  => $validated['razorpay_signature']
+                ];
+                $api->utility->verifyPaymentSignature($attributes);
+            }
         } catch (\Exception $e) {
             return $this->error('Payment verification failed.', 422);
         }
@@ -130,5 +163,22 @@ class JobController extends BaseController
         BookingService::completeJob($booking);
 
         return $this->success(null, 'Payment verified and job completed.');
+    }
+
+    protected function sendDashboardUpdate($booking)
+    {
+        // 1. Broadcast via WebSockets (Real-Time Architecture)
+        broadcast(new JobUpdate($booking));
+
+        // 2. Send Push Notification (FCM)
+        $professional = $booking->professional;
+        if ($professional && $professional->fcm_token) {
+            $this->firebase->sendPushNotification(
+                $professional->fcm_token,
+                'Job Update',
+                "Job status updated to {$booking->status}",
+                ['type' => 'job_status_updated']
+            );
+        }
     }
 }

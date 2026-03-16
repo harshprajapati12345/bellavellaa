@@ -201,7 +201,7 @@ class ProfessionalController extends Controller
         $history = Professional::withCount(['bookings as completed' => function($q) {
                 $q->where('status', 'Completed');
             }, 'bookings as cancelled' => function($q) {
-                $q->where('status', 'Cancelled');
+                $q->where('status', 'cancelled');
             }])
             ->get()
             ->map(function($p) {

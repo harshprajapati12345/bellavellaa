@@ -39,6 +39,18 @@ class KitController extends BaseController
 
         // Create Razorpay Order server-side for security
         try {
+            if (config('services.razorpay.mock')) {
+                return $this->success([
+                    'order_id'     => 'order_mock_' . strtolower(Str::random(14)),
+                    'amount'       => $amountPaise,
+                    'amount_inr'   => $totalAmount,
+                    'currency'     => 'INR',
+                    'product_name' => $product->name,
+                    'receipt'      => 'kit_mock_' . Str::random(8),
+                    'is_mock'      => true,
+                ], 'Razorpay mock order created.');
+            }
+
             $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
             $order = $api->order->create([
                 'receipt'  => 'kit_' . Str::random(8),
@@ -90,13 +102,15 @@ class KitController extends BaseController
 
         // Secure Signature Verification
         try {
-            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-            $attributes = [
-                'razorpay_order_id'   => $validated['razorpay_order_id'],
-                'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                'razorpay_signature'  => $validated['razorpay_signature']
-            ];
-            $api->utility->verifyPaymentSignature($attributes);
+            if (!config('services.razorpay.mock')) {
+                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                $attributes = [
+                    'razorpay_order_id'   => $validated['razorpay_order_id'],
+                    'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                    'razorpay_signature'  => $validated['razorpay_signature']
+                ];
+                $api->utility->verifyPaymentSignature($attributes);
+            }
         } catch (\Exception $e) {
             return $this->error('Payment signature verification failed: ' . $e->getMessage(), 422);
         }

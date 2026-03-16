@@ -276,6 +276,19 @@ class ProfileController extends BaseController
     }
 
     /**
+     * POST /api/professional/update-fcm-token
+     */
+    public function updateFcmToken(Request $request): JsonResponse
+    {
+        $request->validate(['fcm_token' => 'required|string']);
+        
+        $professional = $request->user('professional-api');
+        $professional->update(['fcm_token' => $request->fcm_token]);
+        
+        return $this->success(null, 'FCM token updated successfully.');
+    }
+
+    /**
      * PUT /api/professional/change-password
      */
     public function changePassword(Request $request): JsonResponse

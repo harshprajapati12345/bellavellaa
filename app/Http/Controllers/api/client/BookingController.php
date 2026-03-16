@@ -23,11 +23,11 @@ class BookingController extends BaseController
         $query = $customer->bookingsRel();
 
         if ($status === 'Upcoming') {
-            $query->whereIn('status', ['Unassigned', 'Pending', 'Confirmed', 'Assigned', 'In Progress']);
-        } elseif ($status === 'Completed') {
-            $query->where('status', 'Completed');
-        } elseif ($status === 'Cancelled') {
-            $query->where('status', 'Cancelled');
+            $query->whereIn('status', ['unassigned', 'pending', 'confirmed', 'assigned', 'in_progress']);
+        } elseif ($status === 'completed') {
+            $query->where('status', 'completed');
+        } elseif ($status === 'cancelled') {
+            $query->where('status', 'cancelled');
         }
 
         $bookings = $query
@@ -55,11 +55,11 @@ class BookingController extends BaseController
             return $this->error('Unauthorized.', 403);
         }
 
-        if ($booking->status === 'Completed' || $booking->status === 'Cancelled') {
+        if ($booking->status === 'completed' || $booking->status === 'cancelled') {
             return $this->error('Booking cannot be cancelled in current status: ' . $booking->status, 422);
         }
 
-        $booking->update(['status' => 'Cancelled']);
+        $booking->update(['status' => 'cancelled']);
 
         return $this->success(new BookingResource($booking->fresh(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])), 'Booking cancelled successfully.');
     }
@@ -75,7 +75,7 @@ class BookingController extends BaseController
             'slot' => 'required|string',
         ]);
 
-        if ($booking->status === 'Completed' || $booking->status === 'Cancelled') {
+        if ($booking->status === 'completed' || $booking->status === 'cancelled') {
             return $this->error('Cannot reschedule a ' . strtolower($booking->status) . ' booking.', 422);
         }
 
@@ -110,7 +110,7 @@ class BookingController extends BaseController
         $occupied = \App\Models\Booking::whereDate('date', $validated['date'])
             ->where('slot', $validated['slot'])
             ->where('city', $city)
-            ->where('status', '!=', 'Cancelled')
+            ->where('status', '!=', 'cancelled')
             ->where('id', '!=', $booking->id)
             ->count();
 

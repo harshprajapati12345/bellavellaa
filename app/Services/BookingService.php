@@ -18,12 +18,12 @@ class BookingService
     public static function completeJob(Booking $booking): void
     {
         // Prevent processing already completed jobs
-        if ($booking->status === 'Completed') {
+        if ($booking->status === 'completed') {
             return;
         }
 
         DB::transaction(function () use ($booking) {
-            $booking->update(['status' => 'Completed']);
+            $booking->update(['status' => 'completed']);
 
             if ($booking->professional) {
                 self::distributeEarnings($booking, $booking->professional);

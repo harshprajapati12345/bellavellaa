@@ -18,7 +18,7 @@ class ProfessionalOrderController extends BaseController
         $professional = Professional::findOrFail($id);
         
         $bookings = Booking::where('professional_id', $id)
-            ->whereIn('status', ['Assigned', 'Started', 'In Progress'])
+            ->whereIn('status', ['assigned', 'started', 'in_progress'])
             ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
             ->get();
@@ -34,14 +34,14 @@ class ProfessionalOrderController extends BaseController
         $professional = Professional::findOrFail($id);
         
         $bookings = Booking::where('professional_id', $id)
-            ->whereIn('status', ['Completed', 'Cancelled'])
+            ->whereIn('status', ['completed', 'cancelled', 'rejected'])
             ->orderBy('date', 'desc')
             ->get();
 
         $stats = [
-            'total_completed' => $bookings->where('status', 'Completed')->count(),
-            'total_cancelled' => $bookings->where('status', 'Cancelled')->count(),
-            'total_earning'   => $bookings->where('status', 'Completed')->sum('price'),
+            'total_completed' => $bookings->where('status', 'completed')->count(),
+            'total_cancelled' => $bookings->where('status', 'cancelled')->count(),
+            'total_earning'   => $bookings->where('status', 'completed')->sum('price'),
         ];
 
         return $this->success([

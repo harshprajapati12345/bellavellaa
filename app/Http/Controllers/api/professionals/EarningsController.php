@@ -33,33 +33,33 @@ class EarningsController extends BaseController
         $commissionRate = (100 - $professional->commission) / 100;
 
         $todaysEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->where('date', $today)
             ->get()
             ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $weeklyEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->whereBetween('date', [$startOfWeek, $today])
             ->get()
             ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $monthlyEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->whereBetween('date', [$startOfMonth, $today])
             ->get()
             ->sum(fn($b) => $b->price - ($b->commission ?? ($b->price * $professional->commission / 100)));
 
         $totalJobs = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->count();
 
         $activeJobsAssigned = Booking::where('professional_id', $professional->id)
-            ->whereIn('status', ['Unassigned', 'Pending', 'Confirmed', 'Assigned'])
+            ->whereIn('status', ['unassigned', 'pending', 'confirmed', 'assigned'])
             ->count();
 
         $activeJobsInProgress = Booking::where('professional_id', $professional->id)
-            ->whereIn('status', ['Started', 'In Progress'])
+            ->whereIn('status', ['started', 'in_progress'])
             ->count();
 
         return $this->success([
@@ -87,7 +87,7 @@ class EarningsController extends BaseController
         $professional = $request->user('professional-api');
 
         $jobs = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->orderBy('date', 'desc')
             ->orderBy('slot', 'desc')
             ->paginate(15);
@@ -157,17 +157,17 @@ class EarningsController extends BaseController
         $commissionRate = (100 - ($professional->commission ?? 0)) / 100;
 
         $weeklyEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->whereBetween('date', [$startOfWeek, $today])
             ->sum(DB::raw("price * {$commissionRate}"));
 
         $monthlyEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->whereBetween('date', [$startOfMonth, $today])
             ->sum(DB::raw("price * {$commissionRate}"));
 
         $totalJobs = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->count();
 
         $depositAmountPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
@@ -191,7 +191,7 @@ class EarningsController extends BaseController
         $earningsBalancePaise = max(0, $totalCashBalancePaise - $depositBalancePaise);
 
         $todayEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'Completed')
+            ->where('status', 'completed')
             ->where('date', $today)
             ->sum(DB::raw("price * {$commissionRate}"));
 
@@ -267,6 +267,17 @@ class EarningsController extends BaseController
         $amountInPaise = (int) round($validated['amount'] * 100);
 
         try {
+            if (config('services.razorpay.mock')) {
+                return $this->success([
+                    'order_id'   => 'order_mock_' . strtolower(Str::random(14)),
+                    'amount'     => $amountInPaise,
+                    'amount_inr' => $validated['amount'],
+                    'currency'   => 'INR',
+                    'receipt'    => 'dep_mock_' . Str::random(8),
+                    'is_mock'    => true,
+                ], 'Razorpay mock deposit order created.');
+            }
+
             $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
             $order = $api->order->create([
                 'receipt'  => 'dep_' . Str::random(8),
@@ -307,13 +318,15 @@ class EarningsController extends BaseController
         $amountInPaise = (int) round($validated['amount'] * 100);
 
         try {
-            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-            $attributes = [
-                'razorpay_order_id'   => $validated['razorpay_order_id'],
-                'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                'razorpay_signature'  => $validated['razorpay_signature']
-            ];
-            $api->utility->verifyPaymentSignature($attributes);
+            if (!config('services.razorpay.mock')) {
+                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                $attributes = [
+                    'razorpay_order_id'   => $validated['razorpay_order_id'],
+                    'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                    'razorpay_signature'  => $validated['razorpay_signature']
+                ];
+                $api->utility->verifyPaymentSignature($attributes);
+            }
         } catch (\Exception $e) {
             return $this->error('Payment verification failed: ' . $e->getMessage(), 400);
         }
@@ -348,7 +361,7 @@ class EarningsController extends BaseController
         // Upcoming bookings
         $schedule = Booking::where('professional_id', $professional->id)
             ->where('date', '>=', Carbon::today()->toDateString())
-            ->whereNotIn('status', ['Cancelled'])
+            ->whereNotIn('status', ['cancelled', 'rejected'])
             ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
             ->get();

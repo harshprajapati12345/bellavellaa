@@ -178,9 +178,10 @@ class CartController extends BaseController
         // 2. Fetch category names for Packages in the cart
         $packageCategoryNames = \DB::table('carts')
             ->join('packages', 'carts.item_id', '=', 'packages.id')
+            ->join('categories', 'packages.category_id', '=', 'categories.id')
             ->where('carts.customer_id', $customer->id)
             ->where('carts.item_type', 'package')
-            ->pluck('packages.category')
+            ->pluck('categories.name')
             ->unique();
 
         $allCategoryNames = $serviceCategoryNames->merge($packageCategoryNames)->unique()->filter()->toArray();
@@ -338,18 +339,24 @@ class CartController extends BaseController
 
             // If online payment, generate Razorpay order
             if ($validated['payment_method'] === 'online') {
-                try {
-                    $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-                    $razorpayOrder = $api->order->create([
-                        'receipt' => $order->order_number,
-                        'amount' => $totalPaise,
-                        'currency' => 'INR',
-                    ]);
-                    $response['razorpay_order_id'] = $razorpayOrder['id'];
+                if (config('services.razorpay.mock')) {
+                    $response['razorpay_order_id'] = 'order_mock_' . strtolower(Str::random(14));
                     $response['amount'] = $totalPaise;
-                } catch (\Exception $e) {
-                    \DB::rollBack();
-                    return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+                    $response['is_mock'] = true;
+                } else {
+                    try {
+                        $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                        $razorpayOrder = $api->order->create([
+                            'receipt' => $order->order_number,
+                            'amount' => $totalPaise,
+                            'currency' => 'INR',
+                        ]);
+                        $response['razorpay_order_id'] = $razorpayOrder['id'];
+                        $response['amount'] = $totalPaise;
+                    } catch (\Exception $e) {
+                        \DB::rollBack();
+                        return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
+                    }
                 }
             }
 
@@ -377,15 +384,17 @@ class CartController extends BaseController
         ]);
 
         try {
-            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-            
-            $attributes = array(
-                'razorpay_order_id' => $validated['razorpay_order_id'],
-                'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                'razorpay_signature' => $validated['razorpay_signature']
-            );
-            
-            $api->utility->verifyPaymentSignature($attributes);
+            if (!config('services.razorpay.mock')) {
+                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                
+                $attributes = array(
+                    'razorpay_order_id' => $validated['razorpay_order_id'],
+                    'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                    'razorpay_signature' => $validated['razorpay_signature']
+                );
+                
+                $api->utility->verifyPaymentSignature($attributes);
+            }
 
             $order = Order::findOrFail($validated['order_id']);
             

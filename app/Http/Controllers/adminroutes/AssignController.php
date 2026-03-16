@@ -12,7 +12,7 @@ class AssignController extends Controller
     public function index()
     {
         $bookings = Booking::with(['customer', 'service', 'professional'])
-            ->where('status', '!=', 'Cancelled')
+            ->where('status', '!=', 'cancelled')
             ->get();
         $professionals = Professional::where('status', 'Active')
             ->where('kit_purchased', 1)
@@ -33,7 +33,7 @@ class AssignController extends Controller
             $booking = Booking::findOrFail($request->booking_id);
             $booking->update([
                 'professional_id' => $request->professional_id,
-                'status' => 'Assigned',
+                'status' => 'assigned',
             ]);
 
             // Create notification for the professional

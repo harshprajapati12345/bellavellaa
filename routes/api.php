@@ -186,6 +186,7 @@ Route::prefix('professional')->group(function () {
         Route::post('jobs/{id}/arrived', [\App\Http\Controllers\Api\Professionals\JobController::class, 'arrived']);
         Route::post('jobs/{id}/start-journey', [\App\Http\Controllers\Api\Professionals\JobController::class, 'startJourney']);
         Route::post('jobs/{id}/start-service', [\App\Http\Controllers\Api\Professionals\JobController::class, 'startService']);
+        Route::post('jobs/{id}/finish-service', [\App\Http\Controllers\Api\Professionals\JobController::class, 'finishService']);
         Route::post('jobs/{id}/scan-kit', [\App\Http\Controllers\Api\Professionals\JobController::class, 'scanKit']);
         Route::post('jobs/{id}/complete', [\App\Http\Controllers\Api\Professionals\JobController::class, 'complete']);
         Route::post('jobs/{id}/payment-confirm', [\App\Http\Controllers\Api\Professionals\JobController::class, 'paymentConfirm']);
@@ -242,6 +243,7 @@ Route::prefix('professional')->group(function () {
         Route::get('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'index']);
         Route::post('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'store']);
         Route::delete('leaves/{id}', [\App\Http\Controllers\Api\Professionals\LeaveController::class, 'destroy']);
+        Route::post('update-fcm-token', [\App\Http\Controllers\Api\Professionals\ProfileController::class, 'updateFcmToken']);
     });
 });
 
