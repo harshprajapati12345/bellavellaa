@@ -20,15 +20,17 @@ class DashboardController extends BaseController
         
         $today = Carbon::today()->toDateString();
 
-        // All active bookings assigned to professional
+        // All active bookings assigned to professional (Excluding 'assigned' as per new rule)
         $recentBookings = Booking::with('customer')
             ->where('professional_id', $professional->id)
-            ->whereIn('status', ['assigned', 'accepted', 'in_progress', 'arrived'])
+            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending', 'completed'])
             ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
             ->get()
             ->map(function (\App\Models\Booking $b) {
                 $arr = $b->toArray();
+                $arr['customer_name'] = $b->customer?->name ?? 'Customer';
+                $arr['client_name'] = $b->customer?->name ?? 'Customer';
                 $arr['customer_phone'] = $b->customer?->phone ?? $b->customer?->mobile ?? null;
                 return $arr;
             });
@@ -77,10 +79,10 @@ class DashboardController extends BaseController
             return $this->success(null, 'Professional is offline or not found.');
         }
 
-        // We include all active workflow statuses so the card stays visible
+        /** @var \App\Models\Booking|null $booking */
         $booking = Booking::with('customer')
             ->where('professional_id', $professional->id)
-            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'in_progress', 'payment_pending'])
+            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending'])
             ->latest()
             ->first();
 
@@ -88,9 +90,12 @@ class DashboardController extends BaseController
             return $this->success(null, 'No active job.');
         }
 
-        // Append customer phone so Flutter can open the dialer
+        // Append customer info so Flutter can display it
         $data = $booking->toArray();
-        $data['customer_phone'] = $booking->customer?->phone ?? $booking->customer?->mobile ?? null;
+        $customer = $booking->customer;
+        $data['customer_name'] = $customer?->name ?? 'Customer';
+        $data['client_name'] = $customer?->name ?? 'Customer';
+        $data['customer_phone'] = $customer?->phone ?? $customer?->mobile ?? null;
 
         return $this->success($data, 'Active job retrieved.');
     }
@@ -196,6 +201,11 @@ class DashboardController extends BaseController
             
             if ($balance < 150000) { // 1500 * 100 paise
                 return $this->error('Minimum ₹1,500 deposit required to go online.', 422);
+            }
+
+            $kitCount = \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity');
+            if ($kitCount < 5) {
+                return $this->error('Minimum 5 kits required to go online.', 422);
             }
         }
 

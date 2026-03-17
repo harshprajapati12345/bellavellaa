@@ -399,7 +399,7 @@ class MasterSeeder extends Seeder
         // ══════════════════════════════════════════════════════════════
         // 8. BOOKINGS (customer_id instead of user_id)
         // ══════════════════════════════════════════════════════════════
-        $statuses = ['Pending', 'Confirmed', 'Assigned', 'In Progress', 'Completed'];
+        $statuses = ['pending', 'confirmed', 'assigned', 'in_progress', 'completed'];
         $bookingIds = [];
         for ($i = 0; $i < 5; $i++) {
             $bookingIds[] = DB::table('bookings')->insertGetId([

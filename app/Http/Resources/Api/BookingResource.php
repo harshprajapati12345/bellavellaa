@@ -13,6 +13,9 @@ class BookingResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'customer_name' => $this->customer?->name ?? 'Customer',
+            'client_name' => $this->customer?->name ?? 'Customer',
+            'customer_phone' => $this->customer?->phone ?? $this->customer?->mobile ?? null,
             'customer' => new CustomerResource($this->whenLoaded('customer')),
             'service' => new ServiceResource($this->whenLoaded('service')),
             'variant' => new ServiceVariantResource($this->whenLoaded('variant')),

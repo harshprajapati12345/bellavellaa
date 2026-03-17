@@ -6,11 +6,11 @@
     $bookings = $bookings ?? collect();
     $professionals = $professionals ?? collect();
     $total = $bookings->count();
-    $pending = $bookings->where('status', 'Pending')->count();
-    $inProgress = $bookings->where('status', 'In Progress')->count();
-    $completed = $bookings->where('status', 'Completed')->count();
-    $statusColors = ['Pending' => 'bg-amber-50 text-amber-600', 'Assigned' => 'bg-blue-50 text-blue-600', 'In Progress' => 'bg-violet-50 text-violet-600', 'Completed' => 'bg-emerald-50 text-emerald-600'];
-    $statusDots = ['Pending' => 'bg-amber-400', 'Assigned' => 'bg-blue-400', 'In Progress' => 'bg-violet-400', 'Completed' => 'bg-emerald-400'];
+    $pending = $bookings->where('status', 'pending')->count();
+    $inProgress = $bookings->where('status', 'in_progress')->count();
+    $completed = $bookings->where('status', 'completed')->count();
+    $statusColors = ['pending' => 'bg-amber-50 text-amber-600', 'assigned' => 'bg-blue-50 text-blue-600', 'in_progress' => 'bg-violet-50 text-violet-600', 'completed' => 'bg-emerald-50 text-emerald-600'];
+    $statusDots = ['pending' => 'bg-amber-400', 'assigned' => 'bg-blue-400', 'in_progress' => 'bg-violet-400', 'completed' => 'bg-emerald-400'];
   @endphp
 
   <div class="flex flex-col gap-6">
@@ -84,7 +84,7 @@
 
     <!-- Filter Tabs -->
     <div class="bg-white rounded-2xl p-3 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-wrap items-center gap-1.5">
-      @foreach(['all' => 'All', 'Pending' => 'Pending', 'Assigned' => 'Assigned', 'In Progress' => 'In Progress', 'Completed' => 'Completed'] as $k => $v)
+      @foreach(['all' => 'All', 'pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In Progress', 'completed' => 'Completed'] as $k => $v)
         <button onclick="setTab('{{ $k }}')" id="tab-{{ Str::slug($k) }}"
           class="filter-tab text-sm font-medium px-4 py-2 {{ $k === 'all' ? 'active' : '' }}">
           {{ $v }}
@@ -165,7 +165,7 @@
                       data-type="assign" data-id="{{ $b->id }}">
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                     </button>
-                    @if($b->status === 'Pending' || $b->status === 'Assigned')
+                    @if($b->status === 'pending' || $b->status === 'assigned')
                       <button type="button" onclick="handleOpenDrawer(this)"
                         data-booking-id="{{ $b->id }}"
                         data-customer-name="{{ $b->customer?->name ?? $b->customer_name }}"
@@ -179,16 +179,16 @@
                         title="{{ $b->status === 'Pending' ? 'Assign Professional' : 'Reassign' }}"
                         class="manual-assign-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg {{ $b->status === 'Pending' ? 'bg-black text-white hover:bg-gray-800' : 'border border-gray-200 text-gray-600 hover:bg-gray-100' }} text-xs font-medium transition-all">
                         <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                        {{ $b->status === 'Pending' ? 'Assign' : 'Reassign' }}
+                        {{ $b->status === 'pending' ? 'Assign' : 'Reassign' }}
                       </button>
 
-                      @if($b->status === 'Pending')
+                      @if($b->status === 'pending')
                         <span
                           class="auto-assign-badge flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-xs font-medium border border-amber-100/50">
                           <i data-lucide="zap" class="w-3.5 h-3.5 fill-amber-500"></i> Auto Assigning...
                         </span>
                       @endif
-                    @elseif($b->status === 'In Progress')
+                    @elseif($b->status === 'in_progress')
                       <span
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 text-xs font-medium"><i
                           data-lucide="loader" class="w-3.5 h-3.5"></i> In Progress</span>
@@ -277,7 +277,7 @@
           </div>
           <div class="relative flex-shrink-0">
             <img src="{{ $pro->avatar }}" class="w-10 h-10 rounded-xl object-cover" alt="">
-            @if($pro->last_seen && $pro->last_seen >= now()->subMinutes(2))
+            @if($pro->is_online && $pro->last_seen && $pro->last_seen >= now()->subMinutes(30))
               <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" title="Online Now"></span>
             @endif
           </div>
@@ -517,7 +517,7 @@
 
     /* Assign Drawer */
     let currentBooking = null, selectedPros = [];
-    const statusColors = { 'Pending': 'bg-amber-50 text-amber-600', 'Assigned': 'bg-blue-50 text-blue-600', 'In Progress': 'bg-violet-50 text-violet-600', 'Completed': 'bg-emerald-50 text-emerald-600' };
+    const statusColors = { 'pending': 'bg-amber-50 text-amber-600', 'assigned': 'bg-blue-50 text-blue-600', 'in_progress': 'bg-violet-50 text-violet-600', 'completed': 'bg-emerald-50 text-emerald-600' };
 
     function handleOpenDrawer(btn) {
       console.log('Opening drawer for button:', btn);
@@ -566,7 +566,7 @@
         updateEl('d-booking-date', (booking.date || '') + (booking.slot ? ' at ' + booking.slot : '') + (booking.city ? ' · ' + booking.city : ''));
         updateEl('d-booking-label', `Booking #${booking.id}`);
 
-        const status = booking.status || 'Pending';
+        const status = booking.status || 'pending';
         const sb = document.getElementById('d-status-badge');
         if (sb) {
           sb.textContent = status;

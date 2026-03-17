@@ -128,7 +128,7 @@
                 </td>
                 <td class="px-5 py-4">
                   @php
-                    $pc = match ($h['payout_status']) { 'Paid' => 'bg-emerald-50 text-emerald-600', 'Pending' => 'bg-amber-50 text-amber-600', default => 'bg-red-50 text-red-500'};
+                    $pc = match ($h['payout_status']) { 'paid' => 'bg-emerald-50 text-emerald-600', 'pending' => 'bg-amber-50 text-amber-600', default => 'bg-red-50 text-red-500'};
                   @endphp
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $pc }}">{{ $h['payout_status'] }}</span>
                 </td>

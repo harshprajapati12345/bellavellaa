@@ -12,7 +12,7 @@ class ProfessionalController extends Controller
         $professionals = Professional::all();
         $total   = $professionals->count();
         $active  = $professionals->where('status', 'Active')->count();
-        $online  = $professionals->where('last_seen', '>=', now()->subMinutes(2))->count();
+        $online  = $professionals->where('last_seen', '>=', now()->subMinutes(30))->count();
         $topPro  = $professionals->sortByDesc('bookings_count')->first();
 
         return view('professionals.index', compact('professionals', 'total', 'active', 'online', 'topPro'));
@@ -199,7 +199,7 @@ class ProfessionalController extends Controller
     public function history()
     {
         $history = Professional::withCount(['bookings as completed' => function($q) {
-                $q->where('status', 'Completed');
+                $q->where('status', 'completed');
             }, 'bookings as cancelled' => function($q) {
                 $q->where('status', 'cancelled');
             }])
@@ -216,7 +216,7 @@ class ProfessionalController extends Controller
                     'total_earnings' => $p->earnings,
                     'total_commission' => ($p->earnings * $p->commission / 100),
                     'rating' => $p->rating,
-                    'payout_status' => 'Paid', // Placeholder for advanced payout logic
+                    'payout_status' => 'paid', // Placeholder for advanced payout logic
                     'monthly' => [0,0,0,0,0,0,0,0,0,0,0,0], // Real charts would need complex grouping
                     'reviews' => [],
                 ];

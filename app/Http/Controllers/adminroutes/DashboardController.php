@@ -19,7 +19,7 @@ class DashboardController extends Controller
         
         $stats = [
             'bookings_today' => Booking::whereDate('date', $today)->count(),
-            'revenue_today' => Booking::whereDate('date', $today)->where('status', 'Completed')->sum('price'), // Need price in bookings
+            'revenue_today' => Booking::whereDate('date', $today)->where('status', 'completed')->sum('price'), // Need price in bookings
             'active_professionals' => Professional::where('status', 'Active')->count(),
             'total_customers' => Customer::count(),
             'new_reviews' => Review::whereDate('created_at', '>=', $today->subDays(7))->count(),

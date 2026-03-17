@@ -32,6 +32,8 @@ class AssignmentController extends BaseController
             ->get();
 
         $professionals = Professional::where('status', 'Active')
+            ->where('is_online', 1)
+            ->where('last_seen', '>=', now()->subMinutes(30))
             ->latest()
             ->get();
 
@@ -69,16 +71,17 @@ class AssignmentController extends BaseController
         ]);
 
         // Real-time Push to Firebase (Uber-Style Job UI)
-        $this->firebase->pushJobToFirestore($request->professional_id, [
-            'booking_id'  => $booking->id,
-            'client_name' => $booking->customer->name ?? 'Customer',
-            'service'     => $booking->service->name ?? 'Service',
-            'location'    => $booking->address ?? 'Nearby',
-            'lat'         => $booking->lat,
-            'lng'         => $booking->lng,
-            'price'       => (string)$booking->price,
-            'status'      => 'pending',
-            'type'        => 'booking_assigned',
+        $this->firebase->pushJobToFirestore([
+            'professional_id' => $request->professional_id,
+            'booking_id'      => $booking->id,
+            'client_name'     => $booking->customer->name ?? 'Customer',
+            'service'         => $booking->service->name ?? 'Service',
+            'location'        => $booking->address ?? 'Nearby',
+            'lat'             => $booking->lat,
+            'lng'             => $booking->lng,
+            'price'           => (string)$booking->price,
+            'status'          => 'pending',
+            'type'            => 'booking_assigned',
         ]);
 
         // Real-time Push to General Notifications (History & Redundancy)
@@ -98,8 +101,12 @@ class AssignmentController extends BaseController
                 'New Booking Assigned!',
                 'You have a new booking request from ' . ($booking->customer->name ?? 'Customer'),
                 [
-                    'type' => 'new_job',
-                    'booking_id' => (string)$booking->id
+                    'type' => 'booking_assigned',
+                    'booking_id' => (string)$booking->id,
+                    'client_name' => $booking->customer->name ?? 'Customer',
+                    'service'     => $booking->service->name ?? 'Service',
+                    'location'    => $booking->address ?? 'Nearby',
+                    'price'       => (string)$booking->price,
                 ]
             );
         }

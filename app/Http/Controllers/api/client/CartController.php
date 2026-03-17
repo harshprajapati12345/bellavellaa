@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CartController extends BaseController
@@ -168,7 +169,7 @@ class CartController extends BaseController
         $customer = $this->guard()->user();
         
         // 1. Fetch category names for Services in the cart
-        $serviceCategoryNames = \DB::table('carts')
+        $serviceCategoryNames = DB::table('carts')
             ->join('services', 'carts.item_id', '=', 'services.id')
             ->join('categories', 'services.category_id', '=', 'categories.id')
             ->where('carts.customer_id', $customer->id)
@@ -176,8 +177,18 @@ class CartController extends BaseController
             ->pluck('categories.name')
             ->unique();
 
-        // 2. Fetch category names for Packages in the cart
-        $packageCategoryNames = \DB::table('carts')
+        // 2. Fetch category names for Variants in the cart
+        $variantCategoryNames = DB::table('carts')
+            ->join('service_variants', 'carts.item_id', '=', 'service_variants.id')
+            ->join('services', 'service_variants.service_id', '=', 'services.id')
+            ->join('categories', 'services.category_id', '=', 'categories.id')
+            ->where('carts.customer_id', $customer->id)
+            ->where('carts.item_type', 'variant')
+            ->pluck('categories.name')
+            ->unique();
+
+        // 3. Fetch category names for Packages in the cart
+        $packageCategoryNames = DB::table('carts')
             ->join('packages', 'carts.item_id', '=', 'packages.id')
             ->join('categories', 'packages.category_id', '=', 'categories.id')
             ->where('carts.customer_id', $customer->id)
@@ -185,7 +196,12 @@ class CartController extends BaseController
             ->pluck('categories.name')
             ->unique();
 
-        $allCategoryNames = $serviceCategoryNames->merge($packageCategoryNames)->unique()->filter()->toArray();
+        $allCategoryNames = $serviceCategoryNames
+            ->merge($variantCategoryNames)
+            ->merge($packageCategoryNames)
+            ->unique()
+            ->filter()
+            ->toArray();
 
         // 3. Generate slots structure expected by Flutter app
         $slotsMap = [];
@@ -351,7 +367,7 @@ class CartController extends BaseController
                         'sellable_id' => $cart->item_id,
                         'date' => $order->scheduled_date,
                         'slot' => $order->scheduled_slot,
-                        'status' => 'Pending',
+                        'status' => 'pending',
                         'price' => $displayPrice,
                     ]);
                 }
