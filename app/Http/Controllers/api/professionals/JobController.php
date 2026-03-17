@@ -24,6 +24,9 @@ class JobController extends BaseController
     public function arrived(Request $request, $id): JsonResponse
     {
         $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update(['status' => 'arrived']);
+            $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
         }
         return $this->error('Booking not found.', 404);

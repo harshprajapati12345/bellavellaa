@@ -23,7 +23,7 @@ class DashboardController extends BaseController
         // All active bookings assigned to professional (Excluding 'assigned' as per new rule)
         $recentBookings = Booking::with('customer')
             ->where('professional_id', $professional->id)
-            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending', 'completed'])
+            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending'])
             ->orderBy('date', 'asc')
             ->orderBy('slot', 'asc')
             ->get()
