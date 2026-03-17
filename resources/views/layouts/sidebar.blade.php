@@ -40,9 +40,9 @@ $isCRMActive = ($isHomepageActive || $isMediaActive);
 // $totalProNotificationCount
 
 // Count pending (unassigned) assign requests for badge (still local for now or can move to provider later)
-$pendingAssignCount = \App\Models\Booking::where('status', 'Unassigned')->count();
+$pendingAssignCount = \App\Models\Booking::where('status', 'unassigned')->count();
 // Count pending reviews for badge
-try { $pendingReviewsCount = \App\Models\Review::where('status', 'Pending')->count(); } catch (\Exception $e) { $pendingReviewsCount = 0; }
+try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->count(); } catch (\Exception $e) { $pendingReviewsCount = 0; }
 @endphp
 @push('styles')
 <style>

@@ -24,11 +24,9 @@ class JobController extends BaseController
     public function arrived(Request $request, $id): JsonResponse
     {
         $booking = \App\Models\Booking::find($id);
-        if ($booking) {
-            $booking->update(['status' => 'arrived']);
-            $this->sendDashboardUpdate($booking);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
         }
-        return $this->success(null, 'Arrival marked successfully.');
+        return $this->error('Booking not found.', 404);
     }
 
     /**
@@ -40,8 +38,9 @@ class JobController extends BaseController
         if ($booking) {
             $booking->update(['status' => 'on_the_way']);
             $this->sendDashboardUpdate($booking);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started.');
         }
-        return $this->success(null, 'Journey started.');
+        return $this->error('Booking not found.', 404);
     }
 
     public function startService(Request $request, $id): JsonResponse
@@ -54,18 +53,20 @@ class JobController extends BaseController
             }
             $booking->update($updateData);
             $this->sendDashboardUpdate($booking);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
         }
-        return $this->success(null, 'Service started.');
+        return $this->error('Booking not found.', 404);
     }
 
     public function finishService(Request $request, $id): JsonResponse
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'completed']);
+            $booking->update(['status' => 'payment_pending']);
             $this->sendDashboardUpdate($booking);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
         }
-        return $this->success(null, 'Service finished and completed.');
+        return $this->error('Booking not found.', 404);
     }
 
     /**
@@ -73,7 +74,7 @@ class JobController extends BaseController
      */
     public function scanKit(ScanKitRequest $request, $id): JsonResponse
     {
-        // Logic to verify kit
+        // verification logic already handled by request validation or logic here
         return $this->success(null, 'Kit scanned and verified.');
     }
 
@@ -82,10 +83,21 @@ class JobController extends BaseController
         $booking = \App\Models\Booking::find($id);
 
         if ($booking) {
-            BookingService::completeJob($booking);
+            \App\Services\BookingService::completeJob($booking);
+            $this->sendDashboardUpdate($booking);
+            
+            // Mark professional as idle in Firestore so they can receive new requests
+            $this->firebase->pushJobToFirestore([
+                'professional_id' => $booking->professional_id,
+                'booking_id'      => $booking->id,
+                'status'          => 'idle',
+                'updated_at'      => time(),
+            ]);
+
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Job marked as complete.');
         }
 
-        return $this->success(null, 'Job marked as complete.');
+        return $this->error('Booking not found.', 404);
     }
 
     /**
@@ -161,6 +173,15 @@ class JobController extends BaseController
 
         // Use BookingService to handle completion, wallet credits, and referral check
         BookingService::completeJob($booking);
+        $this->sendDashboardUpdate($booking);
+
+        // Mark professional as idle in Firestore
+        $this->firebase->pushJobToFirestore([
+            'professional_id' => $booking->professional_id,
+            'booking_id'      => $booking->id,
+            'status'          => 'idle',
+            'updated_at'      => time(),
+        ]);
 
         return $this->success(null, 'Payment verified and job completed.');
     }
@@ -177,7 +198,11 @@ class JobController extends BaseController
                 $professional->fcm_token,
                 'Job Update',
                 "Job status updated to {$booking->status}",
-                ['type' => 'job_status_updated']
+                [
+                    'type' => 'job_status_updated',
+                    'booking_id' => (string)$booking->id,
+                    'status' => $booking->status
+                ]
             );
         }
     }

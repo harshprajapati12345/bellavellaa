@@ -64,7 +64,7 @@
               <div class="w-px h-10 bg-gray-200"></div>
               <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=facearea&facepad=2&w=64&q=80" class="w-9 h-9 rounded-full object-cover ring-2 ring-white shrink-0">
               <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">Nail Art</p><p class="text-xs text-gray-400">Sunita Verma · 1h</p></div>
-              <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-semibold shrink-0">Pending</span>
+              <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-semibold shrink-0">pending</span>
             </div>
             <div class="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
               <div class="w-10 text-center shrink-0"><span class="text-sm font-bold text-gray-900">12:00</span><br><span class="text-[10px] text-gray-400">PM</span></div>
@@ -126,7 +126,7 @@
                   <td class="py-3.5 text-gray-600">{{ \Carbon\Carbon::parse($booking->slot)->format('h:i A') }}</td>
                   <td class="py-3.5">
                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold 
-                      {{ $booking->status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : ($booking->status === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500') }}">
+                      {{ $booking->status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : ($booking->status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500') }}">
                       {{ $booking->status }}
                     </span>
                   </td>

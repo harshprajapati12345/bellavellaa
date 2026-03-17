@@ -67,10 +67,10 @@
       <select id="f-order-status" onchange="applyFilters()"
         class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer">
         <option value="">All Statuses</option>
-        <option value="Pending">Pending</option>
-        <option value="Accepted">Accepted</option>
-        <option value="Completed">Completed</option>
-        <option value="Cancelled">Cancelled</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
       </select>
       <select id="f-payment-status" onchange="applyFilters()"
         class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer">
@@ -128,7 +128,7 @@
                 <td class="px-5 py-4 text-sm text-emerald-600 font-medium">₹{{ number_format($ord['pro_earning']) }}</td>
                 <td class="px-5 py-4">
                   @php
-                    $oc = match ($ord['order_status']) { 'Completed' => 'bg-emerald-50 text-emerald-600', 'Pending' => 'bg-amber-50 text-amber-600', 'Accepted' => 'bg-blue-50 text-blue-600', default => 'bg-red-50 text-red-500'};
+                    $oc = match ($ord['order_status']) { 'completed' => 'bg-emerald-50 text-emerald-600', 'pending' => 'bg-amber-50 text-amber-600', 'accepted' => 'bg-blue-50 text-blue-600', default => 'bg-red-50 text-red-500'};
                   @endphp
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $oc }}">{{ $ord['order_status'] }}</span>
                 </td>
@@ -377,15 +377,15 @@
 
         const osEl = document.getElementById('od-order-status');
         if (osEl) {
-          const ocMap = { 'Completed': 'bg-emerald-50 text-emerald-600', 'Pending': 'bg-amber-50 text-amber-600', 'Accepted': 'bg-blue-50 text-blue-600', 'Cancelled': 'bg-red-50 text-red-500' };
-          osEl.textContent = ord.orderStatus || 'Pending';
+          const ocMap = { 'completed': 'bg-emerald-50 text-emerald-600', 'pending': 'bg-amber-50 text-amber-600', 'accepted': 'bg-blue-50 text-blue-600', 'cancelled': 'bg-red-50 text-red-500' };
+          osEl.textContent = ord.orderStatus || 'pending';
           osEl.className = 'text-xs font-semibold px-3 py-1.5 rounded-full ' + (ocMap[ord.orderStatus] || 'bg-gray-100 text-gray-600');
         }
 
         const psEl = document.getElementById('od-payment-status');
         if (psEl) {
           const pcMap = { 'Online': 'bg-blue-50 text-blue-600', 'COD': 'bg-gray-100 text-gray-600', 'Refunded': 'bg-orange-50 text-orange-500' };
-          psEl.textContent = ord.paymentStatus || 'Pending';
+          psEl.textContent = ord.paymentStatus || 'pending';
           psEl.className = 'text-xs font-semibold px-3 py-1.5 rounded-full ' + (pcMap[ord.paymentStatus] || 'bg-gray-100 text-gray-600');
         }
 

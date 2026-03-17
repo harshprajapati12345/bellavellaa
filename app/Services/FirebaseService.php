@@ -19,9 +19,32 @@ class FirebaseService
         $this->privateKey = str_replace('\\n', "\n", config('services.firebase.private_key'));
     }
 
-    public function pushJobToFirestore($professionalId, array $jobData)
+    public function pushJobToFirestore(array $data)
     {
-        return $this->pushToFirestore("job_requests/professional_{$professionalId}", $jobData, 'pending');
+        Log::info('Pushing job to Firestore', $data);
+        
+        $professionalId = $data['professional_id'] ?? null;
+        if (!$professionalId) {
+            Log::warning('Firestore push failed: professional_id missing');
+            return false;
+        }
+
+        $firestoreData = [
+            'booking_id' => $data['booking_id'] ?? null,
+            'service'    => $data['service'] ?? 'New Job Assigned',
+            'status'     => $data['status'] ?? 'pending',
+            'updated_at' => $data['updated_at'] ?? time(),
+        ];
+
+        // Add optional fields if present
+        if (isset($data['client_name'])) $firestoreData['client_name'] = $data['client_name'];
+        if (isset($data['location'])) $firestoreData['location'] = $data['location'];
+        if (isset($data['price'])) $firestoreData['price'] = (string)$data['price'];
+
+        $result = $this->pushToFirestore("job_requests/professional_{$professionalId}", $firestoreData, 'pending');
+        
+        Log::info('Firestore push completed', ['success' => $result]);
+        return $result;
     }
 
     /**

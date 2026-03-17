@@ -26,6 +26,8 @@ class ProfessionalResource extends JsonResource
             'verification_status' => $this->verification ?? 'Not Started',
             'status'              => $this->status,
             'services'            => $this->services,
+            'is_online'           => (bool) $this->is_online,
+            'last_seen'           => $this->last_seen?->toIso8601String(),
             'created_at'          => $this->created_at?->toIso8601String(),
             'updated_at'          => $this->updated_at?->toIso8601String(),
         ];
