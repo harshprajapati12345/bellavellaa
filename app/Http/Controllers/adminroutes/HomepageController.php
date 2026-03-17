@@ -10,13 +10,13 @@ class HomepageController extends Controller
 {
     public function index()
     {
-        $sections = HomepageContent::orderBy('sort_order', 'asc')->get();
+        $sections = HomepageContent::where('section', '!=', 'testimonials')->orderBy('sort_order', 'asc')->get();
         return view('homepage.index', compact('sections'));
     }
 
     public function create()
     {
-        $usedSections = HomepageContent::pluck('section')->toArray();
+        $usedSections = HomepageContent::where('section', '!=', 'testimonials')->pluck('section')->toArray();
         return view('homepage.create', compact('usedSections'));
     }
 
@@ -29,7 +29,6 @@ class HomepageController extends Controller
         'video_stories'      => 'Video Stories',
         'image_banner'       => 'Image Banner',
         'active_booking'     => 'Active Booking',
-        'testimonials'       => 'Testimonials',
         'trending_packages'  => 'Trending Packages',
         'download_app'       => 'Download App',
     ];
@@ -129,3 +128,5 @@ class HomepageController extends Controller
         return response()->json(['success' => true]);
     }
 }
+
+

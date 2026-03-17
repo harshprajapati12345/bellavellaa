@@ -64,7 +64,6 @@
                     'video_stories'     => 'Video Stories',
                     'image_banner'      => 'Image Banner',
                     'active_booking'    => 'Active Booking',
-                    'testimonials'      => 'Testimonials',
                     'trending_packages' => 'Trending Packages',
                     'download_app'      => 'Download App',
                   ];
@@ -231,3 +230,4 @@
     }
   </script>
 @endpush
+

@@ -79,7 +79,10 @@ class BookingController extends BaseController
             return $this->error('Cannot reschedule a ' . strtolower($booking->status) . ' booking.', 422);
         }
 
-        $city = $booking->city ?? 'Mumbai';
+        $city = trim((string) ($booking->city ?? ''));
+        if ($city === '') {
+            return $this->error('Booking city is missing. Please contact support.', 422);
+        }
         $professionals = \App\Models\Professional::where('city', $city)
             ->where('status', 'Active')
             ->where('verification', 'Verified')
@@ -126,3 +129,4 @@ class BookingController extends BaseController
         return $this->success(new BookingResource($booking->fresh(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])), 'Booking rescheduled successfully.');
     }
 }
+

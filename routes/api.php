@@ -167,6 +167,7 @@ Route::prefix('professional')->group(function () {
         // Auth
         Route::post('logout', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'logout']);
         Route::get('me', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'me']);
+        Route::post('refresh', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'refresh']);
         Route::get('verification-status', [\App\Http\Controllers\Api\Professionals\AuthController::class, 'verificationStatus']);
 
         // Dashboard
@@ -324,5 +325,6 @@ Route::prefix('admin')->group(function () {
         });
     });
 });
+
 
 

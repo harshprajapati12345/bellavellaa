@@ -22,6 +22,7 @@ class HomepageService
     {
         $sectionsConfig = Cache::remember('homepage_sections', 300, function () {
             return HomepageContent::where('status', 'Active')
+                ->where('section', '!=', 'testimonials')
                 ->orderBy('sort_order', 'asc')
                 ->get();
         });
@@ -61,7 +62,6 @@ class HomepageService
         return match ($sectionType) {
             'hero_banner'       => self::resolveMediaItems($section->id, $content),
             'image_banner'      => self::resolveMediaItems($section->id, $content),
-            'testimonials'      => self::resolveMediaItems($section->id, $content),
             'trending_packages' => self::resolveMediaItems($section->id, $content),
             'download_app'      => self::resolveMediaItems($section->id, $content),
             'test'              => self::resolveMediaItems($section->id, $content),
@@ -123,7 +123,9 @@ class HomepageService
         $limit = (int) ($content['limit'] ?? 10);
         $dataSource = $content['data_source'] ?? 'featured_services';
 
-        $query = Service::where('status', 'Active');
+        $query = Service::where('status', 'Active')
+            ->with(['activeVariants:id,service_id,price,sale_price,status'])
+            ->withCount(['activeVariants as variant_count']);
 
         switch ($dataSource) {
             case 'trending':
@@ -191,3 +193,6 @@ class HomepageService
         return []; // Return empty array — do NOT return false (false causes the section to be dropped)
     }
 }
+
+
+

@@ -47,8 +47,8 @@
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black/50 text-sm bg-white cursor-pointer transition-all">
                   <option value="">Select section...</option>
                   @foreach($sections as $s)
-                    <option value="{{ $s->id }}" data-media-type="{{ $s->content['media_type'] ?? 'image' }}" {{ (old('homepage_content_id', request('section')) == $s->id) ? 'selected' : '' }}>
-                      {{ $s->content['name'] ?? $s->title ?? $s->section }}</option>
+                    <option value="{{ $s->id }}" data-media-type="{{ $s->media_type ?? 'banner' }}" {{ (old('homepage_content_id', request('section')) == $s->id) ? 'selected' : '' }}>
+                      {{ $s->name ?? $s->title ?? $s->section }}</option>
                   @endforeach
                 </select>
               </div>

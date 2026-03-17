@@ -59,7 +59,7 @@ class MediaController extends Controller
 
     public function create()
     {
-        $sections = HomepageContent::where('status', 'Active')->orderBy('sort_order')->get();
+        $sections = HomepageContent::where('status', 'Active')->where('section', '!=', 'testimonials')->orderBy('sort_order')->get();
         return view('media.create', compact('sections'));
     }
 
@@ -114,7 +114,7 @@ class MediaController extends Controller
 
     public function edit(Media $medium)
     {
-        $sections = HomepageContent::where('status', 'Active')->orderBy('sort_order')->get();
+        $sections = HomepageContent::where('status', 'Active')->where('section', '!=', 'testimonials')->orderBy('sort_order')->get();
         return view('media.edit', ['media' => $medium, 'sections' => $sections]);
     }
 
@@ -151,3 +151,4 @@ class MediaController extends Controller
         return redirect()->route('media.index')->with('success', 'Media deleted.');
     }
 }
+

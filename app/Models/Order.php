@@ -135,3 +135,4 @@ class Order extends Model
         return 'BV-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
 }
+

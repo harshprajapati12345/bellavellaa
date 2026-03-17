@@ -22,7 +22,10 @@ class SlotController extends BaseController
 
         $date = $validated['date'];
         $customer = $this->guard()->user();
-        $city = $validated['city'] ?? ($customer ? $customer->city : 'Mumbai');
+        $city = trim((string) ($validated['city'] ?? ''));
+        if ($city === '') {
+            return $this->error('City is required to fetch available slots.', 422);
+        }
 
         // 1. Get all active professionals in this city
         $professionals = \App\Models\Professional::where('city', $city)
@@ -86,3 +89,4 @@ class SlotController extends BaseController
         return $this->success($availableSlots, 'Available slots retrieved successfully.');
     }
 }
+

@@ -13,6 +13,7 @@ use App\Services\SellableServiceResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CartController extends BaseController
@@ -226,6 +227,10 @@ class CartController extends BaseController
 
         $validated = $request->validate([
             'address' => 'required|string',
+            'address_id' => 'nullable|integer|exists:addresses,id',
+            'city' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'scheduled_date' => 'required|date|after_or_equal:today',
             'scheduled_slot' => 'required|string',
             'payment_method' => 'required|string',
@@ -263,11 +268,31 @@ class CartController extends BaseController
 
             $totalPaise = max(0, $subtotalPaise - $discountPaise + ($validated['tip_amount_paise'] ?? 0));
 
+            $selectedAddress = null;
+            if (!empty($validated['address_id'])) {
+                $selectedAddress = $customer->addresses()->whereKey($validated['address_id'])->first();
+            }
+
+            $resolvedCity = trim((string) ($selectedAddress?->city ?? $validated['city'] ?? ''));
+            $resolvedPhone = trim((string) ($selectedAddress?->phone ?? $customer->mobile ?? ''));
+            if ($resolvedCity === '') {
+                Log::warning('Checkout city missing', [
+                    'customer_id' => $customer->id,
+                    'address_id' => $validated['address_id'] ?? null,
+                    'raw_address' => $validated['address'],
+                ]);
+
+                return $this->error('Selected address is incomplete. City is missing.', 422);
+            }
+
             $order = Order::create([
                 'order_number' => 'ORD-' . strtoupper(Str::random(8)),
                 'customer_id' => $customer->id,
+                'address_id' => $selectedAddress?->id,
                 'address' => $validated['address'],
-                'city' => $customer->city ?? 'Mumbai',
+                'city' => $resolvedCity,
+                'latitude' => $validated['latitude'] ?? $selectedAddress?->latitude,
+                'longitude' => $validated['longitude'] ?? $selectedAddress?->longitude,
                 'scheduled_date' => $validated['scheduled_date'],
                 'scheduled_slot' => $validated['scheduled_slot'],
                 'subtotal_paise' => $subtotalPaise,
@@ -312,8 +337,11 @@ class CartController extends BaseController
                         'order_id' => $order->id,
                         'customer_id' => $customer->id,
                         'customer_name' => $customer->name,
-                        'customer_phone' => $customer->mobile,
-                        'city' => $customer->city ?? 'Mumbai',
+                        'customer_phone' => $resolvedPhone,
+                        'address_id' => $selectedAddress?->id,
+                        'city' => $resolvedCity,
+                        'lat' => $validated['latitude'] ?? $selectedAddress?->latitude,
+                        'lng' => $validated['longitude'] ?? $selectedAddress?->longitude,
                         'service_id' => $cart->service_id,
                         'service_variant_id' => $cart->service_variant_id,
                         'service_name' => $cart->service?->name,
@@ -413,3 +441,7 @@ class CartController extends BaseController
         }
     }
 }
+
+
+
+

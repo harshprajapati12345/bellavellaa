@@ -65,3 +65,4 @@ class Booking extends Model
             ?? $this->package?->name;
     }
 }
+

@@ -32,6 +32,10 @@ class ServiceResource extends JsonResource
             'sort_order' => $this->sort_order,
             'image' => MediaPathNormalizer::url($this->image),
             'image_url' => MediaPathNormalizer::url($this->image),
+            'variant_count' => (int) ($this->variant_count ?? 0),
+            'lowest_variant_price' => $this->relationLoaded('activeVariants') && $this->activeVariants->isNotEmpty()
+                ? (float) $this->activeVariants->map(fn ($variant) => $variant->display_price)->min()
+                : null,
             'has_variants' => (bool) $this->has_variants,
             'is_bookable' => $this->canBeBookedDirectly(),
             'allow_direct_booking_with_variants' => (bool) $this->allow_direct_booking_with_variants,
@@ -50,3 +54,4 @@ class ServiceResource extends JsonResource
         ];
     }
 }
+
