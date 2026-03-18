@@ -34,6 +34,7 @@ class AuthController extends BaseController
 
         if (!app()->isProduction()) {
             $data['otp_debug'] = $otp->otp;
+            $data['otp'] = $otp->otp; // For Flutter auto-fill
         }
 
         return $this->success($data, 'OTP sent successfully.');

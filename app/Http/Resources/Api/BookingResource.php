@@ -24,6 +24,7 @@ class BookingResource extends JsonResource
             'booking_date' => $this->date,
             'booking_time' => $this->slot,
             'status' => $this->status,
+            'current_step' => $this->current_step,
             'sellable_type' => $this->sellable_type,
             'sellable_id' => $this->sellable_id,
             'sellable_name' => $this->sellable_name,

@@ -40,6 +40,8 @@ class FirebaseService
         if (isset($data['client_name'])) $firestoreData['client_name'] = $data['client_name'];
         if (isset($data['location'])) $firestoreData['location'] = $data['location'];
         if (isset($data['price'])) $firestoreData['price'] = (string)$data['price'];
+        if (isset($data['isActive'])) $firestoreData['isActive'] = (bool)$data['isActive'];
+        if (isset($data['current_step'])) $firestoreData['current_step'] = $data['current_step'];
 
         $result = $this->pushToFirestore("job_requests/professional_{$professionalId}", $firestoreData, 'pending');
         

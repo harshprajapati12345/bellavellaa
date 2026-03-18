@@ -23,7 +23,10 @@ class BookingService
         }
 
         DB::transaction(function () use ($booking) {
-            $booking->update(['status' => 'completed']);
+            $booking->update([
+                'status' => 'completed',
+                'current_step' => 'completed'
+            ]);
 
             if ($booking->professional) {
                 self::distributeEarnings($booking, $booking->professional);

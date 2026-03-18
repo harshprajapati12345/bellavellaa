@@ -25,9 +25,12 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'arrived']);
+            $booking->update([
+                'status' => 'scan_kit',
+                'current_step' => 'kit_scan'
+            ]);
             $this->sendDashboardUpdate($booking);
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully. Transitioning to kit scan.');
         }
         return $this->error('Booking not found.', 404);
     }
@@ -39,7 +42,10 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'on_the_way']);
+            $booking->update([
+                'status' => 'on_the_way',
+                'current_step' => 'journey'
+            ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started.');
         }
@@ -50,7 +56,10 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $updateData = ['status' => 'in_progress'];
+            $updateData = [
+                'status' => 'in_progress',
+                'current_step' => 'service'
+            ];
             if (!$booking->service_started_at) {
                 $updateData['service_started_at'] = now();
             }
@@ -65,7 +74,10 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update(['status' => 'payment_pending']);
+            $booking->update([
+                'status' => 'payment_pending',
+                'current_step' => 'payment'
+            ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
         }
@@ -77,8 +89,16 @@ class JobController extends BaseController
      */
     public function scanKit(ScanKitRequest $request, $id): JsonResponse
     {
-        // verification logic already handled by request validation or logic here
-        return $this->success(null, 'Kit scanned and verified.');
+        $booking = \App\Models\Booking::find($id);
+        if ($booking) {
+            $booking->update([
+                'status' => 'scan_kit',
+                'current_step' => 'kit_scan'
+            ]);
+            $this->sendDashboardUpdate($booking);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');
+        }
+        return $this->error('Booking not found.', 404);
     }
 
     public function complete(CompleteJobRequest $request, $id): JsonResponse
@@ -89,11 +109,13 @@ class JobController extends BaseController
             \App\Services\BookingService::completeJob($booking);
             $this->sendDashboardUpdate($booking);
             
-            // Mark professional as idle in Firestore so they can receive new requests
+            // Mark professional as idle in Firestore and set isActive to false
             $this->firebase->pushJobToFirestore([
                 'professional_id' => $booking->professional_id,
                 'booking_id'      => $booking->id,
                 'status'          => 'idle',
+                'current_step'    => 'completed',
+                'isActive'        => false,
                 'updated_at'      => time(),
             ]);
 
@@ -178,11 +200,13 @@ class JobController extends BaseController
         BookingService::completeJob($booking);
         $this->sendDashboardUpdate($booking);
 
-        // Mark professional as idle in Firestore
+        // Mark professional as idle in Firestore and set isActive to false
         $this->firebase->pushJobToFirestore([
             'professional_id' => $booking->professional_id,
             'booking_id'      => $booking->id,
             'status'          => 'idle',
+            'current_step'    => 'completed',
+            'isActive'        => false,
             'updated_at'      => time(),
         ]);
 
@@ -204,9 +228,20 @@ class JobController extends BaseController
                 [
                     'type' => 'job_status_updated',
                     'booking_id' => (string)$booking->id,
-                    'status' => $booking->status
+                    'status' => $booking->status,
+                    'current_step' => $booking->current_step,
                 ]
             );
         }
+
+        // 3. Sync Firestore as well manually
+        $this->firebase->pushJobToFirestore([
+            'professional_id' => $booking->professional_id,
+            'booking_id'      => (string)$booking->id,
+            'status'          => $booking->status,
+            'current_step'    => $booking->current_step,
+            'isActive'        => true,
+            'updated_at'      => time(),
+        ]);
     }
 }
