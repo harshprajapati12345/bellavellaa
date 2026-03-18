@@ -31,10 +31,20 @@ class BookingResource extends JsonResource
             'variant_name' => $this->variant?->name,
             'display_name' => $this->sellable_name,
             'total_amount' => $this->price,
-            'display_price' => $sellable->display_price ?? $sellable->price ?? $this->price,
-            'duration_minutes' => $sellable->resolved_duration_minutes ?? $sellable->duration_minutes ?? $sellable->duration ?? null,
+            'display_price' => data_get($this->meta, 'totals.final_total')
+                ?? $sellable->display_price
+                ?? $sellable->price
+                ?? $this->price,
+            'duration_minutes' => data_get($this->meta, 'totals.duration_minutes')
+                ?? $sellable->resolved_duration_minutes
+                ?? $sellable->duration_minutes
+                ?? $sellable->duration
+                ?? null,
             'address' => $this->order?->address,
             'notes' => $this->notes,
+            'meta' => $this->meta,
+            'package_snapshot' => data_get($this->meta, 'package_snapshot'),
+            'package_configuration' => data_get($this->meta, 'configuration'),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

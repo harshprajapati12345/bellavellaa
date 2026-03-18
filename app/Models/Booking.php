@@ -8,6 +8,10 @@ class Booking extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'meta' => 'array',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);
@@ -45,6 +49,10 @@ class Booking extends Model
 
     public function getSellableItemAttribute()
     {
+        if ($this->sellable_type === 'package') {
+            return $this->package;
+        }
+
         if ($this->service_variant_id) {
             return $this->variant;
         }
@@ -58,6 +66,12 @@ class Booking extends Model
 
     public function getSellableNameAttribute(): ?string
     {
+        if ($this->sellable_type === 'package') {
+            return data_get($this->meta, 'package_snapshot.title')
+                ?? $this->package_name
+                ?? $this->package?->name;
+        }
+
         return $this->variant?->name
             ?? $this->service_name
             ?? $this->service?->name
@@ -65,4 +79,3 @@ class Booking extends Model
             ?? $this->package?->name;
     }
 }
-

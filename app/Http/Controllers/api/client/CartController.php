@@ -9,6 +9,7 @@ use App\Models\Package;
 use App\Models\Promotion;
 use App\Models\Service;
 use App\Models\ServiceVariant;
+use App\Services\ConfigurablePackageService;
 use App\Services\SellableServiceResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,8 @@ use Illuminate\Support\Str;
 class CartController extends BaseController
 {
     public function __construct(
-        protected SellableServiceResolver $sellableResolver
+        protected SellableServiceResolver $sellableResolver,
+        protected ConfigurablePackageService $packageService
     ) {
     }
 
@@ -33,7 +35,7 @@ class CartController extends BaseController
     {
         $cartItems = $this->guard()->user()->carts()->with(['item', 'service', 'variant.service', 'package'])->get();
 
-        $total = $cartItems->sum(fn ($cart) => $cart->quantity * (($cart->sellable_item->display_price ?? $cart->sellable_item->price) ?? 0));
+        $total = $cartItems->sum(fn ($cart) => $cart->quantity * $cart->resolved_unit_price);
 
         return $this->success([
             'items' => CartResource::collection($cartItems),
@@ -45,9 +47,13 @@ class CartController extends BaseController
     {
         $validated = $request->validate([
             'item_type' => 'required|in:service,variant,package',
-            'item_id' => 'required|integer',
+            'item_id' => 'nullable|integer',
+            'package_id' => 'nullable|integer|exists:packages,id',
             'service_id' => 'nullable|integer|exists:services,id',
             'service_variant_id' => 'nullable|integer|exists:service_variants,id',
+            'context_type' => 'nullable|string',
+            'context_id' => 'nullable|integer',
+            'configuration' => 'nullable|array',
             'quantity' => 'nullable|integer|min:1',
         ]);
 
@@ -55,19 +61,53 @@ class CartController extends BaseController
         $quantity = $validated['quantity'] ?? 1;
 
         if ($validated['item_type'] === 'package') {
-            $package = Package::find($validated['item_id']);
+            $packageId = $validated['package_id'] ?? $validated['item_id'] ?? null;
+            $package = Package::with(['contexts', 'groups.items.options'])->find($packageId);
             if (!$package) {
                 return $this->error('Package not found.', 404);
             }
 
-            $cart = Cart::firstOrCreate([
-                'customer_id' => $customerId,
-                'item_type' => 'package',
-                'item_id' => $package->id,
-            ], [
-                'package_id' => $package->id,
-                'quantity' => 0,
-            ]);
+            $context = $this->packageService->assertPackageContext(
+                $package,
+                $validated['context_type'] ?? null,
+                isset($validated['context_id']) ? (int) $validated['context_id'] : null,
+            );
+            $resolvedConfiguration = $this->packageService->buildResolvedConfiguration(
+                $package,
+                $validated['configuration'] ?? null,
+            );
+            $meta = $this->packageService->buildCartMeta(
+                $package,
+                $context,
+                $resolvedConfiguration,
+            );
+            $configHash = data_get($meta, 'config_hash');
+            $effectiveQuantity = $package->quantity_allowed ? $quantity : 1;
+
+            $cart = Cart::query()
+                ->where('customer_id', $customerId)
+                ->where('item_type', 'package')
+                ->where('package_id', $package->id)
+                ->where('meta->config_hash', $configHash)
+                ->first();
+
+            if (!$cart) {
+                $cart = Cart::create([
+                    'customer_id' => $customerId,
+                    'item_type' => 'package',
+                    'item_id' => $package->id,
+                    'package_id' => $package->id,
+                    'quantity' => $effectiveQuantity,
+                    'meta' => $meta,
+                ]);
+            } elseif ($package->quantity_allowed) {
+                $cart->increment('quantity', $effectiveQuantity);
+            } else {
+                $cart->update([
+                    'quantity' => 1,
+                    'meta' => $meta,
+                ]);
+            }
         } else {
             $service = Service::with('variants')->find($validated['service_id'] ?? ($validated['item_type'] === 'service' ? $validated['item_id'] : null));
             $variant = null;
@@ -99,7 +139,9 @@ class CartController extends BaseController
             ]);
         }
 
-        $cart->increment('quantity', $quantity);
+        if ($validated['item_type'] !== 'package') {
+            $cart->increment('quantity', $quantity);
+        }
 
         return $this->success(new CartResource($cart->fresh(['item', 'service', 'variant.service', 'package'])), 'Item added to cart.');
     }
@@ -111,10 +153,42 @@ class CartController extends BaseController
         }
 
         $validated = $request->validate([
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'nullable|integer|min:1',
+            'context_type' => 'nullable|string',
+            'context_id' => 'nullable|integer',
+            'configuration' => 'nullable|array',
         ]);
 
-        $cart->update($validated);
+        if ($cart->item_type === 'package') {
+            $package = Package::with(['contexts', 'groups.items.options'])
+                ->findOrFail($cart->package_id ?? $cart->item_id);
+
+            $context = $this->packageService->assertPackageContext(
+                $package,
+                $validated['context_type'] ?? data_get($cart->meta, 'context.type'),
+                isset($validated['context_id'])
+                    ? (int) $validated['context_id']
+                    : data_get($cart->meta, 'context.id'),
+            );
+            $resolvedConfiguration = $this->packageService->buildResolvedConfiguration(
+                $package,
+                $validated['configuration'] ?? data_get($cart->meta, 'configuration'),
+            );
+            $meta = $this->packageService->buildCartMeta($package, $context, $resolvedConfiguration);
+
+            $cart->update([
+                'quantity' => $package->quantity_allowed
+                    ? ($validated['quantity'] ?? $cart->quantity)
+                    : 1,
+                'meta' => $meta,
+                'item_id' => $package->id,
+                'package_id' => $package->id,
+            ]);
+        } else {
+            $cart->update([
+                'quantity' => $validated['quantity'] ?? $cart->quantity,
+            ]);
+        }
 
         return $this->success(new CartResource($cart->fresh(['item', 'service', 'variant.service', 'package'])), 'Cart updated.');
     }
@@ -142,8 +216,12 @@ class CartController extends BaseController
         $validated = $request->validate([
             'items' => 'required|array',
             'items.*.item_type' => 'required|in:service,package',
-            'items.*.item_id' => 'required|integer',
+            'items.*.item_id' => 'nullable|integer',
+            'items.*.package_id' => 'nullable|integer|exists:packages,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.context_type' => 'nullable|string',
+            'items.*.context_id' => 'nullable|integer',
+            'items.*.configuration' => 'nullable|array',
         ]);
 
         $customer = $this->guard()->user();
@@ -153,6 +231,34 @@ class CartController extends BaseController
 
         // Add new items
         foreach ($validated['items'] as $item) {
+            if ($item['item_type'] === 'package') {
+                $package = Package::with(['contexts', 'groups.items.options'])
+                    ->findOrFail($item['package_id'] ?? $item['item_id']);
+                $context = $this->packageService->assertPackageContext(
+                    $package,
+                    $item['context_type'] ?? null,
+                    isset($item['context_id']) ? (int) $item['context_id'] : null,
+                );
+                $resolvedConfiguration = $this->packageService->buildResolvedConfiguration(
+                    $package,
+                    $item['configuration'] ?? null,
+                );
+
+                Cart::create([
+                    'customer_id' => $customer->id,
+                    'item_type' => 'package',
+                    'item_id' => $package->id,
+                    'package_id' => $package->id,
+                    'quantity' => $package->quantity_allowed ? $item['quantity'] : 1,
+                    'meta' => $this->packageService->buildCartMeta(
+                        $package,
+                        $context,
+                        $resolvedConfiguration,
+                    ),
+                ]);
+                continue;
+            }
+
             Cart::create([
                 'customer_id' => $customer->id,
                 'item_type' => $item['item_type'],
@@ -167,43 +273,19 @@ class CartController extends BaseController
     public function getSlotsFromCart(): JsonResponse
     {
         $customer = $this->guard()->user();
-        
-        // 1. Fetch category names for Services in the cart
-        $serviceCategoryNames = DB::table('carts')
-            ->join('services', 'carts.item_id', '=', 'services.id')
-            ->join('categories', 'services.category_id', '=', 'categories.id')
-            ->where('carts.customer_id', $customer->id)
-            ->where('carts.item_type', 'service')
-            ->pluck('categories.name')
-            ->unique();
+        $cartItems = $customer->carts()->with(['service.category', 'variant.service.category', 'package'])->get();
+        $allCategoryNames = $cartItems->map(function ($cart) {
+            if ($cart->item_type === 'package') {
+                return data_get($cart->meta, 'context.name')
+                    ?? $cart->package?->category?->name
+                    ?? null;
+            }
 
-        // 2. Fetch category names for Variants in the cart
-        $variantCategoryNames = DB::table('carts')
-            ->join('service_variants', 'carts.item_id', '=', 'service_variants.id')
-            ->join('services', 'service_variants.service_id', '=', 'services.id')
-            ->join('categories', 'services.category_id', '=', 'categories.id')
-            ->where('carts.customer_id', $customer->id)
-            ->where('carts.item_type', 'variant')
-            ->pluck('categories.name')
-            ->unique();
+            return $cart->variant?->service?->resolved_category?->name
+                ?? $cart->service?->resolved_category?->name
+                ?? null;
+        })->filter()->unique()->values()->all();
 
-        // 3. Fetch category names for Packages in the cart
-        $packageCategoryNames = DB::table('carts')
-            ->join('packages', 'carts.item_id', '=', 'packages.id')
-            ->join('categories', 'packages.category_id', '=', 'categories.id')
-            ->where('carts.customer_id', $customer->id)
-            ->where('carts.item_type', 'package')
-            ->pluck('categories.name')
-            ->unique();
-
-        $allCategoryNames = $serviceCategoryNames
-            ->merge($variantCategoryNames)
-            ->merge($packageCategoryNames)
-            ->unique()
-            ->filter()
-            ->toArray();
-
-        // 3. Generate slots structure expected by Flutter app
         $slotsMap = [];
         $now = now();
         
@@ -259,7 +341,7 @@ class CartController extends BaseController
 
         try {
             $subtotalPaise = $cartItems->sum(function ($cart) {
-                $price = ($cart->sellable_item->display_price ?? $cart->sellable_item->price ?? 0) * 100;
+                $price = $cart->resolved_unit_price * 100;
 
                 return $cart->quantity * (int) round($price);
             });
@@ -324,9 +406,9 @@ class CartController extends BaseController
 
             foreach ($cartItems as $cart) {
                 $sellable = $cart->sellable_item;
-                $displayPrice = (float) ($sellable->display_price ?? $sellable->price ?? 0);
-                $durationMinutes = $sellable->resolved_duration_minutes ?? $sellable->duration_minutes ?? $sellable->duration ?? 0;
-                $itemName = $sellable->name ?? 'Item';
+                $displayPrice = (float) $cart->resolved_unit_price;
+                $durationMinutes = (int) ($cart->resolved_duration_minutes ?? 0);
+                $itemName = $cart->resolved_display_name;
 
                 $order->items()->create([
                     'item_type' => $cart->item_type,
@@ -344,10 +426,6 @@ class CartController extends BaseController
                     'meta' => $cart->meta,
                 ]);
 
-                if ($cart->item_type === 'package') {
-                    continue;
-                }
-
                 for ($i = 0; $i < $cart->quantity; $i++) {
                     \App\Models\Booking::create([
                         'order_id' => $order->id,
@@ -358,17 +436,18 @@ class CartController extends BaseController
                         'city' => $resolvedCity,
                         'lat' => $validated['latitude'] ?? $selectedAddress?->latitude,
                         'lng' => $validated['longitude'] ?? $selectedAddress?->longitude,
-                        'service_id' => $cart->service_id,
-                        'service_variant_id' => $cart->service_variant_id,
-                        'service_name' => $cart->service?->name,
+                        'service_id' => $cart->item_type === 'package' ? null : $cart->service_id,
+                        'service_variant_id' => $cart->item_type === 'package' ? null : $cart->service_variant_id,
+                        'service_name' => $cart->item_type === 'package' ? null : $cart->service?->name,
                         'package_id' => $cart->package_id,
-                        'package_name' => $cart->package?->name,
+                        'package_name' => data_get($cart->meta, 'package_snapshot.title') ?? $cart->package?->name,
                         'sellable_type' => $cart->item_type,
                         'sellable_id' => $cart->item_id,
                         'date' => $order->scheduled_date,
                         'slot' => $order->scheduled_slot,
                         'status' => 'pending',
                         'price' => $displayPrice,
+                        'meta' => $cart->meta,
                     ]);
                 }
             }
@@ -457,7 +536,6 @@ class CartController extends BaseController
         }
     }
 }
-
 
 
 

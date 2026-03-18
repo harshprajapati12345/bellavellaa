@@ -53,4 +53,45 @@ class Cart extends Model
     {
         return $this->variant ?? $this->service ?? $this->package ?? $this->item;
     }
+
+    public function getResolvedUnitPriceAttribute(): float
+    {
+        if ($this->item_type === 'package') {
+            return (float) (
+                data_get($this->meta, 'totals.final_total')
+                ?? data_get($this->meta, 'totals.discounted_total')
+                ?? data_get($this->meta, 'package_snapshot.display_price')
+                ?? $this->package?->price
+                ?? 0
+            );
+        }
+
+        return (float) (($this->sellable_item->display_price ?? $this->sellable_item->price) ?? 0);
+    }
+
+    public function getResolvedDurationMinutesAttribute(): ?int
+    {
+        if ($this->item_type === 'package') {
+            return data_get($this->meta, 'totals.duration_minutes')
+                ?? $this->package?->duration;
+        }
+
+        return $this->sellable_item->resolved_duration_minutes
+            ?? $this->sellable_item->duration_minutes
+            ?? $this->sellable_item->duration
+            ?? null;
+    }
+
+    public function getResolvedDisplayNameAttribute(): string
+    {
+        if ($this->item_type === 'package') {
+            return (string) (
+                data_get($this->meta, 'package_snapshot.title')
+                ?? $this->package?->name
+                ?? 'Package'
+            );
+        }
+
+        return (string) ($this->variant?->name ?? $this->service?->name ?? $this->item?->name ?? 'Unknown');
+    }
 }

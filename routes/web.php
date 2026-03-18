@@ -80,6 +80,8 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::patch('service-variants/{variant}', [ServiceVariantController::class, 'update'])->name('service-variants.update');
     Route::delete('service-variants/{variant}', [ServiceVariantController::class, 'destroy'])->name('service-variants.destroy');
     Route::resource('packages', PackageController::class);
+    Route::get('packages-linked-groups', [PackageController::class, 'linkedGroups'])->name('packages.linked-groups');
+    Route::get('packages-linked-group-items', [PackageController::class, 'linkedGroupItems'])->name('packages.linked-group-items');
     Route::patch('packages/{package}/toggle-status', [PackageController::class, 'toggleStatus'])->name('packages.toggle-status');
 
     // Professionals Sub-routes
