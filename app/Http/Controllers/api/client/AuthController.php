@@ -43,6 +43,7 @@ class AuthController extends BaseController
         // Show OTP in non-production environments for testing
         if (!app()->isProduction()) {
             $data['otp_debug'] = $otp->otp;
+            $data['otp'] = $otp->otp; // For Flutter auto-fill in local/dev
         }
 
         return $this->success($data, 'OTP sent successfully.');

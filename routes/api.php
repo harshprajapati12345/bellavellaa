@@ -71,6 +71,7 @@ Route::prefix('client')->group(function () {
     Route::get('service-groups/{id}', [\App\Http\Controllers\api\client\ClientServiceGroupController::class, 'show']);
     Route::get('services/{id}', [\App\Http\Controllers\api\client\ClientServiceController::class, 'show']);
     Route::get('service-hierarchy/{nodeKey}', [\App\Http\Controllers\Api\Client\ClientServiceHierarchyController::class, 'show']);
+    Route::get('packages/featured', [ClientPackageController::class, 'featured']);
     Route::get('packages', [ClientPackageController::class, 'index']);
     Route::get('packages/{package}/config', [ClientPackageController::class, 'config']);
     Route::get('services/{id}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class, 'index']);
@@ -328,5 +329,4 @@ Route::prefix('admin')->group(function () {
         });
     });
 });
-
 

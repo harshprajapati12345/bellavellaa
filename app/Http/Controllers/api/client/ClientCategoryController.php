@@ -8,6 +8,7 @@ use App\Http\Resources\Api\CategoryResource;
 use App\Http\Resources\Api\SectionResource;
 use App\Http\Resources\Api\ServiceGroupResource;
 use App\Http\Resources\Api\ServiceResource;
+use App\Http\Resources\Api\ServiceTypeResource;
 use App\Models\Category;
 use App\Models\CategoryBanner;
 use App\Models\Service;
@@ -144,20 +145,12 @@ class ClientCategoryController extends Controller
             ];
         }
 
-        $mostBooked = $category->services()
-            ->where('status', 'Active')
-            ->orderByDesc('bookings')
-            ->take(8)
-            ->get();
-
-        if ($mostBooked->isNotEmpty()) {
-            $sections[] = [
-                'type' => 'carousel',
-                'key' => 'most_booked',
-                'title' => 'Most Booked Services',
-                'items' => ServiceResource::collection($mostBooked),
-            ];
-        }
+        $this->addLevelThreeSection(
+            $sections,
+            'spa-for-women',
+            'Spa for Women',
+            'Stress and pain relief'
+        );
 
         if ($inlineBanners->count() > 1) {
             $sections[] = [
@@ -168,7 +161,13 @@ class ClientCategoryController extends Controller
             ];
         }
 
-        $this->addCategorySection($sections, 'salon-for-women', 'salon-for-women-luxe', 'Salon for Women', 'Pamper yourself at home');
+        $this->addLevelThreeSection(
+            $sections,
+            'salon-for-women',
+            'Salon for Women',
+            'Pamper yourself at home',
+            'salon-for-women-luxe'
+        );
 
         if ($inlineBanners->count() > 2) {
             $sections[] = [
@@ -179,8 +178,12 @@ class ClientCategoryController extends Controller
             ];
         }
 
-        $this->addCategorySection($sections, 'hair-studio-for-women', null, 'Hair Studio for Women', 'Trendiest styles');
-        $this->addCategorySection($sections, 'spa-for-women', 'spa-ayurveda', 'Spa for Women', 'Stress and pain relief');
+        $this->addLevelThreeSection(
+            $sections,
+            'hair-studio-for-women',
+            'Hair Studio for Women',
+            'Trendiest styles'
+        );
 
         return response()->json([
             'success' => true,
@@ -212,6 +215,53 @@ class ClientCategoryController extends Controller
                 'items' => ServiceResource::collection($services),
             ];
         }
+    }
+
+    private function addLevelThreeSection(
+        array &$sections,
+        string $categorySlug,
+        string $title,
+        string $subtitle,
+        ?string $groupSlug = null
+    ): void
+    {
+        $category = Category::where('slug', $categorySlug)
+            ->where('status', 'Active')
+            ->with([
+                'serviceGroups' => fn ($query) => $query
+                    ->where('status', 'Active')
+                    ->when(
+                        $groupSlug,
+                        fn ($groupQuery) => $groupQuery->where('slug', $groupSlug)
+                    )
+                    ->orderBy('sort_order')
+                    ->with([
+                        'serviceTypes' => fn ($typeQuery) => $typeQuery
+                            ->where('status', 'Active')
+                            ->orderBy('sort_order'),
+                    ]),
+            ])
+            ->first();
+
+        if (!$category) {
+            return;
+        }
+
+        $serviceTypes = $category->serviceGroups
+            ->flatMap(fn ($group) => $group->serviceTypes)
+            ->values();
+
+        if ($serviceTypes->isEmpty()) {
+            return;
+        }
+
+        $sections[] = [
+            'type' => 'hierarchy_list',
+            'key' => str_replace('-', '_', $categorySlug) . '_level_3',
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'items' => ServiceTypeResource::collection($serviceTypes),
+        ];
     }
 
     private function findCategory($identifier, array $with = [])

@@ -50,8 +50,53 @@ class PackageController extends BaseController
                 'name' => $context['name'],
                 'slug' => $context['slug'],
             ],
-            'packages' => PackageSummaryResource::collection($packages),
+            'packages' => $packages
+                ->map(fn (Package $package) => $this->packageSummaryPayload($package, $context))
+                ->values(),
         ], 'Packages retrieved successfully.');
+    }
+
+    public function featured(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'limit' => 'nullable|integer|min:1|max:20',
+        ]);
+
+        $limit = (int) ($validated['limit'] ?? 8);
+
+        $packages = Package::query()
+            ->active()
+            ->where('featured', true)
+            ->with([
+                'contexts',
+                'groups.items.options',
+                'groups.items.service.activeVariants',
+            ])
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+
+        if ($packages->isEmpty()) {
+            $packages = Package::query()
+                ->active()
+                ->with([
+                    'contexts',
+                    'groups.items.options',
+                    'groups.items.service.activeVariants',
+                ])
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->limit($limit)
+                ->get();
+        }
+
+        return $this->success([
+            'packages' => $packages
+                ->map(fn (Package $package) => $this->packageSummaryPayload($package))
+                ->filter()
+                ->values(),
+        ], 'Featured packages retrieved successfully.');
     }
 
     public function config(Request $request, Package $package): JsonResponse
@@ -82,5 +127,37 @@ class PackageController extends BaseController
                 'resolved' => $resolved,
             ]),
         ], 'Package configuration retrieved successfully.');
+    }
+
+    protected function packageSummaryPayload(Package $package, ?array $context = null): ?array
+    {
+        $resolvedContext = $context ?? $this->primaryContextPayload($package);
+        if ($resolvedContext === null) {
+            return null;
+        }
+
+        return (new PackageSummaryResource($package))->toArray(request()) + [
+            'context' => [
+                'type' => $resolvedContext['type'],
+                'id' => $resolvedContext['id'],
+                'name' => $resolvedContext['name'],
+                'slug' => $resolvedContext['slug'],
+            ],
+        ];
+    }
+
+    protected function primaryContextPayload(Package $package): ?array
+    {
+        $package->loadMissing('contexts');
+        $record = $package->contexts->first();
+        if ($record === null) {
+            return null;
+        }
+
+        return $this->packageService->assertPackageContext(
+            $package,
+            $record->context_type,
+            (int) $record->context_id
+        );
     }
 }
