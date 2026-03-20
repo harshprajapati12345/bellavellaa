@@ -7,7 +7,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Events\JobUpdate;
 use App\Http\Resources\Api\BookingResource;
+use App\Models\Professional;
 use App\Services\FirebaseService;
+use Illuminate\Support\Facades\DB;
 
 class BookingController extends BaseController
 {
@@ -26,9 +28,9 @@ class BookingController extends BaseController
         $professional = $request->user('professional-api');
 
         // Only verified/approved professionals can see requests (allowing pending for testing/initial flow)
-        if (strtolower($professional->verification) !== 'verified' && 
-            strtolower($professional->verification) !== 'approved' &&
-            strtolower($professional->verification) !== 'pending') {
+        if (strtolower($professional->verification) !== 'verified' &&
+        strtolower($professional->verification) !== 'approved' &&
+        strtolower($professional->verification) !== 'pending') {
             return $this->success([], 'Verify your account to see booking requests.');
         }
 
@@ -81,9 +83,9 @@ class BookingController extends BaseController
     {
         $professional = $request->user('professional-api');
 
-        if (strtolower($professional->verification) !== 'verified' && 
-            strtolower($professional->verification) !== 'approved' &&
-            strtolower($professional->verification) !== 'pending') {
+        if (strtolower($professional->verification) !== 'verified' &&
+        strtolower($professional->verification) !== 'approved' &&
+        strtolower($professional->verification) !== 'pending') {
             return $this->error('Only verified professionals can accept bookings. (Verification: ' . $professional->verification . ')', 403);
         }
 
@@ -115,9 +117,9 @@ class BookingController extends BaseController
         // Reset Firestore job status to idle
         $this->firebase->pushJobToFirestore([
             'professional_id' => $professional->id,
-            'booking_id'      => $booking->id,
-            'status'          => 'idle',
-            'updated_at'      => time(),
+            'booking_id' => $booking->id,
+            'status' => 'idle',
+            'updated_at' => time(),
         ]);
 
         // Real-time WebSocket Dashboard Sync
@@ -132,7 +134,7 @@ class BookingController extends BaseController
     public function reject(Request $request, $id): JsonResponse
     {
         $professional = $request->user('professional-api');
-        
+
         $booking = Booking::findOrFail($id);
 
         if ((int)$booking->professional_id !== (int)$professional->id) {
@@ -147,13 +149,13 @@ class BookingController extends BaseController
         // Reset Firestore job status to idle
         $this->firebase->pushJobToFirestore([
             'professional_id' => $professional->id,
-            'booking_id'      => $booking->id,
-            'status'          => 'idle',
-            'updated_at'      => time(),
+            'booking_id' => $booking->id,
+            'status' => 'idle',
+            'updated_at' => time(),
         ]);
 
         // Real-time WebSocket Dashboard Sync
-        broadcast(new JobUpdate($booking->setAttribute('professional_id', $professional->id))); 
+        broadcast(new JobUpdate($booking->setAttribute('professional_id', $professional->id)));
 
         return $this->success(null, 'Booking request rejected.');
     }
@@ -164,7 +166,7 @@ class BookingController extends BaseController
     public function updateStatus(Request $request, $id): JsonResponse
     {
         $professional = $request->user('professional-api');
-        
+
         $validated = $request->validate([
             'status' => 'required|in:accepted,on_the_way,arrived,in_progress,payment_pending,completed,cancelled,rejected',
         ]);
@@ -176,18 +178,37 @@ class BookingController extends BaseController
         }
 
         $originalStatus = $booking->status;
-        $booking->applyStatusTransition($validated['status']);
+        DB::beginTransaction();
+        try {
+            $booking->applyStatusTransition($validated['status']);
 
-        // Real-time WebSocket Dashboard Sync
-        broadcast(new JobUpdate($booking));
+            // Real-time WebSocket Dashboard Sync
+            broadcast(new JobUpdate($booking));
 
-        // If completed, update earnings + orders count on professional
-        if ($validated['status'] === 'completed' && $originalStatus !== 'completed') {
-            $commissionAmt = ($booking->price * ($professional->commission ?? 0)) / 100;
-            $earnings = $booking->price - $commissionAmt;
-            
-            $professional->increment('orders');
-            $professional->increment('earnings', $earnings);
+            // If completed, update earnings + orders count on professional
+            if ($validated['status'] === 'completed' && $originalStatus !== 'completed') {
+                $commissionAmt = ($booking->price * ($professional->commission ?? 0)) / 100;
+                $earnings = $booking->price - $commissionAmt;
+
+                // 🔥 Sane & Safe Increment
+                $professional = Professional::where('id', $professional->id)->lockForUpdate()->first();
+                $professional->increment('orders'); // Legacy support
+                $professional->increment('total_completed_jobs'); // New system
+                $professional->increment('earnings', $earnings);
+
+                // 🔥 Trigger Referral Logic
+                $rewardService = app(\App\Services\RewardService::class);
+                $rewardService->processFirstJobReferralReward($professional);
+
+                // 🪙 Trigger New Rewards
+                $rewardService->rewardWeeklyPremiumJobs($professional);
+                $rewardService->rewardOnTimeCompletion($professional, $booking);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to update booking status: ' . $e->getMessage(), 500);
         }
 
         return $this->success($booking, 'Booking status updated.');

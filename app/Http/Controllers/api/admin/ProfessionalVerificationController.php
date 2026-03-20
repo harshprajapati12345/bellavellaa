@@ -32,11 +32,14 @@ class ProfessionalVerificationController extends BaseController
         ]);
 
         $professional = Professional::findOrFail($id);
-        
+
         $professional->update([
             'verification' => $request->status,
-            // 'verification_remarks' => $request->remarks, // Assuming column exists or adding it later
         ]);
+
+        if ($request->status === 'Verified') {
+            app(\App\Services\RewardService::class)->rewardProfileVerification($professional);
+        }
 
         return $this->success(new ProfessionalResource($professional), "Professional status updated to {$request->status}.");
     }

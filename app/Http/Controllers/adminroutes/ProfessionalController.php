@@ -10,10 +10,10 @@ class ProfessionalController extends Controller
     public function index()
     {
         $professionals = Professional::all();
-        $total   = $professionals->count();
-        $active  = $professionals->where('status', 'Active')->count();
-        $online  = $professionals->where('last_seen', '>=', now()->subMinutes(30))->count();
-        $topPro  = $professionals->sortByDesc('bookings_count')->first();
+        $total = $professionals->count();
+        $active = $professionals->where('status', 'Active')->count();
+        $online = $professionals->where('last_seen', '>=', now()->subMinutes(30))->count();
+        $topPro = $professionals->sortByDesc('bookings_count')->first();
 
         return view('professionals.index', compact('professionals', 'total', 'active', 'online', 'topPro'));
     }
@@ -34,17 +34,17 @@ class ProfessionalController extends Controller
         }
 
         Professional::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'phone'      => $request->phone,
-            'category'   => $request->category,
-            'city'       => $request->city,
-            'bio'        => $request->bio,
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'category' => $request->category,
+            'city' => $request->city,
+            'bio' => $request->bio,
             'experience' => $request->experience ?? '0 years',
-            'rating'     => $request->rating ?? 0,
-            'status'     => $request->has('status') ? 'Active' : 'Suspended',
-            'avatar'     => $avatarPath,
-            'joined'     => now(),
+            'rating' => $request->rating ?? 0,
+            'status' => $request->has('status') ? 'Active' : 'Suspended',
+            'avatar' => $avatarPath,
+            'joined' => now(),
         ]);
 
         return redirect()->route('professionals.index')->with('success', 'Professional added!');
@@ -62,7 +62,7 @@ class ProfessionalController extends Controller
             'email' => $professional->email ?? '—',
             'city' => $professional->city ?? '—',
             'joined' => \Carbon\Carbon::parse($professional->created_at)->format('d M Y'),
-            'avatar' => $professional->avatar ? asset('storage/'.$professional->avatar) : 'https://i.pravatar.cc/150?u='.$professional->id,
+            'avatar' => $professional->avatar ? asset('storage/' . $professional->avatar) : 'https://i.pravatar.cc/150?u=' . $professional->id,
         ]);
     }
 
@@ -82,16 +82,16 @@ class ProfessionalController extends Controller
         }
 
         $professional->update([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'phone'      => $request->phone,
-            'category'   => $request->category,
-            'city'       => $request->city,
-            'bio'        => $request->bio,
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'category' => $request->category,
+            'city' => $request->city,
+            'bio' => $request->bio,
             'experience' => $request->experience ?? $professional->experience,
-            'rating'     => $request->rating ?? $professional->rating,
-            'status'     => $request->has('status') ? 'Active' : 'Suspended',
-            'avatar'     => $avatarPath,
+            'rating' => $request->rating ?? $professional->rating,
+            'status' => $request->has('status') ? 'Active' : 'Suspended',
+            'avatar' => $avatarPath,
         ]);
 
         return redirect()->route('professionals.index')->with('success', 'Professional updated!');
@@ -103,19 +103,19 @@ class ProfessionalController extends Controller
         $requests = Professional::where('verification', '!=', 'Verified')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($p) {
-                return [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'avatar' => $p->avatar ?: 'https://i.pravatar.cc/150?u='.$p->id,
-                    'aadhaar' => $p->aadhaar ?? '—',
-                    'pan' => $p->pan ?? '—',
-                    'submitted' => $p->updated_at->format('Y-m-d'),
-                    'status' => $p->verification,
-                ];
-            });
+            ->map(function ($p) {
+            return [
+            'id' => $p->id,
+            'name' => $p->name,
+            'avatar' => $p->avatar ?: 'https://i.pravatar.cc/150?u=' . $p->id,
+            'aadhaar' => $p->aadhaar ?? '—',
+            'pan' => $p->pan ?? '—',
+            'submitted' => $p->updated_at->format('Y-m-d'),
+            'status' => $p->verification,
+            ];
+        });
 
-        $pendingCount  = $requests->where('status', 'Pending')->count();
+        $pendingCount = $requests->where('status', 'Pending')->count();
         $approvedCount = $requests->where('status', 'Verified')->count();
         $rejectedCount = $requests->where('status', 'Rejected')->count();
 
@@ -125,11 +125,11 @@ class ProfessionalController extends Controller
     public function verificationReview($id)
     {
         $professional = Professional::findOrFail($id);
-        
+
         $req = [
             'id' => $professional->id,
             'name' => $professional->name,
-            'avatar' => $professional->avatar ? ($professional->avatar) : 'https://i.pravatar.cc/150?u='.$professional->id,
+            'avatar' => $professional->avatar ? ($professional->avatar) : 'https://i.pravatar.cc/150?u=' . $professional->id,
             'email' => $professional->email ?? '—',
             'phone' => $professional->phone ?? '—',
             'aadhaar' => $professional->aadhaar ?? '—',
@@ -174,53 +174,53 @@ class ProfessionalController extends Controller
         $orders = \App\Models\Booking::with(['customer', 'professional'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($b) {
-                return [
-                    'id' => 'ORD-' . (1000 + $b->id),
-                    'customer' => $b->customer->name ?? 'Unknown',
-                    'customer_phone' => $b->customer->phone ?? '—',
-                    'professional' => $b->professional->name ?? '—',
-                    'service' => $b->service_name ?? '—',
-                    'date' => $b->date,
-                    'time' => $b->slot,
-                    'amount' => $b->price ?? 0,
-                    'commission' => $b->commission ?? 0,
-                    'pro_earning' => ($b->price ?? 0) - ($b->commission ?? 0),
-                    'order_status' => $b->status,
-                    'payment_status' => $b->payment_status ?? 'Pending',
-                    'address' => $b->address ?? '—',
-                    'payment_method' => $b->payment_method ?? '—',
-                ];
-            })->all();
+            ->map(function ($b) {
+            return [
+            'id' => 'ORD-' . (1000 + $b->id),
+            'customer' => $b->customer->name ?? 'Unknown',
+            'customer_phone' => $b->customer->phone ?? '—',
+            'professional' => $b->professional->name ?? '—',
+            'service' => $b->service_name ?? '—',
+            'date' => $b->date,
+            'time' => $b->slot,
+            'amount' => $b->price ?? 0,
+            'commission' => $b->commission ?? 0,
+            'pro_earning' => ($b->price ?? 0) - ($b->commission ?? 0),
+            'order_status' => $b->status,
+            'payment_status' => $b->payment_status ?? 'Pending',
+            'address' => $b->address ?? '—',
+            'payment_method' => $b->payment_method ?? '—',
+            ];
+        })->all();
 
         return view('professionals.orders.index', compact('orders'));
     }
 
     public function history()
     {
-        $history = Professional::withCount(['bookings as completed' => function($q) {
-                $q->where('status', 'completed');
-            }, 'bookings as cancelled' => function($q) {
-                $q->where('status', 'cancelled');
-            }])
+        $history = Professional::withCount(['bookings as completed' => function ($q) {
+            $q->where('status', 'completed');
+        }, 'bookings as cancelled' => function ($q) {
+            $q->where('status', 'cancelled');
+        }])
             ->get()
-            ->map(function($p) {
-                return [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'avatar' => $p->avatar ?: 'https://i.pravatar.cc/150?u='.$p->id,
-                    'category' => $p->category ?? 'Prime',
-                    'total_orders' => $p->orders,
-                    'completed' => $p->completed ?? 0,
-                    'cancelled' => $p->cancelled ?? 0,
-                    'total_earnings' => $p->earnings,
-                    'total_commission' => ($p->earnings * $p->commission / 100),
-                    'rating' => $p->rating,
-                    'payout_status' => 'paid', // Placeholder for advanced payout logic
-                    'monthly' => [0,0,0,0,0,0,0,0,0,0,0,0], // Real charts would need complex grouping
-                    'reviews' => [],
-                ];
-            })->all();
+            ->map(function ($p) {
+            return [
+            'id' => $p->id,
+            'name' => $p->name,
+            'avatar' => $p->avatar ?: 'https://i.pravatar.cc/150?u=' . $p->id,
+            'category' => $p->category ?? 'Prime',
+            'total_orders' => $p->orders,
+            'completed' => $p->completed ?? 0,
+            'cancelled' => $p->cancelled ?? 0,
+            'total_earnings' => $p->earnings,
+            'total_commission' => ($p->earnings * $p->commission / 100),
+            'rating' => $p->rating,
+            'payout_status' => 'paid', // Placeholder for advanced payout logic
+            'monthly' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Real charts would need complex grouping
+            'reviews' => [],
+            ];
+        })->all();
 
         return view('professionals.history.index', compact('history'));
     }
@@ -228,33 +228,47 @@ class ProfessionalController extends Controller
     public function deposits()
     {
         $transactions = \App\Models\WalletTransaction::with(['wallet.holder'])
-            ->whereHas('wallet', function($q) {
-                $q->where('holder_type', 'professional')->where('type', 'cash');
-            })
+            ->whereHas('wallet', function ($q) {
+            $q->where('holder_type', 'professional')->where('type', 'cash');
+        })
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function($t) {
-                // Ensure balanced formatting, convert from paise if needed (assuming paise in Wallet balance)
-                $amountBase = $t->amount;
-                $balanceBase = $t->balance_after;
-                
-                return [
-                    'id' => 'TRX-' . (1000 + $t->id),
-                    'professional' => $t->wallet->holder->name ?? 'Unknown',
-                    'pro_id' => $t->wallet->holder->id ?? '—',
-                    'date' => $t->created_at->format('Y-m-d H:i:s'),
-                    'type' => ucfirst($t->type), // Credit/Debit
-                    'amount' => $amountBase / 100, // Assuming paise
-                    'balance_after' => $balanceBase / 100, // Assuming paise
-                    'source' => $t->source,
-                    'description' => $t->description,
-                ];
-            });
+            ->map(function ($t) {
+            // Ensure balanced formatting, convert from paise if needed (assuming paise in Wallet balance)
+            $amountBase = $t->amount;
+            $balanceBase = $t->balance_after;
+
+            return [
+            'id' => 'TRX-' . (1000 + $t->id),
+            'professional' => $t->wallet->holder->name ?? 'Unknown',
+            'pro_id' => $t->wallet->holder->id ?? '—',
+            'date' => $t->created_at->format('Y-m-d H:i:s'),
+            'type' => ucfirst($t->type), // Credit/Debit
+            'amount' => $amountBase / 100, // Assuming paise
+            'balance_after' => $balanceBase / 100, // Assuming paise
+            'source' => $t->source,
+            'description' => $t->description,
+            ];
+        });
 
         $totalDeposits = $transactions->where('type', 'Credit')->sum('amount');
         $totalWithdrawals = $transactions->where('type', 'Debit')->sum('amount');
 
         return view('professionals.deposits.index', compact('transactions', 'totalDeposits', 'totalWithdrawals'));
+    }
+
+    public function suspend($id)
+    {
+        $pro = Professional::findOrFail($id);
+        $pro->update(['status' => 'Suspended']);
+        return back()->with('success', 'Professional suspended.');
+    }
+
+    public function activate($id)
+    {
+        $pro = Professional::findOrFail($id);
+        $pro->update(['status' => 'Active']);
+        return back()->with('success', 'Professional activated.');
     }
 
     public function destroy(Professional $professional)

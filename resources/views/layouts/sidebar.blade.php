@@ -168,11 +168,23 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
                 class="flex items-center justify-between px-4 py-2.5 {{ request()->is('*/verification*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <div class="flex items-center gap-3">
                   <i data-lucide="badge-check" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                  <span class="font-normal text-sm text-black">Verification</span>
+                  <span class="font-normal text-sm text-black">Doc Verification</span>
                 </div>
                 @if($pendingVerificationCount > 0)
                 <span class="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none shadow-sm">
                   {{ $pendingVerificationCount }}
+                </span>
+                @endif
+              </a>
+              <a href="{{ route('professionals.payout-verifications') }}"
+                class="flex items-center justify-between px-4 py-2.5 {{ request()->is('*/payout-verifications*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <div class="flex items-center gap-3">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                  <span class="font-normal text-sm text-black">Payout Verification</span>
+                </div>
+                @if($pendingPayoutVerificationCount > 0)
+                <span class="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none shadow-sm">
+                  {{ $pendingPayoutVerificationCount }}
                 </span>
                 @endif
               </a>
@@ -185,6 +197,23 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
                 class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/history*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="history" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">History</span>
+              </a>
+              <a href="{{ route('professionals.withdraw-requests') }}"
+                class="flex items-center justify-between px-4 py-2.5 {{ request()->is('*/withdraw-requests*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <div class="flex items-center gap-3">
+                  <i data-lucide="hand-coins" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                  <span class="font-normal text-sm text-black">Withdraw Requests</span>
+                </div>
+                @if($pendingWithdrawalCount > 0)
+                <span class="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none shadow-sm">
+                  {{ $pendingWithdrawalCount }}
+                </span>
+                @endif
+              </a>
+              <a href="{{ route('professionals.withdraw-history') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/withdraw-history*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="history" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Withdrawal History</span>
               </a>
               <a href="{{ route('professionals.deposits') }}"
                 class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/deposits*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">

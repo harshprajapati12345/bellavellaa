@@ -20,7 +20,7 @@ class EarningsController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
-        
+
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
@@ -64,15 +64,15 @@ class EarningsController extends BaseController
 
         return $this->success([
             'overall_earnings' => $professional->earnings ?? 0,
-            'total_hours'      => 0, // Mock for now until time tracking is added
-            'total_jobs'       => $totalJobs,
-            'summary'          => [
-                'today'      => round($todaysEarnings, 2),
-                'this_week'  => round($weeklyEarnings, 2),
+            'total_hours' => 0, // Mock for now until time tracking is added
+            'total_jobs' => $totalJobs,
+            'summary' => [
+                'today' => round($todaysEarnings, 2),
+                'this_week' => round($weeklyEarnings, 2),
                 'this_month' => round($monthlyEarnings, 2),
             ],
-            'active_jobs'      => [
-                'assigned'    => $activeJobsAssigned,
+            'active_jobs' => [
+                'assigned' => $activeJobsAssigned,
                 'in_progress' => $activeJobsInProgress,
             ],
         ], 'Earnings overview retrieved.');
@@ -107,13 +107,13 @@ class EarningsController extends BaseController
         $type = $tab === 'coins' ? 'coin' : 'cash';
 
         $cashWallet = Wallet::firstOrCreate(
-            ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
-            ['balance' => 0]
+        ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
+        ['balance' => 0]
         );
 
         $coinWallet = Wallet::firstOrCreate(
-            ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'coin'],
-            ['balance' => 0]
+        ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'coin'],
+        ['balance' => 0]
         );
 
         $activeWallet = $type === 'coin' ? $coinWallet : $cashWallet;
@@ -123,33 +123,33 @@ class EarningsController extends BaseController
             ->limit(20)
             ->get()
             ->map(function ($t) use ($type) {
-                // UI Formatting logic
-                $title = $t->description ?: 'Earnings Payout';
-                if ($t->source === 'withdrawal') {
-                    $title = 'Successful Withdrawal';
-                }
+            // UI Formatting logic
+            $title = $t->description ?: 'Earnings Payout';
+            if ($t->source === 'withdrawal') {
+                $title = 'Successful Withdrawal';
+            }
 
-                $subtitle = $t->created_at->isToday() 
-                    ? 'Today, ' . $t->created_at->format('g:i A')
-                    : ($t->created_at->isYesterday() 
-                        ? 'Yesterday, ' . $t->created_at->format('g:i A') 
-                        : $t->created_at->format('d M, g:i A'));
+            $subtitle = $t->created_at->isToday()
+                ? 'Today, ' . $t->created_at->format('g:i A')
+                : ($t->created_at->isYesterday()
+                ? 'Yesterday, ' . $t->created_at->format('g:i A')
+                : $t->created_at->format('d M, g:i A'));
 
-                $val = $type === 'coin' ? $t->amount : ($t->amount / 100);
-                $prefix = $t->type === 'debit' ? '-' : '+';
-                $currency = $type === 'coin' ? '' : '₹';
-                $formattedAmount = "{$prefix}{$currency}" . number_format($val, 0);
+            $val = $type === 'coin' ? $t->amount : ($t->amount / 100);
+            $prefix = $t->type === 'debit' ? '-' : '+';
+            $currency = $type === 'coin' ? '' : '₹';
+            $formattedAmount = "{$prefix}{$currency}" . number_format($val, 0);
 
-                return [
-                    'id'             => $t->id,
-                    'title'          => $title,
-                    'subtitle'       => $subtitle,
-                    'amount'         => $val,
-                    'display_amount' => $formattedAmount,
-                    'type'           => $t->type,
-                    'created_at'     => $t->created_at,
-                ];
-            });
+            return [
+            'id' => $t->id,
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'amount' => $val,
+            'display_amount' => $formattedAmount,
+            'type' => $t->type,
+            'created_at' => $t->created_at,
+            ];
+        });
 
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
@@ -174,12 +174,12 @@ class EarningsController extends BaseController
             ->where('source', 'deposit')
             ->where('type', 'credit')
             ->sum('amount');
-            
+
         $withdrawnDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
             ->where('source', 'withdrawal')
             ->where('reference_type', 'deposit') // Assuming we track this
             ->sum('amount');
-            
+
         // For now, simpler: anything from 'deposit' source is deposit.
         // Everything else is earnings.
         $totalDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
@@ -196,18 +196,36 @@ class EarningsController extends BaseController
             ->sum(DB::raw("price * {$commissionRate}"));
 
         return $this->success([
-            'cash_balance'   => $totalCashBalancePaise / 100,
+            'cash_balance' => $totalCashBalancePaise / 100,
             'earnings_balance' => $earningsBalancePaise / 100,
-            'deposit_balance'  => $depositBalancePaise / 100,
-            'total_balance'    => $totalCashBalancePaise / 100,
-            'coin_balance'   => $coinWallet->balance,
-            'kit_count'      => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
-            'active_balance' => $type === 'coin' ? $coinWallet->balance : ($totalCashBalancePaise / 100),
-            'transactions'   => $transactions,
-            'today_earnings'  => $todayEarnings,
+            'deposit_balance' => $depositBalancePaise / 100,
+            'total_balance' => $totalCashBalancePaise / 100,
+            'coin_balance' => $professional->coins_balance, // New direct column
+            'coins_balance' => $professional->coins_balance, // For Flutter compatibility
+            'kit_count' => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
+            'active_balance' => $type === 'coin' ? $professional->coins_balance : ($totalCashBalancePaise / 100),
+            'transactions' => $transactions,
+            'today_earnings' => $todayEarnings,
             'weekly_earnings' => $weeklyEarnings,
             'monthly_earnings' => $monthlyEarnings,
-            'total_jobs'     => $totalJobs,
+            'total_jobs' => $professional->total_completed_jobs, // Use new safe column
+            'total_completed_jobs' => $professional->total_completed_jobs, // For Flutter
+            'kit_orders' => \App\Models\KitOrder::with('product')
+            ->where('professional_id', $professional->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($order) {
+            return [
+                    'id' => $order->id,
+                    'title' => $order->product->name ?? 'Service Kit',
+                    'quantity' => $order->quantity,
+                    'amount' => (double)$order->quantity,
+                    'status' => $order->status,
+                    'type' => 'credit',
+                    'created_at' => $order->created_at->format('d M, Y'),
+                    'description' => "Assigned " . $order->quantity . " kits",
+                ];
+        }),
         ], 'Wallet retrieved.');
     }
 
@@ -218,13 +236,21 @@ class EarningsController extends BaseController
     {
         $professional = $request->user('professional-api');
 
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:100',
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:100', // Minimum ₹100
         ]);
 
-        $amountInPaise = (int) ($validated['amount'] * 100);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        return DB::transaction(function () use ($professional, $amountInPaise) {
+        $amountInPaise = (int)($request->amount * 100);
+
+        return DB::transaction(function () use ($professional, $amountInPaise, $request) {
             $wallet = Wallet::where('holder_type', 'professional')
                 ->where('holder_id', $professional->id)
                 ->where('type', 'cash')
@@ -235,23 +261,27 @@ class EarningsController extends BaseController
                 return $this->error('Insufficient wallet balance.', 400);
             }
 
-            // Deduct balance
-            $wallet->balance -= $amountInPaise;
-            $wallet->save();
-
-            // Record transaction
-            WalletTransaction::create([
-                'wallet_id'     => $wallet->id,
-                'type'          => 'debit',
-                'amount'        => $amountInPaise,
-                'balance_after' => $wallet->balance,
-                'source'        => 'withdrawal',
-                'description'   => 'Withdrawal to bank account',
+            // Create withdrawal request record (PENDING)
+            $withdrawal = \App\Models\WithdrawalRequest::create([
+                'professional_id' => $professional->id,
+                'amount' => $amountInPaise,
+                'method' => 'direct',
+                'status' => \App\Models\WithdrawalRequest::STATUS_PENDING,
+                'transaction_reference' => 'PENDING-' . strtoupper(Str::random(8)),
             ]);
+
+            // Debit the wallet (Deduction on request - Option B)
+            $wallet->debit(
+                $amountInPaise,
+                'withdrawal_request',
+                "Withdrawal request of ₹" . $request->amount . " (Pending)",
+                $withdrawal->id,
+                \App\Models\WithdrawalRequest::class
+            );
 
             return $this->success([
                 'balance' => $wallet->balance / 100
-            ], 'Withdrawal successful.');
+            ], 'Withdrawal request submitted for approval.');
         });
     }
 
@@ -264,39 +294,40 @@ class EarningsController extends BaseController
             'amount' => 'required|numeric|min:1',
         ]);
 
-        $amountInPaise = (int) round($validated['amount'] * 100);
+        $amountInPaise = (int)round($validated['amount'] * 100);
 
         try {
             if (config('services.razorpay.mock')) {
                 return $this->success([
-                    'order_id'   => 'order_mock_' . strtolower(Str::random(14)),
-                    'amount'     => $amountInPaise,
+                    'order_id' => 'order_mock_' . strtolower(Str::random(14)),
+                    'amount' => $amountInPaise,
                     'amount_inr' => $validated['amount'],
-                    'currency'   => 'INR',
-                    'receipt'    => 'dep_mock_' . Str::random(8),
-                    'is_mock'    => true,
+                    'currency' => 'INR',
+                    'receipt' => 'dep_mock_' . Str::random(8),
+                    'is_mock' => true,
                 ], 'Razorpay mock deposit order created.');
             }
 
             $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
             $order = $api->order->create([
-                'receipt'  => 'dep_' . Str::random(8),
-                'amount'   => $amountInPaise,
+                'receipt' => 'dep_' . Str::random(8),
+                'amount' => $amountInPaise,
                 'currency' => 'INR',
-                'notes'    => [
+                'notes' => [
                     'professional_id' => $request->user('professional-api')->id,
                     'type' => 'wallet_deposit'
                 ]
             ]);
 
             return $this->success([
-                'order_id'   => $order['id'],
-                'amount'     => $amountInPaise,
+                'order_id' => $order['id'],
+                'amount' => $amountInPaise,
                 'amount_inr' => $validated['amount'],
-                'currency'   => 'INR',
-                'receipt'    => $order['receipt'],
+                'currency' => 'INR',
+                'receipt' => $order['receipt'],
             ], 'Deposit order created.');
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
         }
     }
@@ -309,32 +340,33 @@ class EarningsController extends BaseController
         $professional = $request->user('professional-api');
 
         $validated = $request->validate([
-            'amount'              => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:1',
             'razorpay_payment_id' => 'required|string',
-            'razorpay_order_id'   => 'required|string',
-            'razorpay_signature'  => 'required|string',
+            'razorpay_order_id' => 'required|string',
+            'razorpay_signature' => 'required|string',
         ]);
 
-        $amountInPaise = (int) round($validated['amount'] * 100);
+        $amountInPaise = (int)round($validated['amount'] * 100);
 
         try {
             if (!config('services.razorpay.mock')) {
                 $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
                 $attributes = [
-                    'razorpay_order_id'   => $validated['razorpay_order_id'],
+                    'razorpay_order_id' => $validated['razorpay_order_id'],
                     'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                    'razorpay_signature'  => $validated['razorpay_signature']
+                    'razorpay_signature' => $validated['razorpay_signature']
                 ];
                 $api->utility->verifyPaymentSignature($attributes);
             }
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             return $this->error('Payment verification failed: ' . $e->getMessage(), 400);
         }
 
         return DB::transaction(function () use ($professional, $amountInPaise, $validated) {
             $wallet = Wallet::firstOrCreate(
-                ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
-                ['balance' => 0]
+            ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
+            ['balance' => 0]
             );
 
             $wallet->credit(

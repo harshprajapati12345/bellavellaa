@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth'  => \App\Http\Middleware\JwtAuthenticate::class,
             'jwt.admin' => \App\Http\Middleware\JwtAdminAuthenticate::class,
             'cors'      => \App\Http\Middleware\CorsMiddleware::class,
+            'professional.suspended' => \App\Http\Middleware\CheckSuspendedProfessional::class,
         ]);
 
         // Add CORS middleware globally

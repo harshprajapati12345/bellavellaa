@@ -205,9 +205,27 @@ $suspended = $professionals->where('status', 'Suspended')->count();
 @push('scripts')
 <script>
   function toggleSuspend(id, currentStatus) {
-    const action = currentStatus === 'Active' ? 'Suspend' : 'Activate';
-    Swal.fire({ title: `${action} Professional?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#000', cancelButtonColor: '#9ca3af', confirmButtonText: `Yes, ${action}` })
-      .then(r => { if (r.isConfirmed) Swal.fire({ title: `${action}d!`, icon: 'success', confirmButtonColor: '#000', timer: 1800, showConfirmButton: false }); });
+    const action = currentStatus === 'Active' ? 'suspend' : 'activate';
+    const actionText = currentStatus === 'Active' ? 'Suspend' : 'Activate';
+    
+    Swal.fire({ 
+      title: `${actionText} Professional?`, 
+      text: `Are you sure you want to ${actionText.toLowerCase()} this professional?`,
+      icon: 'question', 
+      showCancelButton: true, 
+      confirmButtonColor: currentStatus === 'Active' ? '#f59e0b' : '#10b981', 
+      cancelButtonColor: '#9ca3af', 
+      confirmButtonText: `Yes, ${actionText}` 
+    }).then(r => { 
+      if (r.isConfirmed) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url('professionals') }}/${id}/${action}`;
+        form.innerHTML = `@csrf`;
+        document.body.appendChild(form);
+        form.submit();
+      }
+    });
   }
 
   function changeCommission(id, current) {

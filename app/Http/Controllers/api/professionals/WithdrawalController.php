@@ -17,7 +17,7 @@ class WithdrawalController extends BaseController
     public function history(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
-        
+
         $withdrawals = WithdrawalRequest::where('professional_id', $professional->id)
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -31,54 +31,64 @@ class WithdrawalController extends BaseController
     public function store(Request $request): JsonResponse
     {
         $professional = $request->user('professional-api');
+        \Illuminate\Support\Facades\Log::info("Withdrawal request hit", ['pro_id' => $professional->id, 'data' => $request->all()]);
 
-        // 1. Check verification status
-        if ($professional->payout_verification_status !== 'Verified') {
-            return $this->error('Your account is not verified for withdrawals. Please complete your payout verification first.', 403);
-        }
-
-        // 2. Validate request
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:500|max:50000',
-            'method' => ['required', Rule::in(['bank', 'upi'])],
-            'bank_account_id' => 'required_if:method,bank|nullable|string',
-            'upi_id' => 'required_if:method,upi|nullable|string',
-        ]);
-
-        $amountInPaise = (int) ($validated['amount'] * 100);
-
-        // 3. Process Transaction
-        return DB::transaction(function () use ($professional, $amountInPaise, $validated) {
-            $wallet = Wallet::where('holder_type', 'professional')
-                ->where('holder_id', $professional->id)
-                ->where('type', 'cash')
-                ->lockForUpdate()
-                ->first();
-
-            if (!$wallet || $wallet->balance < $amountInPaise) {
-                return $this->error('Insufficient wallet balance.', 400);
-            }
-
-            // Debit the wallet immediately (Balance locking mechanism)
-            $wallet->debit(
-                $amountInPaise,
-                'withdrawal_request',
-                "Withdrawal request of ₹{$validated['amount']}",
-                null,
-                WithdrawalRequest::class
-            );
-
-            // Create withdrawal record
-            $withdrawal = WithdrawalRequest::create([
-                'professional_id' => $professional->id,
-                'amount' => $amountInPaise,
-                'method' => $validated['method'],
-                'status' => WithdrawalRequest::STATUS_PENDING,
-                'bank_account_id' => $validated['bank_account_id'] ?? null,
-                'upi_id' => $validated['upi_id'] ?? null,
+        try {
+            // 1. Validate amount and method
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'amount' => 'required|numeric|min:100',
+                'method' => 'nullable|string|in:upi,bank,direct',
             ]);
 
-            return $this->success($withdrawal, 'Withdrawal request submitted successfully.');
-        });
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $amount = $request->amount;
+            $amountInPaise = (int)($amount * 100);
+
+            // 2. Process Transaction
+            return DB::transaction(function () use ($professional, $amount, $amountInPaise, $request) {
+                // Find cash wallet
+                $wallet = Wallet::where('holder_type', 'professional')
+                    ->where('holder_id', $professional->id)
+                    ->where('type', 'cash')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$wallet || $wallet->balance < $amountInPaise) {
+                    return $this->error('Insufficient wallet balance.', 400);
+                }
+
+                // Create withdrawal record (PENDING)
+                $withdrawal = WithdrawalRequest::create([
+                    'professional_id' => $professional->id,
+                    'amount' => $amountInPaise,
+                    'method' => $request->method ?? 'direct',
+                    'status' => WithdrawalRequest::STATUS_PENDING,
+                    'transaction_reference' => 'PENDING-' . strtoupper(bin2hex(random_bytes(4))),
+                ]);
+
+                // Debit the wallet (Deduction on request - Option B)
+                $wallet->debit(
+                    $amountInPaise,
+                    'withdrawal_request',
+                    "Withdrawal request of ₹{$amount} (Pending)",
+                    $withdrawal->id,
+                    WithdrawalRequest::class
+                );
+
+                return $this->success($withdrawal, 'Withdrawal request submitted for approval.');
+            });
+
+        }
+        catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Withdrawal Error: ' . $e->getMessage());
+            return $this->error('An error occurred during withdrawal: ' . $e->getMessage(), 500);
+        }
     }
 }

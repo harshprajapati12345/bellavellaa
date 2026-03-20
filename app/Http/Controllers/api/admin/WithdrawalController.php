@@ -17,7 +17,7 @@ class WithdrawalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $status = $request->query('status');
-        
+
         $query = WithdrawalRequest::with('professional')
             ->orderBy('created_at', 'desc');
 
@@ -53,7 +53,7 @@ class WithdrawalController extends Controller
         }
 
         $withdrawal->update([
-            'status' => WithdrawalRequest::STATUS_PAID,
+            'status' => WithdrawalRequest::STATUS_COMPLETED,
             'transaction_reference' => $request->transaction_reference,
             'admin_note' => $request->admin_note,
         ]);

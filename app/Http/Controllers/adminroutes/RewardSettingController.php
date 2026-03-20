@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\adminroutes;
 
+use App\Http\Controllers\Controller;
 use App\Models\RewardRule;
 use Illuminate\Http\Request;
 
@@ -32,7 +33,7 @@ class RewardSettingController extends Controller
             if ($rule) {
                 $rule->update([
                     'coins' => $data['coins'],
-                    'status' => isset($data['status']),
+                    'status' => $data['status'],
                 ]);
             }
         }

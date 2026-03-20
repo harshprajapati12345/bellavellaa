@@ -64,7 +64,7 @@ class AuthController extends BaseController
         if (!$professional) {
             return $this->success([
                 'is_new_user' => true,
-                'mobile'      => $request->mobile,
+                'mobile' => $request->mobile,
             ], 'OTP verified. Please complete signup.');
         }
 
@@ -74,7 +74,8 @@ class AuthController extends BaseController
 
         try {
             $token = $this->guard()->login($professional);
-        } catch (JWTException $e) {
+        }
+        catch (JWTException $e) {
             return $this->error('Could not create token.', 500);
         }
 
@@ -84,15 +85,15 @@ class AuthController extends BaseController
 
         return $this->success([
             'access_token' => $token,
-            'token_type'   => 'bearer',
-            'expires_in'   => $this->guard()->factory()->getTTL() * 60,
-            'user'         => [
+            'token_type' => 'bearer',
+            'expires_in' => $this->guard()->factory()->getTTL() * 60,
+            'user' => [
                 'id' => $professional->id,
                 'name' => $professional->name,
                 'verification' => $professional->verification,
                 'status' => $professional->status,
             ],
-            'is_new_user'  => false,
+            'is_new_user' => false,
         ], 'Login successful.');
     }
 
@@ -102,25 +103,25 @@ class AuthController extends BaseController
     public function register(Request $request): JsonResponse
     {
         $request->validate([
-            'mobile'   => 'required|string|digits:10',
-            'name'     => 'required|string|max:255',
-            'email'    => 'nullable|email|max:255',
+            'mobile' => 'required|string|digits:10',
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
             'category' => 'nullable|string|max:100',
-            'city'     => 'nullable|string|max:100',
-            'dob'      => 'nullable|string',
-            'gender'   => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'dob' => 'nullable|string',
+            'gender' => 'nullable|string',
             'experience' => 'nullable|string',
             'languages' => 'nullable|string',
-            'address'  => 'nullable|string',
-            'pincode'  => 'nullable|string|digits:6',
-            'state'    => 'nullable|string',
-            'aadhar'   => 'nullable|string|digits:12',
-            'pan'      => 'nullable|string|size:10',
+            'address' => 'nullable|string',
+            'pincode' => 'nullable|string|digits:6',
+            'state' => 'nullable|string',
+            'aadhar' => 'nullable|string|digits:12',
+            'pan' => 'nullable|string|size:10',
             'aadhar_front' => 'nullable|image|max:2048',
-            'aadhar_back'  => 'nullable|image|max:2048',
-            'pan_photo'    => 'nullable|image|max:2048',
-            'certificate'  => 'nullable|image|max:2048',
-            'selfie'       => 'nullable|image|max:2048',
+            'aadhar_back' => 'nullable|image|max:2048',
+            'pan_photo' => 'nullable|image|max:2048',
+            'certificate' => 'nullable|image|max:2048',
+            'selfie' => 'nullable|image|max:2048',
             'referral_code' => 'nullable|string|exists:professionals,referral_code',
         ]);
 
@@ -141,21 +142,23 @@ class AuthController extends BaseController
         }
 
         $data = [
-            'phone'        => $request->mobile,
-            'name'         => $request->name,
-            'email'        => $request->email,
-            'category'     => $request->category,
-            'city'         => $request->city,
-            'dob'          => $request->dob,
-            'gender'       => $request->gender,
-            'experience'   => $request->experience,
-            'languages'    => $request->languages ? explode(', ', $request->languages) : [],
+            'phone' => $request->mobile,
+            'name' => $request->name,
+            'email' => $request->email,
+            'category' => $request->category,
+            'city' => $request->city,
+            'dob' => $request->dob,
+            'gender' => $request->gender,
+            'experience' => $request->experience,
+            'languages' => $request->languages ? explode(', ', $request->languages) : [],
             'service_area' => $request->address,
-            'aadhaar'      => $request->aadhar,
-            'pan'          => $request->pan,
-            'status'       => 'Active',
+            'pincode' => $request->pincode,
+            'state' => $request->state,
+            'aadhaar' => $request->aadhar,
+            'pan' => $request->pan,
+            'status' => 'Active',
             'verification' => 'Pending',
-            'joined'       => now()->toDateString(),
+            'joined' => now()->toDateString(),
         ];
 
         // Handle Referral
@@ -195,38 +198,33 @@ class AuthController extends BaseController
 
         $professional = Professional::create($data);
 
-        // --- AUTOMATED REWARDS ---
-        $rewardService = app(RewardService::class);
-        $coinsAwarded = 0;
-        $coinsAwarded += $rewardService->awardSignupReward($professional, 'professional');
-
+        // --- AUTOMATED REWARDS (PROFESSIONAL: FIRST JOB TRIGGERED) ---
         if ($request->referral_code) {
-            $referrer = Professional::where('referral_code', $request->referral_code)->first()
-                     ?? \App\Models\Customer::where('referral_code', $request->referral_code)->first();
-            
+            $referrer = Professional::where('referral_code', $request->referral_code)->first();
+
             if ($referrer) {
-                $referrerType = $referrer instanceof Professional ? 'professional' : 'customer';
-                $coinsAwarded += $rewardService->awardReferralRewards($professional, 'professional', $referrer, $referrerType, $request->referral_code);
+                $rewardService = app(RewardService::class);
+                $rewardService->createPendingReferral($professional, $referrer, $request->referral_code);
             }
         }
 
         try {
             $token = $this->guard()->login($professional);
-        } catch (JWTException $e) {
+        }
+        catch (JWTException $e) {
             return $this->error('Could not create token.', 500);
         }
 
         return $this->success([
             'access_token' => $token,
-            'token_type'   => 'bearer',
-            'expires_in'   => $this->guard()->factory()->getTTL() * 60,
-            'user'         => [
+            'token_type' => 'bearer',
+            'expires_in' => $this->guard()->factory()->getTTL() * 60,
+            'user' => [
                 'id' => $professional->id,
                 'name' => $professional->name,
                 'verification' => $professional->verification,
                 'status' => $professional->status,
             ],
-            'coins_awarded' => $coinsAwarded,
         ], 'Registration successful.');
     }
 
@@ -248,8 +246,8 @@ class AuthController extends BaseController
 
         return $this->success([
             'verification' => $professional->verification,
-            'status'       => $professional->status,
-            'docs'         => (bool)$professional->docs,
+            'status' => $professional->status,
+            'docs' => (bool)$professional->docs,
         ], 'Verification status retrieved.');
     }
 
@@ -270,7 +268,8 @@ class AuthController extends BaseController
     {
         try {
             $token = $this->guard()->refresh();
-        } catch (JWTException $e) {
+        }
+        catch (JWTException $e) {
             return $this->error('Could not refresh token. Please login again.', 401);
         }
 
@@ -284,7 +283,8 @@ class AuthController extends BaseController
     {
         try {
             $this->guard()->logout();
-        } catch (JWTException $e) {
+        }
+        catch (JWTException $e) {
             return $this->error('Could not invalidate token.', 500);
         }
 
