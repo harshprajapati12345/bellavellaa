@@ -17,6 +17,21 @@ class AssignController extends Controller
     {
         $this->firebase = $firebase;
     }
+
+    protected function bookingNotificationPayload(Booking $booking): array
+    {
+        return [
+            'booking_id' => $booking->id,
+            'client_name' => $booking->customer?->name ?? 'Customer',
+            'service' => $booking->sellable_name ?? $booking->service?->name ?? $booking->package?->name ?? 'Service',
+            'location' => $booking->order?->address ?? $booking->address ?? 'Nearby',
+            'price' => (string) (data_get($booking->meta, 'totals.final_total')
+                ?? data_get($booking->meta, 'totals.discounted_total')
+                ?? $booking->price
+                ?? 0),
+        ];
+    }
+
     public function index()
     {
         $bookings = Booking::with(['customer', 'service', 'professional'])
@@ -39,24 +54,22 @@ class AssignController extends Controller
             ]);
 
             $booking = Booking::findOrFail($request->booking_id);
-            $booking->update([
+            $booking->loadMissing(['customer', 'service', 'package', 'order']);
+            $booking->fill([
                 'professional_id' => $request->professional_id,
                 'status' => 'assigned',
             ]);
+            $booking->markLifecycle('assigned_at');
+            $booking->save();
+            $payload = $this->bookingNotificationPayload($booking);
 
             // Create notification for the professional
             ProfessionalNotification::create([
                 'professional_id' => $request->professional_id,
                 'type' => 'booking_assigned',
                 'title' => 'New Booking Assigned 🔔',
-                'body' => "A new service request for {$booking->service?->name} has been assigned to you.",
-                'data' => [
-                    'booking_id'  => $booking->id,
-                    'client_name' => $booking->customer?->name ?? 'Customer',
-                    'service'     => $booking->service?->name ?? 'Service',
-                    'location'    => $booking->address ?? 'Nearby',
-                    'price'       => $booking->price,
-                ],
+                'body' => "A new service request for {$payload['service']} has been assigned to you.",
+                'data' => $payload,
             ]);
 
             // Trigger Real-Time Push Notification (FCM)
@@ -64,14 +77,14 @@ class AssignController extends Controller
                 $this->firebase->sendPushNotification(
                     $booking->professional->fcm_token,
                     'New Booking Assigned 🔔',
-                    "A new service request for {$booking->service?->name} has been assigned to you.",
+                    "A new service request for {$payload['service']} has been assigned to you.",
                     [
                         'type' => 'booking_assigned',
                         'booking_id' => (string)$booking->id,
-                        'client_name' => $booking->customer?->name ?? 'Customer',
-                        'service' => $booking->service?->name ?? 'Service',
-                        'location' => $booking->address ?? 'Nearby',
-                        'price' => (string)$booking->price,
+                        'client_name' => $payload['client_name'],
+                        'service' => $payload['service'],
+                        'location' => $payload['location'],
+                        'price' => $payload['price'],
                     ]
                 );
             }
@@ -80,10 +93,10 @@ class AssignController extends Controller
             $this->firebase->pushJobToFirestore([
                 'professional_id' => $request->professional_id,
                 'booking_id'      => $booking->id,
-                'client_name'     => $booking->customer?->name ?? 'Customer',
-                'service'         => $booking->service?->name ?? 'Service',
-                'location'        => $booking->address ?? 'Nearby',
-                'price'           => (string)$booking->price,
+                'client_name'     => $payload['client_name'],
+                'service'         => $payload['service'],
+                'location'        => $payload['location'],
+                'price'           => $payload['price'],
                 'status'          => 'pending',
                 'updated_at'      => time(),
             ]);
@@ -115,7 +128,7 @@ class AssignController extends Controller
             'booking_id' => 'required|exists:bookings,id',
         ]);
 
-        $booking = Booking::with(['service'])->findOrFail($request->booking_id);
+        $booking = Booking::with(['service', 'customer', 'package', 'order'])->findOrFail($request->booking_id);
 
         // Auto-assign logic: Find active, online professionals in the same city
         $query = Professional::where('status', 'Active')
@@ -138,24 +151,21 @@ class AssignController extends Controller
             ], 404);
         }
 
-        $booking->update([
+        $booking->fill([
             'professional_id' => $professional->id,
             'status' => 'assigned',
         ]);
+        $booking->markLifecycle('assigned_at');
+        $booking->save();
+        $payload = $this->bookingNotificationPayload($booking);
 
         // Create notification for the professional
         ProfessionalNotification::create([
             'professional_id' => $professional->id,
             'type'            => 'booking_assigned',
             'title'           => 'New Booking Assigned 🔔',
-            'body'            => "A new service request for {$booking->service?->name} has been assigned to you.",
-            'data'            => [
-                'booking_id'  => $booking->id,
-                'client_name' => $booking->customer?->name ?? 'Customer',
-                'service'     => $booking->service?->name ?? 'Service',
-                'location'    => $booking->address ?? 'Nearby',
-                'price'       => $booking->price,
-            ],
+            'body'            => "A new service request for {$payload['service']} has been assigned to you.",
+            'data'            => $payload,
         ]);
 
         // Trigger Real-Time Push Notification (FCM)
@@ -163,14 +173,14 @@ class AssignController extends Controller
             $this->firebase->sendPushNotification(
                 $professional->fcm_token,
                 'New Booking Assigned 🔔',
-                "A new service request for {$booking->service?->name} has been assigned to you.",
+                "A new service request for {$payload['service']} has been assigned to you.",
                 [
                     'type' => 'booking_assigned',
                     'booking_id' => (string)$booking->id,
-                    'client_name' => $booking->customer?->name ?? 'Customer',
-                    'service' => $booking->service?->name ?? 'Service',
-                    'location' => $booking->address ?? 'Nearby',
-                    'price' => (string)$booking->price,
+                    'client_name' => $payload['client_name'],
+                    'service' => $payload['service'],
+                    'location' => $payload['location'],
+                    'price' => $payload['price'],
                 ]
             );
         }
@@ -178,10 +188,10 @@ class AssignController extends Controller
         $this->firebase->pushJobToFirestore([
             'professional_id' => $professional->id,
             'booking_id'      => $booking->id,
-            'client_name'     => $booking->customer?->name ?? 'Customer',
-            'service'         => $booking->service?->name ?? 'Service',
-            'location'        => $booking->address ?? 'Nearby',
-            'price'           => (string)$booking->price,
+            'client_name'     => $payload['client_name'],
+            'service'         => $payload['service'],
+            'location'        => $payload['location'],
+            'price'           => $payload['price'],
             'status'          => 'pending',
             'updated_at'      => time(),
         ]);
@@ -204,7 +214,7 @@ class AssignController extends Controller
             'city'                => $booking->city ?? '—',
             'date'                => $booking->date ? \Carbon\Carbon::parse($booking->date)->format('d M Y') : '—',
             'slot'                => $booking->slot ?? '—',
-            'customer_name'       => $booking->customer?->name ?? $booking->customer_name ?? 'Guest',
+            'customer_name'       => $booking->customer_display_name,
             'customer_avatar'     => $booking->customer?->avatar ?? null,
             'customer_phone'      => $booking->customer?->phone ?? '—',
             'service_name'        => $booking->service?->name ?? $booking->service_name ?? '—',

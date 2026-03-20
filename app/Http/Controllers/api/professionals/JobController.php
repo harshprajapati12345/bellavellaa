@@ -25,10 +25,13 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update([
-                'status' => 'scan_kit',
-                'current_step' => 'kit_scan'
+            $booking->applyStatusTransition('arrived', [
+                'current_step' => 'kit_scan',
             ]);
+            if ($booking->status !== 'scan_kit') {
+                $booking->status = 'scan_kit';
+                $booking->save();
+            }
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully. Transitioning to kit scan.');
         }
@@ -42,9 +45,8 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $booking->update([
-                'status' => 'on_the_way',
-                'current_step' => 'journey'
+            $booking->applyStatusTransition('on_the_way', [
+                'current_step' => 'journey',
             ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started.');
@@ -56,14 +58,9 @@ class JobController extends BaseController
     {
         $booking = \App\Models\Booking::find($id);
         if ($booking) {
-            $updateData = [
-                'status' => 'in_progress',
-                'current_step' => 'service'
-            ];
-            if (!$booking->service_started_at) {
-                $updateData['service_started_at'] = now();
-            }
-            $booking->update($updateData);
+            $booking->applyStatusTransition('in_progress', [
+                'current_step' => 'service',
+            ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
         }
@@ -76,7 +73,7 @@ class JobController extends BaseController
         if ($booking) {
             $booking->update([
                 'status' => 'payment_pending',
-                'current_step' => 'payment'
+                'current_step' => 'payment',
             ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
@@ -93,7 +90,7 @@ class JobController extends BaseController
         if ($booking) {
             $booking->update([
                 'status' => 'scan_kit',
-                'current_step' => 'kit_scan'
+                'current_step' => 'kit_scan',
             ]);
             $this->sendDashboardUpdate($booking);
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');

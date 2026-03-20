@@ -21,6 +21,20 @@ class AssignmentController extends BaseController
     {
         $this->firebase = $firebase;
     }
+
+    protected function bookingNotificationPayload(Booking $booking): array
+    {
+        return [
+            'booking_id' => $booking->id,
+            'client_name' => $booking->customer->name ?? 'Customer',
+            'service' => $booking->sellable_name ?? $booking->service?->name ?? $booking->package?->name ?? 'Service',
+            'location' => $booking->order?->address ?? $booking->address ?? 'Nearby',
+            'price' => (string) (data_get($booking->meta, 'totals.final_total')
+                ?? data_get($booking->meta, 'totals.discounted_total')
+                ?? $booking->price
+                ?? 0),
+        ];
+    }
     /**
      * Display a listing of assignable bookings and active professionals.
      */
@@ -49,11 +63,15 @@ class AssignmentController extends BaseController
     public function store(StoreAssignmentRequest $request): JsonResponse
     {
         $booking = Booking::findOrFail($request->booking_id);
-        
-        $booking->update([
+        $booking->loadMissing(['customer', 'service', 'package', 'order']);
+
+        $booking->fill([
             'professional_id' => $request->professional_id,
-            'status'          => 'assigned',
+            'status' => 'assigned',
         ]);
+        $booking->markLifecycle('assigned_at');
+        $booking->save();
+        $payload = $this->bookingNotificationPayload($booking);
 
         // Create notification for the professional (DB)
         ProfessionalNotification::create([
@@ -61,25 +79,19 @@ class AssignmentController extends BaseController
             'type'            => 'booking_assigned',
             'title'           => 'New Booking Assigned!',
             'body'            => 'You have a new booking request from ' . ($booking->customer->name ?? 'Customer'),
-            'data'            => [
-                'booking_id'  => $booking->id,
-                'client_name' => $booking->customer->name ?? 'Customer',
-                'service'     => $booking->service->name ?? 'Service',
-                'location'    => $booking->address ?? 'Nearby',
-                'price'       => $booking->price,
-            ],
+            'data'            => $payload,
         ]);
 
         // Real-time Push to Firebase (Uber-Style Job UI)
         $this->firebase->pushJobToFirestore([
             'professional_id' => $request->professional_id,
             'booking_id'      => $booking->id,
-            'client_name'     => $booking->customer->name ?? 'Customer',
-            'service'         => $booking->service->name ?? 'Service',
-            'location'        => $booking->address ?? 'Nearby',
+            'client_name'     => $payload['client_name'],
+            'service'         => $payload['service'],
+            'location'        => $payload['location'],
             'lat'             => $booking->lat,
             'lng'             => $booking->lng,
-            'price'           => (string)$booking->price,
+            'price'           => $payload['price'],
             'status'          => 'pending',
             'type'            => 'booking_assigned',
         ]);
@@ -103,10 +115,10 @@ class AssignmentController extends BaseController
                 [
                     'type' => 'booking_assigned',
                     'booking_id' => (string)$booking->id,
-                    'client_name' => $booking->customer->name ?? 'Customer',
-                    'service'     => $booking->service->name ?? 'Service',
-                    'location'    => $booking->address ?? 'Nearby',
-                    'price'       => (string)$booking->price,
+                    'client_name' => $payload['client_name'],
+                    'service'     => $payload['service'],
+                    'location'    => $payload['location'],
+                    'price'       => $payload['price'],
                 ]
             );
         }

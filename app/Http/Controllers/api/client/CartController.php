@@ -430,7 +430,7 @@ class CartController extends BaseController
                     \App\Models\Booking::create([
                         'order_id' => $order->id,
                         'customer_id' => $customer->id,
-                        'customer_name' => $customer->name,
+                        'customer_name' => $customer->name ?: ($resolvedPhone ?: 'Guest'),
                         'customer_phone' => $resolvedPhone,
                         'address_id' => $selectedAddress?->id,
                         'city' => $resolvedCity,
@@ -536,6 +536,5 @@ class CartController extends BaseController
         }
     }
 }
-
 
 

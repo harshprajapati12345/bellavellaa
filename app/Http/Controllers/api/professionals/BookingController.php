@@ -110,7 +110,7 @@ class BookingController extends BaseController
             return $this->error("Cannot accept — booking status is '{$booking->status}' (expected 'assigned').", 400);
         }
 
-        $booking->update(['status' => 'accepted']);
+        $booking->applyStatusTransition('accepted');
 
         // Reset Firestore job status to idle
         $this->firebase->pushJobToFirestore([
@@ -141,7 +141,7 @@ class BookingController extends BaseController
 
         $booking->update([
             'professional_id' => null,
-            'status' => 'unassigned' // Revert to unassigned so admin can reassign
+            'status' => 'unassigned',
         ]);
 
         // Reset Firestore job status to idle
@@ -176,7 +176,7 @@ class BookingController extends BaseController
         }
 
         $originalStatus = $booking->status;
-        $booking->update(['status' => $validated['status']]);
+        $booking->applyStatusTransition($validated['status']);
 
         // Real-time WebSocket Dashboard Sync
         broadcast(new JobUpdate($booking));

@@ -23,9 +23,8 @@ class BookingService
         }
 
         DB::transaction(function () use ($booking) {
-            $booking->update([
-                'status' => 'completed',
-                'current_step' => 'completed'
+            $booking->applyStatusTransition('completed', [
+                'current_step' => 'completed',
             ]);
 
             if ($booking->professional) {

@@ -112,8 +112,8 @@
           <tbody id="assign-tbody">
             @foreach($bookings as $b)
               <tr class="table-row border-b border-gray-50" data-id="{{ $b->id }}"
-                data-customer="{{ strtolower($b->customer?->name ?? $b->customer_name ?? '') }}"
-                data-display-name="{{ $b->customer?->name ?? $b->customer_name }}"
+                data-customer="{{ strtolower($b->customer_display_name ?? '') }}"
+                data-display-name="{{ $b->customer_display_name }}"
                 data-service="{{ strtolower($b->service?->name ?? $b->service_name ?? '') }}"
                 data-display-service="{{ $b->service?->name ?? $b->service_name }}"
                 data-package="{{ $b->package?->name ?? $b->package_name ?? '' }}" data-status="{{ $b->status }}"
@@ -129,7 +129,7 @@
                       src="{{ $b->customer?->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
                       class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-white shadow-sm" alt="">
                     <div>
-                      <p class="text-sm font-semibold text-gray-900">{{ $b->customer?->name ?? $b->customer_name }}</p>
+                      <p class="text-sm font-semibold text-gray-900">{{ $b->customer_display_name }}</p>
                       <p class="text-xs text-gray-400">{{ $b->city ?? '—' }}</p>
                     </div>
                   </div>
@@ -168,7 +168,7 @@
                     @if($b->status === 'pending' || $b->status === 'assigned')
                       <button type="button" onclick="handleOpenDrawer(this)"
                         data-booking-id="{{ $b->id }}"
-                        data-customer-name="{{ $b->customer?->name ?? $b->customer_name }}"
+                        data-customer-name="{{ $b->customer_display_name }}"
                         data-customer-avatar="{{ $b->customer?->avatar ?? $b->customer_avatar ?? 'https://i.pravatar.cc/64?img=' . ($b->id % 50) }}"
                         data-service-name="{{ $b->service?->name ?? $b->service_name }}"
                         data-package-name="{{ $b->package?->name ?? $b->package_name ?? '' }}"
