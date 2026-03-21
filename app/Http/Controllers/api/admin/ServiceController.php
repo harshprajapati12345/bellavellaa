@@ -30,7 +30,7 @@ class ServiceController extends BaseController
             $query->where('status', $status);
         }
 
-        $services = $query->latest()->paginate(request('per_page', 15));
+        $services = $query->latest()->orderBy('id', 'desc')->paginate(request('per_page', 15));
 
         return $this->success([
             'services'    => ServiceResource::collection($services),

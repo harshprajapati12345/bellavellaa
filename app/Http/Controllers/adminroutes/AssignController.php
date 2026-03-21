@@ -173,7 +173,7 @@ class AssignController extends Controller
             $this->firebase->sendPushNotification(
                 $professional->fcm_token,
                 'New Booking Assigned 🔔',
-                "A new service request for {$payload['service']} has been assigned to you.",
+                    "A new service request for {$payload['service']} has been assigned to you.",
                 [
                     'type' => 'booking_assigned',
                     'booking_id' => (string)$booking->id,
@@ -202,6 +202,16 @@ class AssignController extends Controller
             'message' => "Successfully assigned {$professional->name} to booking #{$booking->id}.",
             'professional_name' => $professional->name
         ]);
+    }
+
+    public function edit($id)
+    {
+        $booking = Booking::with(['customer', 'service', 'package', 'professional', 'order'])->findOrFail($id);
+        $professionals = Professional::where('status', 'Active')
+            ->where('is_online', 1)
+            ->get();
+
+        return view('assign.edit', compact('booking', 'professionals'));
     }
 
     public function show($id)

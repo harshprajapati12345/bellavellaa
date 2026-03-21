@@ -28,7 +28,7 @@ class OfferController extends BaseController
             $query->where('status', $status);
         }
 
-        $offers = $query->latest()->paginate(request('per_page', 15));
+        $offers = $query->latest()->orderBy('id', 'desc')->paginate(request('per_page', 15));
 
         return $this->success([
             'offers'      => OfferResource::collection($offers),

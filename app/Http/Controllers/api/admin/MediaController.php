@@ -27,7 +27,10 @@ class MediaController extends BaseController
             $query->where('status', $request->status);
         }
 
-        $media = $query->orderBy('order', 'asc')->orderBy('created_at', 'desc')->get();
+        $media = $query->orderBy('order', 'asc')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
 
         return $this->success(MediaResource::collection($media), 'Media retrieved successfully.');
     }

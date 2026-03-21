@@ -145,6 +145,7 @@ Route::middleware(['auth:admin'])->group(function () {
 
     Route::get('/assign', [AssignController::class , 'index'])->name('assign.index');
     Route::get('/assign/{id}', [AssignController::class , 'show'])->name('assign.show');
+    Route::get('/assign/{id}/edit', [AssignController::class , 'edit'])->name('assign.edit');
     Route::post('/assign/update', [AssignController::class , 'update'])->name('assign.update');
     Route::post('/assign/auto', [AssignController::class , 'autoAssign'])->name('assign.auto');
 

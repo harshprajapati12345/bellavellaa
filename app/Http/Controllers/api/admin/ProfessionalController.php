@@ -26,7 +26,7 @@ class ProfessionalController extends BaseController
             $query->where('category', $request->category);
         }
 
-        $professionals = $query->orderBy('name')->get();
+        $professionals = $query->latest()->orderBy('id', 'desc')->paginate($request->input('per_page', 15));
 
         return $this->success(ProfessionalResource::collection($professionals), 'Professionals retrieved.');
     }

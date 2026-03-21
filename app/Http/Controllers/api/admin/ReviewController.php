@@ -35,7 +35,7 @@ class ReviewController extends BaseController
             $query->where('is_featured', $request->boolean('is_featured'));
         }
 
-        $reviews = $query->latest()->paginate($request->input('per_page', 15));
+        $reviews = $query->latest()->orderBy('id', 'desc')->paginate($request->input('per_page', 15));
 
         return $this->success([
             'reviews'    => ReviewResource::collection($reviews),

@@ -19,6 +19,7 @@ class VideoController extends BaseController
         $videos = Media::where('type', 'Video')
             ->orderBy('order', 'asc')
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return $this->success(MediaResource::collection($videos), 'Videos retrieved successfully.');

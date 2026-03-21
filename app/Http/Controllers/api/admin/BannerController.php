@@ -19,6 +19,7 @@ class BannerController extends BaseController
         $banners = Media::where('type', 'Banner')
             ->orderBy('order', 'asc')
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return $this->success(MediaResource::collection($banners), 'Banners retrieved successfully.');

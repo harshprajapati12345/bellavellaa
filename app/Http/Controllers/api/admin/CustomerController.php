@@ -29,7 +29,7 @@ class CustomerController extends BaseController
             $query->where('status', $status);
         }
 
-        $customers = $query->latest()->paginate(request('per_page', 15));
+        $customers = $query->latest()->orderBy('id', 'desc')->paginate(request('per_page', 15));
 
         return $this->success([
             'customers'   => CustomerResource::collection($customers),

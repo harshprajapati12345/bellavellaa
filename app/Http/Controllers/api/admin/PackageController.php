@@ -30,7 +30,7 @@ class PackageController extends BaseController
             $query->where('status', $status);
         }
 
-        $packages = $query->latest()->paginate(request('per_page', 15));
+        $packages = $query->latest()->orderBy('id', 'desc')->paginate(request('per_page', 15));
 
         return $this->success([
             'packages'    => PackageResource::collection($packages),
