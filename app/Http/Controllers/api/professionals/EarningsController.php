@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Professionals;
 use App\Models\Booking;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Http\Resources\Api\BookingResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -91,6 +92,10 @@ class EarningsController extends BaseController
             ->orderBy('date', 'desc')
             ->orderBy('slot', 'desc')
             ->paginate(15);
+
+        $jobs->getCollection()->transform(function ($job) {
+            return new BookingResource($job);
+        });
 
         return $this->success($jobs, 'Job history retrieved.');
     }
@@ -398,6 +403,6 @@ class EarningsController extends BaseController
             ->orderBy('slot', 'asc')
             ->get();
 
-        return $this->success($schedule, 'Schedule retrieved.');
+        return $this->success(BookingResource::collection($schedule), 'Schedule retrieved.');
     }
 }

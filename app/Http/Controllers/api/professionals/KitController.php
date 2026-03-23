@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\Professionals;
 
-use App\Models\KitProduct;
+use App\Http\Resources\Api\KitOrderResource;
+use App\Http\Resources\Api\KitProductResource;
 use App\Models\KitOrder;
+use App\Models\KitProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -19,7 +21,7 @@ class KitController extends BaseController
             ->where('status', 'Active')
             ->get();
 
-        return $this->success($products, 'Kit products retrieved.');
+        return $this->success(KitProductResource::collection($products), 'Kit products retrieved.');
     }
 
     /**
@@ -135,7 +137,7 @@ class KitController extends BaseController
         // Activate professional
         $professional->update(['kit_purchased' => true]);
 
-        return $this->success($order->load('product'), 'Payment verified. Kit order placed and professional activated.');
+        return $this->success(new KitOrderResource($order->load('product')), 'Payment verified. Kit order placed and professional activated.');
     }
 
     /**
@@ -181,7 +183,7 @@ class KitController extends BaseController
         // Activate professional
         $professional->update(['kit_purchased' => true]);
 
-        return $this->success($order, 'Kit order placed successfully and professional activated.');
+        return $this->success(new KitOrderResource($order), 'Kit order placed successfully and professional activated.');
     }
 
     /**
@@ -196,7 +198,7 @@ class KitController extends BaseController
             ->latest()
             ->get();
 
-        return $this->success($orders, 'Kit orders retrieved.');
+        return $this->success(KitOrderResource::collection($orders), 'Kit orders retrieved.');
     }
 
     /**
@@ -210,6 +212,6 @@ class KitController extends BaseController
             ->with('product.category')
             ->findOrFail($id);
 
-        return $this->success($order, 'Kit order details retrieved.');
+        return $this->success(new KitOrderResource($order), 'Kit order details retrieved.');
     }
 }

@@ -167,6 +167,9 @@ Route::prefix('professional')->group(function () {
         Route::post('refresh', [\App\Http\Controllers\Api\Professionals\AuthController::class , 'refresh']);
         Route::post('logout', [\App\Http\Controllers\Api\Professionals\AuthController::class , 'logout']);
         Route::get('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'show']);
+        Route::post('update-fcm-token', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'updateFcmToken']);
+        Route::post('update-bank-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'updateBankDetails']);
+        Route::post('update-upi-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'updateUPIDetails']);
 
         // Routes blocked if suspended
         Route::middleware(['professional.suspended'])->group(function () {
@@ -228,6 +231,15 @@ Route::prefix('professional')->group(function () {
                 Route::post('notifications/read-all', [\App\Http\Controllers\Api\Professionals\NotificationController::class , 'readAll']);
                 Route::delete('notifications/{id}', [\App\Http\Controllers\Api\Professionals\NotificationController::class , 'destroy']);
 
+                // Referrals
+                Route::get('referrals', [\App\Http\Controllers\Api\Professionals\ReferralController::class , 'index']);
+                Route::post('referrals/submit', [\App\Http\Controllers\Api\Professionals\ReferralController::class , 'submit']);
+
+                // Leave Requests
+                Route::get('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class , 'index']);
+                Route::post('leaves', [\App\Http\Controllers\Api\Professionals\LeaveController::class , 'store']);
+                Route::delete('leaves/{id}', [\App\Http\Controllers\Api\Professionals\LeaveController::class , 'destroy']);
+
                 // Profile
                 Route::put('profile', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'update']);
                 Route::post('upload-profile-image', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'uploadProfileImage']);
@@ -235,10 +247,6 @@ Route::prefix('professional')->group(function () {
                 Route::put('change-password', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'changePassword']);
             }
             );
-
-            // TEMPORARY: Move these outside auth middleware to verify if hits are reaching
-            Route::post('update-bank-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'updateBankDetails']);
-            Route::post('update-upi-details', [\App\Http\Controllers\Api\Professionals\ProfileController::class , 'updateUPIDetails']);
         });
     });
 

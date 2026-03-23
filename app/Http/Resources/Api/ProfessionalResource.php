@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Support\MediaPathNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,7 +18,7 @@ class ProfessionalResource extends JsonResource
             'name'                => $this->name,
             'email'               => $this->email,
             'phone'               => $this->phone,
-            'avatar'              => $this->avatar ? asset('storage/' . $this->avatar) : null,
+            'avatar'              => MediaPathNormalizer::url($this->avatar),
             'category'            => $this->category,
             'city'                => $this->city,
             'bio'                 => $this->bio,

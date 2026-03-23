@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Support\MediaPathNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class CategoryBannerResource extends JsonResource
 {
@@ -14,7 +14,7 @@ class CategoryBannerResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'subtitle' => $this->subtitle,
-            'image_url' => $this->image ? Storage::disk('public')->url($this->image) : null,
+            'image_url' => MediaPathNormalizer::url($this->image),
             'link_url' => $this->link_url,
             'banner_type' => $this->banner_type,
             'sort_order' => $this->sort_order,

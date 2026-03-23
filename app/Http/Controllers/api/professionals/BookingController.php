@@ -211,6 +211,6 @@ class BookingController extends BaseController
             return $this->error('Failed to update booking status: ' . $e->getMessage(), 500);
         }
 
-        return $this->success($booking, 'Booking status updated.');
+        return $this->success(new \App\Http\Resources\Api\BookingResource($booking), 'Booking status updated.');
     }
 }

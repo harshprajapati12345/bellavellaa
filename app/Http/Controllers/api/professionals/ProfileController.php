@@ -5,23 +5,30 @@ namespace App\Http\Controllers\Api\Professionals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\VerificationRequest;
+use App\Models\Professional;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Resources\Api\ProfessionalResource;
 
 class ProfileController extends BaseController
 {
+    protected function resolveProfessional(Request $request): ?Professional
+    {
+        return $request->user('professional-api');
+    }
+
     /**
      * GET /api/professionals/profile
      */
     public function show(Request $request): JsonResponse
     {
-        $professional = $request->user('professional-api') ?? \App\Models\Professional::find(1);
+        $professional = $this->resolveProfessional($request);
         \Illuminate\Support\Facades\Log::info("Profile Fetch for Pro ID: " . ($professional ? $professional->id : 'NULL'));
 
         if (!$professional) {
-            return $this->error('Professional not found.', 404);
+            return $this->error('Unauthenticated.', 401);
         }
 
-        return $this->success($professional, 'Profile retrieved successfully.');
+        return $this->success(new ProfessionalResource($professional), 'Profile retrieved successfully.');
     }
 
     /**
@@ -141,7 +148,7 @@ class ProfileController extends BaseController
             $professional->update(['docs' => true]);
         }
 
-        return $this->success($professional->fresh(), 'Profile updated successfully.');
+        return $this->success(new ProfessionalResource($professional->fresh()), 'Profile updated successfully.');
     }
 
     /**
@@ -161,7 +168,7 @@ class ProfileController extends BaseController
             $professional->update(['avatar' => '/storage/' . $path]);
         }
 
-        return $this->success($professional->fresh(), 'Profile image uploaded.');
+        return $this->success(new ProfessionalResource($professional->fresh()), 'Profile image uploaded.');
     }
 
     /**
@@ -203,16 +210,16 @@ class ProfileController extends BaseController
             $professional->update($updateData);
         }
 
-        return $this->success($professional->fresh(), 'Documents uploaded.');
+        return $this->success(new ProfessionalResource($professional->fresh()), 'Documents uploaded.');
     }
 
     public function updateBankDetails(Request $request): JsonResponse
     {
-        $professional = $request->user('professional-api') ?? \App\Models\Professional::find(1);
+        $professional = $this->resolveProfessional($request);
         \Illuminate\Support\Facades\Log::info("DEBUG: updateBankDetails hit for Pro ID: " . ($professional ? $professional->id : 'NULL'));
 
         if (!$professional) {
-            return $this->error('Professional not found.', 404);
+            return $this->error('Unauthenticated.', 401);
         }
 
         /*
@@ -259,16 +266,16 @@ class ProfileController extends BaseController
         ['status' => 'pending', 'rejection_reason' => null]
         );
 
-        return $this->success($professional->fresh(), 'Bank details updated successfully.');
+        return $this->success(new ProfessionalResource($professional->fresh()), 'Bank details updated successfully.');
     }
 
     public function updateUPIDetails(Request $request): JsonResponse
     {
-        $professional = $request->user('professional-api') ?? \App\Models\Professional::find(1);
+        $professional = $this->resolveProfessional($request);
         \Illuminate\Support\Facades\Log::info("DEBUG: updateUPIDetails hit for Pro ID: " . ($professional ? $professional->id : 'NULL'));
 
         if (!$professional) {
-            return $this->error('Professional not found.', 404);
+            return $this->error('Unauthenticated.', 401);
         }
 
         /*
@@ -307,7 +314,7 @@ class ProfileController extends BaseController
         ['status' => 'pending', 'rejection_reason' => null]
         );
 
-        return $this->success($professional->fresh(), 'UPI details updated successfully.');
+        return $this->success(new ProfessionalResource($professional->fresh()), 'UPI details updated successfully.');
     }
 
     /**

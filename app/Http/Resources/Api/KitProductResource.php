@@ -5,6 +5,14 @@ namespace App\Http\Resources\Api;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * Resource for Kit Products.
+ * 
+ * Pattern: Foundation Hardening Phase 4
+ * - Resources MUST explicitly map all fields to ensure contract stability.
+ * - Logic for 'low stock' or 'out of stock' status is encapsulated here to 
+ *   keep the Controller and Client simple.
+ */
 class KitProductResource extends JsonResource
 {
     /**
