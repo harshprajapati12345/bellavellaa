@@ -1,6 +1,0 @@
-Table: professionals
-id, session_id, name, email, fcm_token, avatar, category, phone, referral_code, referred_by, aadhaar, pan, aadhaar_front, aadhaar_back, aadhaar_status, pan_img, pan_status, certificate_img, electricity_bill, electricity_bill_status, city, area, gender, dob, bio, languages, service_area, pincode, state, service_radius, payout, portfolio, is_online, is_online_manual, is_online_system, rejection_count, suspended_until, status, working_hours, shift_start_time, shift_end_time, shift_duration, kit_purchased, verification, id_verification_status, certificate_verification_status, selfie, orders, kits, wallet_balance, commission, experience, experience_description, joined, services, docs, rating, coins_balance, total_completed_jobs, created_at, updated_at, created_at_legacy, deleted_at, last_seen, bank_proof_image, upi_screenshot, payout_verification_status
-
-Table: kit_orders
-id, idempotency_key, idempotency_hash, idempotency_response, professional_id, kit_product_id, quantity, total_amount, payment_id, razorpay_order_id, payment_session_id, payment_status, payment_method, order_status, used_quantity, status, assigned_at, notes, created_at, updated_at
-
