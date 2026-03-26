@@ -10,6 +10,13 @@ use Exception;
 
 class OfferController extends Controller
 {
+    protected function normalizeDateInput(?string $value): ?string
+    {
+        $value = $value !== null ? trim($value) : null;
+
+        return $value === '' ? null : $value;
+    }
+
     public function index()
     {
         $offers = Offer::all();
@@ -40,6 +47,9 @@ class OfferController extends Controller
         try {
             DB::beginTransaction();
 
+            $validFrom = $this->normalizeDateInput($request->input('valid_from'));
+            $validUntil = $this->normalizeDateInput($request->input('valid_until'));
+
             $imagePath = null;
             if ($request->hasFile('image')) {
                 $imagePath = $request->file('image')->store('offers', 'public');
@@ -51,8 +61,8 @@ class OfferController extends Controller
                 'discount_value' => $request->discount_value,
                 'discount_type'  => $request->discount_type,
                 'code'           => strtoupper($request->code),
-                'valid_from'     => $request->valid_from,
-                'valid_until'    => $request->valid_until,
+                'valid_from'     => $validFrom,
+                'valid_until'    => $validUntil,
                 'status'         => $request->has('status') ? 'Active' : 'Inactive',
                 'image'          => $imagePath,
             ]);
@@ -76,7 +86,7 @@ class OfferController extends Controller
             'description' => strip_tags($offer->description ?? 'No description available.'),
             'discount'    => ($offer->discount_type === 'percentage' ? $offer->discount_value . '%' : '₹' . $offer->discount_value) . ' OFF',
             'code'        => $offer->code ?? 'NO CODE',
-            'usage'       => $offer->usage_count ?? 0,
+            'usage'       => $offer->times_used ?? 0,
             'valid_from'  => $offer->valid_from ? \Carbon\Carbon::parse($offer->valid_from)->format('d M Y') : '—',
             'valid_until' => $offer->valid_until ? \Carbon\Carbon::parse($offer->valid_until)->format('d M Y') : '—',
             'status'      => $offer->status,
@@ -104,6 +114,9 @@ class OfferController extends Controller
         try {
             DB::beginTransaction();
 
+            $validFrom = $this->normalizeDateInput($request->input('valid_from'));
+            $validUntil = $this->normalizeDateInput($request->input('valid_until'));
+
             $imagePath = $offer->image;
             if ($request->hasFile('image')) {
                 // Consider deleting old image here if needed
@@ -116,8 +129,8 @@ class OfferController extends Controller
                 'discount_value' => $request->discount_value,
                 'discount_type'  => $request->discount_type,
                 'code'           => strtoupper($request->code),
-                'valid_from'     => $request->valid_from,
-                'valid_until'    => $request->valid_until,
+                'valid_from'     => $validFrom,
+                'valid_until'    => $validUntil,
                 'status'         => $request->has('status') ? 'Active' : 'Inactive',
                 'image'          => $imagePath,
             ]);

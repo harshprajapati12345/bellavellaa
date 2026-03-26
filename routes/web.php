@@ -152,6 +152,7 @@ Route::middleware(['auth:admin'])->group(function () {
 
 
     // Settings
+    Route::get('settings/checkout-discounts', [SettingController::class , 'checkoutDiscounts'])->name('settings.checkout-discounts');
     Route::post('settings/update', [SettingController::class , 'update'])->name('settings.update');
     Route::post('settings/theme/save', [SettingController::class , 'saveTheme'])->name('settings.theme.save');
     Route::post('settings/theme/reset', [SettingController::class , 'resetTheme'])->name('settings.theme.reset');
@@ -167,6 +168,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('referrals/{id}/toggle-status', [ReferralController::class , 'toggleStatus'])->name('referrals.toggle-status');
 
     // Reward Point Settings
+    Route::get('settings/rewards', [RewardSettingController::class , 'index'])->name('settings.rewards.index');
     Route::post('settings/rewards/update', [RewardSettingController::class , 'update'])->name('settings.rewards.update');
 
 });

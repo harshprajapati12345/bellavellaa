@@ -6,7 +6,7 @@
     $offers = $offers ?? collect();
     $total = $offers->count();
     $active = $offers->where('status', 'Active')->count();
-    $totalUsage = $offers->sum('usage');
+    $totalUsage = $offers->sum('times_used');
   @endphp
 
   <div class="flex flex-col gap-6">
@@ -88,8 +88,8 @@
                 data-description="{{ $o->description ?? '' }}" data-code="{{ $o->code ?? '—' }}"
                 data-type="{{ ucwords($o->discount_type ?? 'percentage') }}"
                 data-discount="{{ $o->discount_type === 'percentage' ? $o->discount_value . '%' : '₹' . $o->discount_value }}"
-                data-usage="{{ $o->usage_count ?? 0 }}" data-max-usage="{{ $o->max_usage ?? 'Unlimited' }}"
-                data-min-spend="{{ $o->min_spend ?? 0 }}"
+                data-usage="{{ $o->times_used ?? 0 }}" data-max-usage="{{ $o->usage_limit ?? 'Unlimited' }}"
+                data-min-spend="{{ isset($o->min_order_paise) ? ($o->min_order_paise / 100) : 0 }}"
                 data-start="{{ $o->valid_from ? \Carbon\Carbon::parse($o->valid_from)->format('d M Y') : '—' }}"
                 data-end="{{ $o->valid_until ? \Carbon\Carbon::parse($o->valid_until)->format('d M Y') : '—' }}"
                 data-status="{{ $o->status ?? 'Active' }}"
@@ -109,7 +109,7 @@
                   </div>
                 </td>
                 <td class="px-4 py-4 text-center"><span
-                    class="text-sm font-medium text-gray-700">{{ $o->usage_count ?? 0 }}</span></td>
+                    class="text-sm font-medium text-gray-700">{{ $o->times_used ?? 0 }}</span></td>
                 <td class="px-4 py-4 text-sm text-gray-500">
                   {{ $o->valid_until ? \Carbon\Carbon::parse($o->valid_until)->format('d M Y') : '—' }}</td>
                 <td class="px-4 py-4">

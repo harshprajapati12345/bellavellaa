@@ -34,6 +34,8 @@ class BookingResource extends JsonResource
             'service_started_at' => $this->service_started_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
+            'cancel_reason_code' => $this->cancel_reason_code,
+            'cancel_reason_note' => $this->cancel_reason_note,
             'can_track_professional' => $this->canTrackProfessional(),
             'can_reschedule' => $this->canReschedule(),
             'can_cancel' => $this->canCancel(),

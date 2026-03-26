@@ -50,10 +50,19 @@ class BookingController extends BaseController
         return $this->success(new BookingResource($booking), 'Booking details retrieved successfully.');
     }
 
-    public function cancel(Booking $booking): JsonResponse
+    public function cancel(Request $request, Booking $booking): JsonResponse
     {
         if ($booking->customer_id !== $this->guard()->id()) {
             return $this->error('Unauthorized.', 403);
+        }
+
+        $validated = $request->validate([
+            'reason_code' => 'required|in:changed_plan,mistake,other_service,trust_issue,price,reschedule,other',
+            'reason_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($validated['reason_code'] === 'other' && blank($validated['reason_note'] ?? null)) {
+            return $this->error('Please enter your cancellation reason.', 422);
         }
 
         if (!$booking->canCancel()) {
@@ -62,6 +71,8 @@ class BookingController extends BaseController
 
         $booking->applyStatusTransition('cancelled', [
             'current_step' => 'cancelled',
+            'cancel_reason_code' => $validated['reason_code'],
+            'cancel_reason_note' => $validated['reason_note'] ?? null,
         ]);
 
         return $this->success(new BookingResource($booking->fresh(['customer', 'order', 'service', 'variant.service', 'professional', 'package'])), 'Booking cancelled successfully.');
@@ -96,9 +107,9 @@ class BookingController extends BaseController
             ->where('status', 'Active')
             ->where('verification', 'Verified')
             ->get();
-            
+
         $capacity = 0;
-        
+
         $slot = $validated['new_time_slot'];
         try {
             $slotTime = Carbon::createFromFormat('h:i A', $slot);

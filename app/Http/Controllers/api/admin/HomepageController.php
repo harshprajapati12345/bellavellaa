@@ -27,6 +27,15 @@ class HomepageController extends BaseController
     {
         $data = $request->validated();
 
+        if (($data['section'] ?? null) === 'promo_banner') {
+            $heroSection = HomepageContent::where('section', 'hero_banner')->first();
+            if ($heroSection) {
+                HomepageContent::where('sort_order', '>', $heroSection->sort_order)
+                    ->increment('sort_order');
+                $data['sort_order'] = $heroSection->sort_order + 1;
+            }
+        }
+
         if ($request->hasFile('section_image')) {
             $path = $request->file('section_image')->store('homepage', 'public');
             $data['image'] = asset('storage/' . $path);

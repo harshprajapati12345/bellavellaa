@@ -66,21 +66,19 @@
 
               <!-- Title -->
               <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Title <span
-                    class="text-red-400">*</span></label>
-                <input type="text" name="title" required
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Title</label>
+                <input type="text" name="title"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black/50 text-sm bg-white transition-all"
-                  placeholder="e.g. Hero Slide 1, Promo Video" value="{{ old('title', $media->title) }}">
+                  placeholder="e.g. Hero Slide 1, Promo Video" value="{{ old('title', '') }}">
               </div>
 
 
               <!-- Target Page -->
               <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Target Page
-                  <span class="text-red-400">*</span></label>
-                <select name="target_page" required
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 ml-1">Target Page</label>
+                <select name="target_page"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black/50 text-sm bg-white cursor-pointer transition-all">
-                  <option value="">Select page...</option>
+                  <option value="" {{ old('target_page', '') === '' ? 'selected' : '' }}>Select page...</option>
                   @foreach([
                     'home' => 'Home', 
                     'services' => 'Services', 
@@ -90,7 +88,7 @@
                     'professionals' => 'Professionals', 
                     'offers' => 'Offers', 
                     'none' => 'None'] as $key => $label)
-                    <option value="{{ $key }}" {{ (old('target_page', $media->target_page) === $key) ? 'selected' : '' }}>{{ $label }}
+                    <option value="{{ $key }}" {{ (old('target_page', '') === $key) ? 'selected' : '' }}>{{ $label }}
                     </option>
                   @endforeach
                 </select>
@@ -388,3 +386,6 @@
     }
   </script>
 @endpush
+
+
+

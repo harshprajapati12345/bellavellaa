@@ -50,6 +50,6 @@ class MediaPathNormalizer
             return null;
         }
 
-        return \Storage::disk('public')->url($normalized);
+        return '/storage/' . ltrim($normalized, '/');
     }
 }

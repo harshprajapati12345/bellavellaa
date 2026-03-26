@@ -23,6 +23,7 @@ class HomepageController extends Controller
     // All valid Flutter client homepage section types
     public const SECTION_TYPES = [
         'hero_banner'        => 'Hero Banner',
+        'promo_banner'       => 'Promotional Banner',
         'category_carousel'  => 'Category Carousel',
         'service_carousel'   => 'Service Carousel',
         'service_grid'       => 'Service Grid',
@@ -54,17 +55,19 @@ class HomepageController extends Controller
             $imagePath = asset('storage/' . $stored);
         }
 
+        $sortOrder = $this->resolveDefaultSortOrder($sectionKey);
+
         HomepageContent::create([
             'section'      => $sectionKey,
             'name'         => $label,
             'title'        => $request->title,
             'subtitle'     => $request->subtitle,
-            'content_type' => 'dynamic',
+            'content_type' => $this->resolveContentType($sectionKey),
             'media_type'   => $request->media_type,
             'description'  => $request->description,
             'image'        => $imagePath,
             'status'       => $request->has('status') ? 'Active' : 'Inactive',
-            'sort_order'   => HomepageContent::max('sort_order') + 1,
+            'sort_order'   => $sortOrder,
             'content'      => [],
         ]);
 
@@ -127,6 +130,35 @@ class HomepageController extends Controller
         }
         return response()->json(['success' => true]);
     }
-}
 
+    private function resolveContentType(string $sectionKey): string
+    {
+        return in_array($sectionKey, [
+            'hero_banner',
+            'promo_banner',
+            'image_banner',
+            'video_stories',
+            'active_booking',
+            'trending_packages',
+            'download_app',
+        ], true) ? 'static' : 'dynamic';
+    }
+
+    private function resolveDefaultSortOrder(string $sectionKey): int
+    {
+        if ($sectionKey !== 'promo_banner') {
+            return (int) HomepageContent::max('sort_order') + 1;
+        }
+
+        $heroSection = HomepageContent::where('section', 'hero_banner')->first();
+        if (!$heroSection) {
+            return (int) HomepageContent::max('sort_order') + 1;
+        }
+
+        HomepageContent::where('sort_order', '>', $heroSection->sort_order)
+            ->increment('sort_order');
+
+        return $heroSection->sort_order + 1;
+    }
+}
 

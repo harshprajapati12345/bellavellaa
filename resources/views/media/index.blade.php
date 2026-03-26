@@ -107,7 +107,7 @@ $currentFilter = $filter ?? 'All';
                 <td class="px-4 py-4">
                   <div class="media-preview flex items-center justify-center bg-gray-100">
                     @if(!empty($m->file_path) || !empty($m->url))
-                    <img src="{{ $m->file_path ?? $m->url }}" class="w-full h-full object-cover rounded-xl" alt="">
+                    <img src="{{ \App\Support\MediaPathNormalizer::url($m->file_path ?? $m->url) }}" class="w-full h-full object-cover rounded-xl" alt="">
                     @else
                     <i data-lucide="{{ $typeIcon }}" class="w-5 h-5 text-gray-400"></i>
                     @endif

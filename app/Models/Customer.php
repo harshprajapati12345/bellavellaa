@@ -70,9 +70,9 @@ class Customer extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(CustomerNotification::class);
     }
-    public function promotionUsages(): HasMany
+    public function offerUsages(): HasMany
     {
-        return $this->hasMany(PromotionUsage::class);
+        return $this->hasMany(OfferUsage::class);
     }
     public function addresses(): HasMany
     {

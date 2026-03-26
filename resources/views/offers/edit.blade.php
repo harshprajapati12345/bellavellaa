@@ -1,5 +1,9 @@
 @extends('layouts.app')
 @section('content')
+  @php
+    $validFromValue = old('valid_from', $offer->valid_from?->format('Y-m-d'));
+    $validUntilValue = old('valid_until', $offer->valid_until?->format('Y-m-d'));
+  @endphp
   <div class="flex flex-col gap-6">
     @if($errors->any())
       <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-2xl text-sm">
@@ -61,12 +65,12 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Valid From</label>
-                <input type="date" name="valid_from" value="{{ old('valid_from', $offer->valid_from) }}"
+                <input type="date" name="valid_from" value="{{ $validFromValue }}"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Valid Until</label>
-                <input type="date" name="valid_until" value="{{ old('valid_until', $offer->valid_until) }}"
+                <input type="date" name="valid_until" value="{{ $validUntilValue }}"
                   class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
               </div>
             </div>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Client\AddressController;
 use App\Http\Controllers\Api\Client\BookingController;
 use App\Http\Controllers\Api\Client\CategoryController;
 use App\Http\Controllers\Api\Client\HomepageController;
+use App\Http\Controllers\Api\Client\OfferController as ClientOfferController;
 use App\Http\Controllers\Api\Client\ProfileController;
 use App\Http\Controllers\Api\Client\ReviewController;
 use App\Http\Controllers\Api\Client\CartController;
@@ -123,6 +124,7 @@ Route::prefix('client')->group(function () {
                 Route::delete('cart/{cart}', [CartController::class , 'destroy']);
                 Route::post('cart/clear', [CartController::class , 'clear']);
                 Route::post('cart/sync', [CartController::class , 'sync']);
+                Route::post('cart/checkout/preview', [CartController::class , 'previewCheckout']);
                 Route::post('cart/checkout', [CartController::class , 'checkout']);
                 Route::post('cart/checkout/verify', [CartController::class , 'verifyCheckout']);
 
@@ -133,7 +135,11 @@ Route::prefix('client')->group(function () {
                 Route::post('bookings/{bookingId}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class , 'store']);
                 Route::post('app-feedback', [\App\Http\Controllers\Api\Client\AppFeedbackController::class , 'store']);
 
-                // Promotions & Slots
+                Route::get('offers', [ClientOfferController::class , 'index']);
+                Route::post('offers/validate', [ClientOfferController::class , 'validateCode']);
+
+                // Backward-compatibility shim:
+                // Keep legacy promotion routes alive until all deployed clients move to /client/offers.
                 Route::get('promotions', [PromotionController::class , 'index']);
                 Route::post('promotions/validate', [PromotionController::class , 'validateCode']);
                 Route::get('slots', [SlotController::class , 'index']);
@@ -332,3 +338,4 @@ Route::prefix('admin')->group(function () {
             }
             );
         });
+

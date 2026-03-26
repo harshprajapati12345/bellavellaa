@@ -1,3 +1,9 @@
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*" "expr=%{REQUEST_URI} =~ m#^/storage/#"
+    Header always set Access-Control-Allow-Methods "GET, OPTIONS" "expr=%{REQUEST_URI} =~ m#^/storage/#"
+    Header always set Access-Control-Allow-Headers "Origin, Content-Type, Accept, Authorization" "expr=%{REQUEST_URI} =~ m#^/storage/#"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

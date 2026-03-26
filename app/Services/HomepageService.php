@@ -61,6 +61,7 @@ class HomepageService
         
         return match ($sectionType) {
             'hero_banner'       => self::resolveMediaItems($section->id, $content),
+            'promo_banner'      => self::resolvePromoBannerItems($section, $content),
             'image_banner'      => self::resolveMediaItems($section->id, $content),
             'trending_packages' => self::resolveMediaItems($section->id, $content),
             'download_app'      => self::resolveMediaItems($section->id, $content),
@@ -90,6 +91,28 @@ class HomepageService
             ->get();
 
         return MediaResource::collection($mediaItems)->resolve();
+    }
+
+    protected static function resolvePromoBannerItems(HomepageContent $section, array $content): array
+    {
+        $mediaItems = self::resolveMediaItems($section->id, $content);
+        if (!empty($mediaItems)) {
+            return $mediaItems;
+        }
+
+        if (empty($section->image)) {
+            return [];
+        }
+
+        return [[
+            'id'          => $section->id,
+            'title'       => $section->title,
+            'subtitle'    => $section->subtitle,
+            'url'         => $section->image,
+            'image'       => $section->image,
+            'target_page' => $section->btn_link,
+            'description' => $section->description,
+        ]];
     }
 
     protected static function resolveCategoryCarousel(array $content)
@@ -193,6 +216,4 @@ class HomepageService
         return []; // Return empty array — do NOT return false (false causes the section to be dropped)
     }
 }
-
-
 

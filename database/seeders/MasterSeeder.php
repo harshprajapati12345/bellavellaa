@@ -52,8 +52,6 @@ class MasterSeeder extends Seeder
         DB::table('customer_notifications')->truncate();
         DB::table('professional_notifications')->truncate();
         DB::table('admin_notifications')->truncate();
-        DB::table('promotions')->truncate();
-        DB::table('promotion_usages')->truncate();
         DB::table('service_options')->truncate();
         DB::table('service_variants')->truncate();
         DB::table('hierarchy_banners')->truncate();
@@ -924,38 +922,8 @@ class MasterSeeder extends Seeder
         // ══════════════════════════════════════════════════════════════
         // 30. PROMOTIONS + USAGES (customer_id)
         // ══════════════════════════════════════════════════════════════
-        $promoCodes = ['WELCOME50', 'SUMMER20', 'BOGO2025', 'FLAT200', 'NEWUSER'];
-        $promoIds = [];
-        foreach ($promoCodes as $i => $code) {
-            $promoIds[] = DB::table('promotions')->insertGetId([
-                'name' => ucwords(strtolower($code)) . ' Offer',
-                'code' => $code,
-                'description' => "Special {$code} promotion",
-                'type' => ['percentage', 'percentage', 'bogo', 'flat', 'percentage'][$i],
-                'value' => $i === 3 ? 20000 : rand(10, 50),
-                'max_discount_paise' => $i !== 3 ? rand(30000, 100000) : null,
-                'min_order_paise' => rand(29900, 99900),
-                'usage_limit' => rand(100, 1000),
-                'per_user_limit' => rand(1, 3),
-                'times_used' => rand(0, 50),
-                'starts_at' => now()->subDays(10),
-                'ends_at' => now()->addDays(30),
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        for ($i = 0; $i < 5; $i++) {
-            DB::table('promotion_usages')->insert([
-                'promotion_id' => $promoIds[$i],
-                'customer_id' => $customers[$i],
-                'order_id' => $orderIds[$i],
-                'discount_paise' => rand(5000, 50000),
-                'created_at' => now()->subDays(rand(1, 7)),
-                'updated_at' => now(),
-            ]);
-        }
-        $this->command->info('✅ Promotions seeded');
+        // Legacy promotions seeding removed.
+        // Offers are the canonical source of truth for coupon and discount flows.
 
         // ══════════════════════════════════════════════════════════════
         // 31-33. SERVICE OPTIONS, VARIANTS, TAGS

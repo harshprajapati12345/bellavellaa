@@ -106,8 +106,12 @@ class MediaController extends Controller
             'linked_section' => $medium->homepageContent ? ($medium->homepageContent->content['name'] ?? $medium->homepageContent->title ?? $medium->homepageContent->section) : '—',
             'target_page' => $medium->target_page ?? '—',
             'status' => $medium->status,
-            'url' => $medium->url,
-            'thumbnail' => $medium->thumbnail ?: (str_contains(strtolower($medium->type), 'video') ? 'https://images.unsplash.com/photo-1492691523567-627a5856eb0b?auto=format&fit=crop&w=400&q=80' : $medium->url),
+            'url' => MediaPathNormalizer::url($medium->url),
+            'thumbnail' => $medium->thumbnail
+                ? MediaPathNormalizer::url($medium->thumbnail)
+                : (str_contains(strtolower($medium->type), 'video')
+                    ? 'https://images.unsplash.com/photo-1492691523567-627a5856eb0b?auto=format&fit=crop&w=400&q=80'
+                    : MediaPathNormalizer::url($medium->url)),
             'created' => $medium->created_at->format('d M Y'),
         ]);
     }
@@ -151,4 +155,3 @@ class MediaController extends Controller
         return redirect()->route('media.index')->with('success', 'Media deleted.');
     }
 }
-

@@ -25,13 +25,18 @@ class Order extends Model
         'scheduled_slot',
         'subtotal_paise',
         'discount_paise',
+        'payment_discount_paise',
+        'wallet_discount_paise',
+        'offer_discount_paise',
+        'total_discount_paise',
+        'discount_snapshot',
         'tax_paise',
         'total_paise',
         'coins_used',
         'status',
         'payment_status',
         'payment_method',
-        'promotion_id',
+        'offer_id',
         'coupon_code',
         'customer_notes',
         'admin_notes',
@@ -44,6 +49,11 @@ class Order extends Model
         'scheduled_date' => 'date',
         'subtotal_paise' => 'integer',
         'discount_paise' => 'integer',
+        'payment_discount_paise' => 'integer',
+        'wallet_discount_paise' => 'integer',
+        'offer_discount_paise' => 'integer',
+        'total_discount_paise' => 'integer',
+        'discount_snapshot' => 'array',
         'tax_paise' => 'integer',
         'total_paise' => 'integer',
         'coins_used' => 'integer',
@@ -80,9 +90,9 @@ class Order extends Model
     {
         return $this->belongsTo(Professional::class);
     }
-    public function promotion(): BelongsTo
+    public function offer(): BelongsTo
     {
-        return $this->belongsTo(Promotion::class);
+        return $this->belongsTo(Offer::class);
     }
     public function items(): HasMany
     {
@@ -135,4 +145,3 @@ class Order extends Model
         return 'BV-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
 }
-

@@ -58,6 +58,7 @@
                 @php
                   $allSections = [
                     'hero_banner'       => 'Hero Banner',
+                    'promo_banner'      => 'Promotional Banner',
                     'category_carousel' => 'Category Carousel',
                     'service_carousel'  => 'Service Carousel',
                     'service_grid'      => 'Service Grid',
@@ -230,4 +231,3 @@
     }
   </script>
 @endpush
-

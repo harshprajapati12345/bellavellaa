@@ -22,6 +22,7 @@ elseif (str_starts_with($routeName, 'kit-products')) $section = 'kit-products';
 elseif (str_starts_with($routeName, 'kit-orders')) $section = 'kit-orders';
 elseif (str_starts_with($routeName, 'leaves')) $section = 'leaves';
 elseif (str_starts_with($routeName, 'referrals')) $section = 'referrals';
+elseif (str_starts_with($routeName, 'settings.checkout-discounts')) $section = 'settings.checkout-discounts';
 elseif (str_starts_with($routeName, 'settings.rewards')) $section = 'settings.rewards';
 elseif (str_starts_with($routeName, 'settings')) $section = 'settings';
 
@@ -366,20 +367,30 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
           <!-- Settings -->
           <div class="relative">
             <button onclick="toggleSettings()" id="settings-btn"
-              class="w-full flex items-center justify-between px-4 py-3 {{ ($section === 'settings' || $section === 'settings.rewards') ? 'bg-white shadow-sm ring-1 ring-gray-200' : 'hover:bg-white' }} rounded-xl text-black transition-all group sidebar-item-hover">
+              class="w-full flex items-center justify-between px-4 py-3 {{ str_starts_with($section, 'settings') ? 'bg-white shadow-sm ring-1 ring-gray-200' : 'hover:bg-white' }} rounded-xl text-black transition-all group sidebar-item-hover">
               <div class="flex items-center gap-3">
                 <i data-lucide="settings" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
                 <span class="font-normal text-base text-black">Settings</span>
               </div>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200 {{ ($section === 'settings' || $section === 'settings.rewards') ? 'chevron-rotate' : '' }}"
+              <i data-lucide="chevron-down" class="w-4 h-4 text-black opacity-60 transition-transform duration-200 {{ str_starts_with($section, 'settings') ? 'chevron-rotate' : '' }}"
                 id="settings-chevron"></i>
             </button>
             <!-- Submenu -->
-            <div id="settings-submenu" class="submenu{{ ($section === 'settings') ? ' open' : '' }} pl-4 mt-1 space-y-1">
+            <div id="settings-submenu" class="submenu{{ str_starts_with($section, 'settings') ? ' open' : '' }} pl-4 mt-1 space-y-1">
               <a href="{{ route('settings.index') }}"
                 class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.index' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="sliders" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">General Settings</span>
+              </a>
+              <a href="{{ route('settings.checkout-discounts') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.checkout-discounts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="badge-percent" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Pricing &amp; Discounts</span>
+              </a>
+              <a href="{{ route('settings.rewards.index') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.rewards.index' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="coins" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Rewards &amp; Wallet</span>
               </a>
             </div>
           </div>
