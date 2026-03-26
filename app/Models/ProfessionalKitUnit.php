@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProfessionalKitUnit extends Model
 {
     protected $fillable = [
-        'professional_id', 'kit_unit_id',
+        'professional_id', 'kit_unit_id', 'kit_order_id',
         'assigned_at', 'used_at', 'order_id',
     ];
 
@@ -20,6 +20,7 @@ class ProfessionalKitUnit extends Model
     public function professional(): BelongsTo { return $this->belongsTo(Professional::class); }
     public function kitUnit(): BelongsTo { return $this->belongsTo(KitUnit::class); }
     public function order(): BelongsTo { return $this->belongsTo(Order::class); }
+    public function kitOrder(): BelongsTo { return $this->belongsTo(KitOrder::class); }
 
     public function isUsed(): bool { return $this->used_at !== null; }
 }

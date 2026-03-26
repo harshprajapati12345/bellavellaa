@@ -22,7 +22,11 @@ class Professional extends Authenticatable implements JWTSubject
         'portfolio'     => 'array',
         'working_hours' => 'array',
         'docs'          => 'boolean',
-        'last_seen'     => 'datetime',
+        'kits'          => 'integer',
+        'last_seen'      => 'datetime',
+        'shift_start_time' => 'datetime',
+        'shift_end_time' => 'datetime',
+        'shift_duration' => 'integer',
     ];
 
     // ── JWT ────────────────────────────────────────────────────────
@@ -38,6 +42,7 @@ class Professional extends Authenticatable implements JWTSubject
 
     // ── Relationships ──────────────────────────────────────────────
     public function bookings() { return $this->hasMany(Booking::class); }
+    public function wallet() { return $this->morphOne(Wallet::class, 'holder'); }
 
     public function kitOrders()
     {
