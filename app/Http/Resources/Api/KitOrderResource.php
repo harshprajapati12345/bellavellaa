@@ -17,6 +17,8 @@ class KitOrderResource extends JsonResource
             'professional'  => new ProfessionalResource($this->whenLoaded('professional')),
             'product'       => new KitProductResource($this->whenLoaded('kitProduct')),
             'quantity'      => $this->quantity,
+            'total_amount'  => (float) $this->total_amount,
+            'payment_method'=> $this->payment_method,
             'status'        => $this->status,
             'assigned_at'   => $this->assigned_at?->toIso8601String(),
             'received_at'   => $this->received_at?->toIso8601String(),
