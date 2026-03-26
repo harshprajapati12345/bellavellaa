@@ -9,6 +9,8 @@ use App\Models\KitProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class KitController extends BaseController
 {
@@ -79,7 +81,7 @@ class KitController extends BaseController
 
     /**
      * POST /api/professional/payment/verify
-     * Verify Razorpay payment + create kit order record
+     * Verify Razorpay payment + create kit order record (Hardenened Idempotency)
      */
     public function verifyPayment(Request $request): JsonResponse
     {
@@ -95,53 +97,106 @@ class KitController extends BaseController
             'notes'               => 'nullable|string',
         ]);
 
-        $product = KitProduct::findOrFail($validated['kit_product_id']);
-        $totalAmount = $product->price * $validated['quantity'];
+        // 1. Idempotency Check (Header OR Body)
+        $idempotencyKey = $request->header('Idempotency-Key') ?? $request->input('idempotency_key');
+        
+        // Calculate hash excluding idempotency noise
+        $hashData = $request->except(['idempotency_key', 'idempotency_hash']);
+        $requestHash = hash('sha256', json_encode($hashData));
 
-        if ($product->total_stock < $validated['quantity']) {
-            return $this->error('Insufficient stock for this product.', 400);
-        }
-
-        // Secure Signature Verification
-        try {
-            if (!config('services.razorpay.mock')) {
-                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-                $attributes = [
-                    'razorpay_order_id'   => $validated['razorpay_order_id'],
-                    'razorpay_payment_id' => $validated['razorpay_payment_id'],
-                    'razorpay_signature'  => $validated['razorpay_signature']
-                ];
-                $api->utility->verifyPaymentSignature($attributes);
+        if ($idempotencyKey) {
+            $existing = KitOrder::where('idempotency_key', $idempotencyKey)->first();
+            if ($existing) {
+                if ($existing->idempotency_hash !== $requestHash && $request->has('idempotency_hash')) {
+                     // If hash was provided and doesn't match, it's a reuse error
+                     if ($existing->idempotency_hash !== $request->input('idempotency_hash')) {
+                        return $this->error('Idempotency key reuse with different payload detected.', 400);
+                     }
+                }
+                if ($existing->idempotency_response) {
+                    return response()->json(json_decode($existing->idempotency_response, true));
+                }
             }
-        } catch (\Exception $e) {
-            return $this->error('Payment signature verification failed: ' . $e->getMessage(), 422);
         }
 
-        $product->decrement('total_stock', $validated['quantity']);
+        // 2. Distributed Lock to prevent parallel race conditions
+        $lockKey = 'kit_verify_' . $professional->id . '_' . $validated['razorpay_payment_id'];
+        return Cache::lock($lockKey, 15)->block(5, function () use ($professional, $validated, $idempotencyKey, $requestHash) {
+            
+            $product = KitProduct::findOrFail($validated['kit_product_id']);
+            $totalAmount = $product->price * $validated['quantity'];
 
-        $order = KitOrder::create([
-            'professional_id'   => $professional->id,
-            'kit_product_id'    => $validated['kit_product_id'],
-            'quantity'          => $validated['quantity'],
-            'total_amount'      => $totalAmount,
-            'payment_id'        => $validated['razorpay_payment_id'],
-            'razorpay_order_id' => $validated['razorpay_order_id'],
-            'payment_status'    => 'Paid',
-            'payment_method'    => $validated['payment_method'] ?? 'Razorpay',
-            'order_status'      => 'Processing',
-            'status'            => 'Assigned',
-            'notes'             => $validated['notes'] ?? null,
-            'assigned_at'       => now(),
-        ]);
+            // 3. Secure Signature Verification
+            try {
+                if (!config('services.razorpay.mock')) {
+                    $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                    $attributes = [
+                        'razorpay_order_id'   => $validated['razorpay_order_id'],
+                        'razorpay_payment_id' => $validated['razorpay_payment_id'],
+                        'razorpay_signature'  => $validated['razorpay_signature']
+                    ];
+                    $api->utility->verifyPaymentSignature($attributes);
+                }
+            } catch (\Exception $e) {
+                return $this->error('Payment signature verification failed: ' . $e->getMessage(), 422);
+            }
 
-        // Activate professional
-        $professional->update(['kit_purchased' => true]);
+            try {
+                return DB::transaction(function () use ($professional, $product, $validated, $totalAmount, $idempotencyKey, $requestHash) {
+                    
+                    // 4. Double check payment_id uniqueness inside transaction
+                    if (KitOrder::where('payment_id', $validated['razorpay_payment_id'])->exists()) {
+                         throw new \Exception('This payment has already been processed.');
+                    }
 
-        return $this->success(new KitOrderResource($order->load('product')), 'Payment verified. Kit order placed and professional activated.');
+                    // 5. Atomic Stock Check & Decrement
+                    $product = KitProduct::where('id', $product->id)->lockForUpdate()->first();
+                    if ($product->total_stock < $validated['quantity']) {
+                        throw new \Exception('Insufficient stock for this product.');
+                    }
+                    $product->decrement('total_stock', $validated['quantity']);
+
+                    // 6. Create Order with Idempotency Data
+                    $order = KitOrder::create([
+                        'idempotency_key'   => $idempotencyKey,
+                        'idempotency_hash'  => $requestHash,
+                        'professional_id'   => $professional->id,
+                        'kit_product_id'    => $validated['kit_product_id'],
+                        'quantity'          => $validated['quantity'],
+                        'total_amount'      => $totalAmount,
+                        'payment_id'        => $validated['razorpay_payment_id'],
+                        'razorpay_order_id' => $validated['razorpay_order_id'],
+                        'payment_status'    => 'Paid',
+                        'payment_method'    => $validated['payment_method'] ?? 'Razorpay',
+                        'order_status'      => 'Processing',
+                        'status'            => 'Assigned',
+                        'notes'             => $validated['notes'] ?? null,
+                        'assigned_at'       => now(),
+                    ]);
+
+                    // 7. Update Professional Inventory
+                    $professional->increment('kits', $validated['quantity']);
+                    $professional->update(['kit_purchased' => true]);
+
+                    $responseData = [
+                        'success' => true,
+                        'message' => 'Payment verified. Kit order placed.',
+                        'data'    => new KitOrderResource($order->load('product'))
+                    ];
+                    
+                    // 8. Store Idempotency Response for Replay
+                    $order->update(['idempotency_response' => json_encode($responseData)]);
+
+                    return response()->json($responseData);
+                });
+            } catch (\Exception $e) {
+                return $this->error($e->getMessage(), 400);
+            }
+        });
     }
 
     /**
-     * POST /api/professional/orders (Legacy — direct place without payment)
+     * POST /api/professional/orders (Wallet Purchase — Hardened)
      */
     public function order(Request $request): JsonResponse
     {
@@ -153,37 +208,89 @@ class KitController extends BaseController
             'notes'          => 'nullable|string',
         ]);
 
-        $product = KitProduct::findOrFail($validated['kit_product_id']);
-        $totalAmount = $product->price * $validated['quantity'];
+        // 1. Idempotency Check
+        $idempotencyKey = $request->header('Idempotency-Key') ?? $request->input('idempotency_key');
+        $hashData = $request->except(['idempotency_key', 'idempotency_hash']);
+        $requestHash = hash('sha256', json_encode($hashData));
 
-        if ($product->total_stock < $validated['quantity']) {
-            return $this->error('Insufficient stock for this product.', 400);
+        if ($idempotencyKey) {
+            $existing = KitOrder::where('idempotency_key', $idempotencyKey)->first();
+            if ($existing) {
+                if ($existing->idempotency_hash !== $requestHash && $request->has('idempotency_hash')) {
+                     if ($existing->idempotency_hash !== $request->input('idempotency_hash')) {
+                        return $this->error('Idempotency key reuse with different payload detected.', 400);
+                     }
+                }
+                if ($existing->idempotency_response) {
+                    return response()->json(json_decode($existing->idempotency_response, true));
+                }
+            }
         }
 
-        if ($professional->earnings_balance < $totalAmount) {
-            return $this->error('Insufficient wallet balance.', 400);
-        }
+        // 2. Distributed Lock
+        $lockKey = 'kit_wallet_purchase_' . $professional->id;
+        return Cache::lock($lockKey, 10)->block(3, function () use ($professional, $validated, $idempotencyKey, $requestHash) {
+            
+            $product = KitProduct::findOrFail($validated['kit_product_id']);
+            $totalAmount = $product->price * $validated['quantity'];
+            $amountPaise = (int)($totalAmount * 100);
 
-        $product->decrement('total_stock', $validated['quantity']);
-        $professional->decrement('earnings_balance', $totalAmount);
+            try {
+                return DB::transaction(function () use ($professional, $product, $validated, $totalAmount, $amountPaise, $idempotencyKey, $requestHash) {
+                    
+                    // 3. Wallet Lock & Check
+                    $wallet = \App\Models\Wallet::where('holder_type', get_class($professional))
+                        ->where('holder_id', $professional->id)
+                        ->where('type', 'cash')
+                        ->lockForUpdate()
+                        ->first();
 
-        $order = KitOrder::create([
-            'professional_id' => $professional->id,
-            'kit_product_id'  => $validated['kit_product_id'],
-            'quantity'        => $validated['quantity'],
-            'total_amount'    => $totalAmount,
-            'status'          => 'Assigned',
-            'order_status'    => 'Processing',
-            'payment_status'  => 'Paid',
-            'payment_method'  => 'Wallet',
-            'notes'           => $validated['notes'],
-            'assigned_at'     => now(),
-        ]);
+                    if (!$wallet || $wallet->balance < $amountPaise) {
+                        throw new \Exception('Insufficient wallet balance.');
+                    }
 
-        // Activate professional
-        $professional->update(['kit_purchased' => true]);
+                    // 4. Product Lock & Check
+                    $product = KitProduct::where('id', $product->id)->lockForUpdate()->first();
+                    if ($product->total_stock < $validated['quantity']) {
+                        throw new \Exception('Insufficient stock for this product.');
+                    }
 
-        return $this->success(new KitOrderResource($order), 'Kit order placed successfully and professional activated.');
+                    // 5. Atomic Execution
+                    $wallet->debit($amountPaise, 'kit_purchase', "Purchase of " . $product->name, null, 'kit_order');
+                    $product->decrement('total_stock', $validated['quantity']);
+
+                    $order = KitOrder::create([
+                        'idempotency_key'   => $idempotencyKey,
+                        'idempotency_hash'  => $requestHash,
+                        'professional_id'   => $professional->id,
+                        'kit_product_id'    => $product->id,
+                        'quantity'          => $validated['quantity'],
+                        'total_amount'      => $totalAmount,
+                        'status'            => 'Assigned',
+                        'order_status'      => 'Processing',
+                        'payment_status'    => 'Paid',
+                        'payment_method'    => 'Wallet',
+                        'notes'             => $validated['notes'] ?? null,
+                        'assigned_at'       => now(),
+                    ]);
+
+                    // Update Professional Inventory
+                    $professional->increment('kits', $validated['quantity']);
+                    $professional->update(['kit_purchased' => true]);
+
+                    $responseData = [
+                        'success' => true,
+                        'message' => 'Kit purchased successfully via Wallet.',
+                        'data'    => new KitOrderResource($order->load('product'))
+                    ];
+                    $order->update(['idempotency_response' => json_encode($responseData)]);
+
+                    return response()->json($responseData);
+                });
+            } catch (\Exception $e) {
+                return $this->error($e->getMessage(), 400);
+            }
+        });
     }
 
     /**
