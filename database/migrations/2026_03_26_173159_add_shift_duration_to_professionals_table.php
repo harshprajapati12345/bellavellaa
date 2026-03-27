@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->integer('shift_duration')->default(480)->after('is_online');
-        });
+        if (!Schema::hasColumn('professionals', 'shift_duration')) {
+            Schema::table('professionals', function (Blueprint $table) {
+                $table->integer('shift_duration')->default(480)->after('is_online');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn('shift_duration');
-        });
+        if (Schema::hasColumn('professionals', 'shift_duration')) {
+            Schema::table('professionals', function (Blueprint $table) {
+                $table->dropColumn('shift_duration');
+            });
+        }
     }
 };

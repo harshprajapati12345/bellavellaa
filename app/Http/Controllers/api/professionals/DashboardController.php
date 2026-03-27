@@ -11,6 +11,31 @@ use Carbon\Carbon;
 class DashboardController extends BaseController
 {
     /**
+     * GET /api/professionals/active-job
+     */
+    public function activeJob(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $activeJob = Booking::with('customer')
+            ->where('professional_id', $professional->id)
+            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending'])
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if (!$activeJob) {
+            return $this->success(null, 'No active job found.');
+        }
+
+        $data = $activeJob->toArray();
+        $data['customer_name'] = $activeJob->customer?->name ?? 'Customer';
+        $data['client_name'] = $activeJob->customer?->name ?? 'Customer';
+        $data['customer_phone'] = $activeJob->customer?->phone ?? $activeJob->customer?->mobile ?? null;
+
+        return $this->success($data, 'Active job retrieved.');
+    }
+
+    /**
      * GET /api/professionals/dashboard
      * Dashboard summary: today's bookings, earnings overview, pending requests
      */
