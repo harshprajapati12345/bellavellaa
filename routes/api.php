@@ -305,6 +305,14 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('homepage', App\Http\Controllers\Api\Admin\HomepageController::class);
             Route::post('homepage/reorder', [App\Http\Controllers\Api\Admin\HomepageController::class , 'reorder']);
 
+            // Areas
+            Route::get('areas', function () {
+                return response()->json([
+                    'success' => true,
+                    'data' => \App\Models\Customer::whereNotNull('area')->distinct()->pluck('area')
+                ]);
+            });
+
             // Professionals Management
             Route::apiResource('professionals', App\Http\Controllers\Api\Admin\ProfessionalController::class);
             Route::get('professionals-verification', [

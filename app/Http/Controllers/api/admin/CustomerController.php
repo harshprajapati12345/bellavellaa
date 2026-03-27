@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Http\Resources\Api\CustomerResource;
 use App\Http\Requests\Api\Admin\StoreCustomerRequest;
 use App\Http\Requests\Api\Admin\UpdateCustomerRequest;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class CustomerController extends BaseController
@@ -13,23 +14,30 @@ class CustomerController extends BaseController
     /**
      * Display a listing of the customers.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $query = Customer::query();
 
-        if ($search = request('search')) {
+        if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhere('city', 'like', "%{$search}%");
+                  ->orWhere('city', 'like', "%{$search}%")
+                  ->orWhere('area', 'like', "%{$search}%");
             });
         }
 
-        if ($status = request('status')) {
+        // ✅ Area filter (FINAL FIX: Case-insensitive partial match)
+        if ($request->filled('area')) {
+            $area = strtolower(trim($request->area));
+            $query->whereRaw('LOWER(area) LIKE ?', ["%$area%"]);
+        }
+
+        if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
 
-        $customers = $query->latest()->orderBy('id', 'desc')->paginate(request('per_page', 15));
+        $customers = $query->latest()->orderBy('id', 'desc')->paginate($request->input('per_page', 20));
 
         return $this->success([
             'customers'   => CustomerResource::collection($customers),

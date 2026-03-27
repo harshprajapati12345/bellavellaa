@@ -79,6 +79,17 @@
         <option value="COD">COD</option>
         <option value="Refunded">Refunded</option>
       </select>
+
+      <form method="GET" class="flex items-center gap-3">
+        <select name="area" onchange="this.form.submit()"
+          class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-black/5 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:20px_20px] bg-[right_10px_center] bg-no-repeat pr-10">
+          <option value="">All Areas</option>
+          @foreach($areas as $area)
+            <option value="{{ $area }}" {{ request('area') == $area ? 'selected' : '' }}>{{ $area }}</option>
+          @endforeach
+        </select>
+      </form>
+
       <button onclick="resetFilters()"
         class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-100 transition-all">
         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset

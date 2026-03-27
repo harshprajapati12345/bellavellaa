@@ -9,10 +9,18 @@ use Illuminate\Support\Facades\Storage;
 
 class CustomerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::latest()->get();
-        return view('customers.index', compact('customers'));
+        $query = Customer::query();
+
+        if ($request->filled('area')) {
+            $query->whereRaw('LOWER(area) LIKE ?', ["%" . strtolower($request->area) . "%"]);
+        }
+
+        $customers = $query->latest()->get();
+        $areas = Customer::whereNotNull('area')->distinct()->pluck('area');
+
+        return view('customers.index', compact('customers', 'areas'));
     }
 
     public function create()

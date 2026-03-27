@@ -121,6 +121,12 @@ class AuthController extends BaseController
             'light_bill' => 'nullable|image|max:2048',
             'selfie' => 'nullable|image|max:2048',
             'referral_code' => 'nullable|string|exists:professionals,referral_code',
+            // Banking Details
+            'account_holder_name' => 'nullable|string|max:255',
+            'bank_name' => 'nullable|string|max:255',
+            'account_number' => 'nullable|string|max:50',
+            'ifsc_code' => 'nullable|string|max:20',
+            'upi_id' => 'nullable|string|max:100',
         ]);
 
         $alreadyVerified = Otp::where('mobile', $request->mobile)
@@ -154,6 +160,11 @@ class AuthController extends BaseController
             'state' => $request->state,
             'aadhaar' => $request->aadhar,
             'pan' => $request->pan,
+            'account_holder_name' => $request->account_holder_name,
+            'bank_name' => $request->bank_name,
+            'account_number' => $request->account_number,
+            'ifsc_code' => $request->ifsc_code,
+            'upi_id' => $request->upi_id,
             'status' => 'Active',
             'verification' => 'Pending',
             'joined' => now()->toDateString(),

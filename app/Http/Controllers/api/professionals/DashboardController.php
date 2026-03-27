@@ -11,31 +11,7 @@ use Carbon\Carbon;
 
 class DashboardController extends BaseController
 {
-    /**
-     * GET /api/professionals/active-job
-     */
-    public function activeJob(Request $request): JsonResponse
-    {
-        $professional = $request->user('professional-api');
-
-        $activeJob = Booking::with('customer')
-            ->where('professional_id', $professional->id)
-            ->whereIn('status', ['accepted', 'on_the_way', 'arrived', 'scan_kit', 'in_progress', 'payment_pending'])
-            ->orderByDesc('updated_at')
-            ->first();
-
-        if (!$activeJob) {
-            return $this->success(null, 'No active job found.');
-        }
-
-        $data = $activeJob->toArray();
-        $data['customer_name'] = $activeJob->customer?->name ?? 'Customer';
-        $data['client_name'] = $activeJob->customer?->name ?? 'Customer';
-        $data['customer_phone'] = $activeJob->customer?->phone ?? $activeJob->customer?->mobile ?? null;
-
-        return $this->success($data, 'Active job retrieved.');
-    }
-
+   
     /**
      * GET /api/professionals/dashboard
      * Dashboard summary: today's bookings, earnings overview, pending requests
@@ -96,7 +72,6 @@ class DashboardController extends BaseController
         $cutoffDate = now()->subDays($withdrawDelayDays);
 
         // Sum earnings that are still in "cooldown" (completed after cutoff)
-        // Using completed_at as it represents the actual job completion time (authoritative for payout)
         $pendingEarningsPaise = Booking::where('professional_id', $professional->id)
             ->where('status', 'completed')
             ->whereNotNull('completed_at')
@@ -153,8 +128,6 @@ class DashboardController extends BaseController
         ], 'Dashboard summary retrieved.');
     }
 
-    // ... (rest of the methods)
-
     /**
      * GET /api/professionals/active-job
      * Returns the current focused job for the professional workflow.
@@ -203,12 +176,12 @@ class DashboardController extends BaseController
                 return $this->error('Minimum 5 kits required to go online.', 422);
             }
 
-            // Set new shift session (Admin controlled start/end)
+            // Set new shift session
             $professional->session_id = (string) \Illuminate\Support\Str::uuid();
             $professional->shift_start_time = $shiftStart;
             $professional->shift_end_time = $shiftEnd;
         } else {
-            // Going offline manually: stop shift and clear session
+            // Going offline manually
             $professional->shift_end_time = null;
             $professional->session_id = null;
         }
@@ -229,7 +202,7 @@ class DashboardController extends BaseController
     {
         $professional = $request->user('professional-api');
         
-        // Auto-offline check in heartbeat using global settings
+        // Auto-offline check
         $shiftStartTime = Setting::get('shift_start_time', '09:00');
         $shiftDuration = (int) Setting::get('shift_duration', 480);
         $shiftStart = Carbon::today()->setTimeFromTimeString($shiftStartTime);
