@@ -182,10 +182,18 @@ class ProfessionalController extends Controller
         return redirect()->route('professionals.verification')->with('info', 'Change request sent to professional.');
     }
 
-    public function orders()
+    public function orders(Request $request)
     {
-        $orders = \App\Models\Booking::with(['customer', 'professional'])
-            ->orderBy('created_at', 'desc')
+        $query = \App\Models\Booking::with(['customer', 'professional']);
+
+        if ($request->filled('area')) {
+            $area = strtolower($request->area);
+            $query->whereHas('customer', function ($q) use ($area) {
+                $q->whereRaw('LOWER(area) LIKE ?', ["%$area%"]);
+            });
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($b) {
                 return [
@@ -206,7 +214,9 @@ class ProfessionalController extends Controller
                 ];
             })->all();
 
-        return view('professionals.orders.index', compact('orders'));
+        $areas = \App\Models\Customer::whereNotNull('area')->distinct()->pluck('area');
+
+        return view('professionals.orders.index', compact('orders', 'areas'));
     }
 
     public function history()

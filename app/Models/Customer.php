@@ -28,6 +28,10 @@ class Customer extends Authenticatable implements JWTSubject
         'referral_code',
         'referred_by_customer_id',
         'referral_code_used',
+        'area',
+        'city',
+        'address',
+        'zip',
     ];
 
     protected $casts = [
