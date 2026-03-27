@@ -34,53 +34,6 @@ class CartController extends BaseController
         return Auth::guard('api');
     }
 
-    protected function getCheckoutDiscountSettings(): array
-    {
-        $onlineType = (string) Setting::get('checkout_online_discount_type', 'percentage');
-        $walletType = (string) Setting::get('checkout_wallet_discount_type', 'percentage');
-
-        return [
-            'enabled' => Setting::getBool('checkout_discounts_enabled', false),
-            'online' => [
-                'enabled' => Setting::getBool('checkout_online_discount_enabled', false),
-                'type' => in_array($onlineType, ['percentage', 'fixed'], true) ? $onlineType : 'percentage',
-                'value' => $onlineType === 'fixed'
-                    ? Setting::getInt('checkout_online_discount_value', 0)
-                    : Setting::getFloat('checkout_online_discount_value', 0),
-                'min_order_paise' => Setting::getInt('checkout_online_discount_min_order_paise', 0),
-                'max_cap_paise' => Setting::getInt('checkout_online_discount_max_cap_paise', 0),
-            ],
-            'wallet' => [
-                'enabled' => Setting::getBool('checkout_wallet_discount_enabled', false),
-                'type' => in_array($walletType, ['percentage', 'fixed'], true) ? $walletType : 'percentage',
-                'value' => $walletType === 'fixed'
-                    ? Setting::getInt('checkout_wallet_discount_value', 0)
-                    : Setting::getFloat('checkout_wallet_discount_value', 0),
-                'min_order_paise' => Setting::getInt('checkout_wallet_discount_min_order_paise', 0),
-                'max_cap_paise' => Setting::getInt('checkout_wallet_discount_max_cap_paise', 0),
-            ],
-            'allow_combined_discount' => Setting::getBool('checkout_allow_combined_discount', false),
-            'total_discount_max_cap_paise' => Setting::getInt('checkout_total_discount_max_cap_paise', 0),
-        ];
-    }
-
-    protected function calculateConfiguredDiscount(int $subtotalPaise, array $config): int
-    {
-        if (!$config['enabled'] || $subtotalPaise <= 0 || $subtotalPaise < $config['min_order_paise']) {
-            return 0;
-        }
-
-        $discount = $config['type'] === 'fixed'
-            ? (int) $config['value']
-            : (int) floor(($subtotalPaise * max(0, (float) $config['value'])) / 100);
-
-        if ($config['max_cap_paise'] > 0) {
-            $discount = min($discount, (int) $config['max_cap_paise']);
-        }
-
-        return max(0, min($discount, $subtotalPaise));
-    }
-
     public function index(): JsonResponse
     {
         $cartItems = $this->guard()->user()->carts()->with(['item', 'service', 'variant.service', 'package'])->get();
@@ -365,44 +318,6 @@ class CartController extends BaseController
     }
 
 
-    protected function calculateWalletRedemptionPaise(int $coinsUsed, int $payablePaise): int
-    {
-        if ($coinsUsed <= 0 || $payablePaise <= 0) {
-            return 0;
-        }
-
-        return min($coinsUsed * 100, $payablePaise);
-    }
-
-    protected function debitCoinsForOrder(Order $order): void
-    {
-        if (($order->coins_used ?? 0) <= 0) {
-            return;
-        }
-
-        $existingDebit = \App\Models\WalletTransaction::query()
-            ->where('source', 'order_redemption')
-            ->where('reference_type', 'order')
-            ->where('reference_id', (string) $order->id)
-            ->exists();
-
-        if ($existingDebit) {
-            return;
-        }
-
-        $wallet = $order->customer?->coinWallet()->first();
-        if (!$wallet) {
-            throw new \RuntimeException('BellaVella coin wallet not found for customer.');
-        }
-
-        $wallet->debit(
-            (int) $order->coins_used,
-            'order_redemption',
-            'BellaVella Coins redeemed for order ' . $order->order_number,
-            (string) $order->id,
-            'order'
-        );
-    }
     public function previewCheckout(Request $request): JsonResponse
     {
         $customer = $this->guard()->user();
@@ -415,22 +330,16 @@ class CartController extends BaseController
         $validated = $request->validate([
             'payment_method' => 'required|string',
             'coupon_code' => 'nullable|string',
-            'coins_used' => 'nullable|integer|min:0',
             'tip_amount_paise' => 'nullable|integer|min:0',
         ]);
 
         $subtotalPaise = $cartItems->sum(function ($cart) {
             $price = $cart->resolved_unit_price * 100;
-
             return $cart->quantity * (int) round($price);
         });
 
         $offerDiscountPaise = 0;
-        $paymentDiscountPaise = 0;
-        $walletDiscountPaise = 0;
         $offerId = null;
-        $coinsUsed = (int) ($validated['coins_used'] ?? 0);
-        $discountSettings = $this->getCheckoutDiscountSettings();
 
         if (!empty($validated['coupon_code'])) {
             $offer = Offer::active()
@@ -452,116 +361,17 @@ class CartController extends BaseController
             }
         }
 
-        if ($coinsUsed > 0) {
-            $coinWallet = $customer->coinWallet()->first();
-            if (!$coinWallet || $coinWallet->balance < $coinsUsed) {
-                return $this->error('Insufficient BellaVella Coins balance.', 422);
-            }
-        }
-
-        if ($discountSettings['enabled']) {
-            if ($validated['payment_method'] === 'online') {
-                $paymentDiscountPaise = $this->calculateConfiguredDiscount($subtotalPaise, $discountSettings['online']);
-            }
-
-            if ($coinsUsed > 0) {
-                $walletDiscountPaise = $this->calculateConfiguredDiscount($subtotalPaise, $discountSettings['wallet']);
-            }
-        }
-
-        if (!$discountSettings['allow_combined_discount']) {
-            if ($paymentDiscountPaise >= $walletDiscountPaise) {
-                $walletDiscountPaise = 0;
-            } else {
-                $paymentDiscountPaise = 0;
-            }
-        }
-
-        $remainingSubtotalPaise = max(0, $subtotalPaise - $offerDiscountPaise);
-        $paymentDiscountPaise = min($paymentDiscountPaise, $remainingSubtotalPaise);
-        $remainingSubtotalPaise -= $paymentDiscountPaise;
-        $walletDiscountPaise = min($walletDiscountPaise, $remainingSubtotalPaise);
-
-        if ($discountSettings['total_discount_max_cap_paise'] > 0) {
-            $remainingGlobalCapPaise = $discountSettings['total_discount_max_cap_paise'];
-            $paymentDiscountPaise = min($paymentDiscountPaise, $remainingGlobalCapPaise);
-            $remainingGlobalCapPaise -= $paymentDiscountPaise;
-            $walletDiscountPaise = min($walletDiscountPaise, $remainingGlobalCapPaise);
-        }
-
         $tipAmountPaise = (int) ($validated['tip_amount_paise'] ?? 0);
-        $totalDiscountPaise = $offerDiscountPaise + $paymentDiscountPaise + $walletDiscountPaise;
-        $payableBeforeWalletRedemptionPaise = max(0, $subtotalPaise - $totalDiscountPaise + $tipAmountPaise);
-        $walletRedemptionPaise = $this->calculateWalletRedemptionPaise($coinsUsed, $payableBeforeWalletRedemptionPaise);
-
-        if ($validated['payment_method'] === 'wallet') {
-            if ($coinsUsed <= 0) {
-                return $this->error('Select BellaVella Coins to pay using BellaVella Wallet.', 422);
-            }
-
-            if ($walletRedemptionPaise < $payableBeforeWalletRedemptionPaise) {
-                return $this->error('Insufficient BellaVella Coins to pay fully by wallet.', 422);
-            }
-        }
-
-        $totalPaise = max(0, $payableBeforeWalletRedemptionPaise - $walletRedemptionPaise);
-
-        $appliedRules = [];
-        if ($paymentDiscountPaise > 0) {
-            $appliedRules[] = 'online_payment_discount';
-        }
-        if ($walletDiscountPaise > 0) {
-            $appliedRules[] = 'wallet_usage_discount';
-        }
-        if ($offerDiscountPaise > 0) {
-            $appliedRules[] = 'offer_discount';
-        }
-        if ($walletRedemptionPaise > 0) {
-            $appliedRules[] = 'wallet_redemption';
-        }
-
-        $discountSnapshot = [
-            'subtotal_paise' => $subtotalPaise,
-            'payment_method' => $validated['payment_method'],
-            'coins_used' => $coinsUsed,
-            'settings' => [
-                'checkout_discounts_enabled' => $discountSettings['enabled'],
-                'online_enabled' => $discountSettings['online']['enabled'],
-                'online_type' => $discountSettings['online']['type'],
-                'online_value' => $discountSettings['online']['value'],
-                'online_min_order_paise' => $discountSettings['online']['min_order_paise'],
-                'online_max_cap_paise' => $discountSettings['online']['max_cap_paise'],
-                'wallet_enabled' => $discountSettings['wallet']['enabled'],
-                'wallet_type' => $discountSettings['wallet']['type'],
-                'wallet_value' => $discountSettings['wallet']['value'],
-                'wallet_min_order_paise' => $discountSettings['wallet']['min_order_paise'],
-                'wallet_max_cap_paise' => $discountSettings['wallet']['max_cap_paise'],
-                'allow_combined_discount' => $discountSettings['allow_combined_discount'],
-                'total_discount_max_cap_paise' => $discountSettings['total_discount_max_cap_paise'],
-            ],
-            'applied' => [
-                'payment_discount_paise' => $paymentDiscountPaise,
-                'wallet_discount_paise' => $walletDiscountPaise,
-                'offer_discount_paise' => $offerDiscountPaise,
-                'total_discount_paise' => $totalDiscountPaise,
-                'wallet_redeemed_paise' => $walletRedemptionPaise,
-            ],
-            'applied_rules' => $appliedRules,
-        ];
+        $payablePaise = max(0, $subtotalPaise - $offerDiscountPaise + $tipAmountPaise);
 
         return $this->success([
             'subtotal_paise' => $subtotalPaise,
             'payment_method' => $validated['payment_method'],
             'offer_id' => $offerId,
-            'coins_used' => $coinsUsed,
             'tip_amount_paise' => $tipAmountPaise,
-            'payment_discount_paise' => $paymentDiscountPaise,
-            'wallet_discount_paise' => $walletDiscountPaise,
             'offer_discount_paise' => $offerDiscountPaise,
-            'total_discount_paise' => $totalDiscountPaise,
-            'wallet_redeemed_paise' => $walletRedemptionPaise,
-            'total_paise' => $totalPaise,
-            'discount_snapshot' => $discountSnapshot,
+            'total_discount_paise' => $offerDiscountPaise,
+            'total_paise' => $payablePaise,
         ], 'Checkout preview calculated successfully.');
     }
 
@@ -584,7 +394,6 @@ class CartController extends BaseController
             'scheduled_slot' => 'required|string',
             'payment_method' => 'required|string',
             'coupon_code' => 'nullable|string',
-            'coins_used' => 'nullable|integer|min:0',
             'tip_amount_paise' => 'nullable|integer|min:0',
         ]);
 
@@ -593,16 +402,11 @@ class CartController extends BaseController
         try {
             $subtotalPaise = $cartItems->sum(function ($cart) {
                 $price = $cart->resolved_unit_price * 100;
-
                 return $cart->quantity * (int) round($price);
             });
 
             $offerDiscountPaise = 0;
-            $paymentDiscountPaise = 0;
-            $walletDiscountPaise = 0;
             $offerId = null;
-            $coinsUsed = (int) ($validated['coins_used'] ?? 0);
-            $discountSettings = $this->getCheckoutDiscountSettings();
 
             if (!empty($validated['coupon_code'])) {
                 $offer = Offer::active()
@@ -624,105 +428,8 @@ class CartController extends BaseController
                 }
             }
 
-            if ($coinsUsed > 0) {
-                $coinWallet = $customer->coinWallet()->first();
-                if (!$coinWallet || $coinWallet->balance < $coinsUsed) {
-                    DB::rollBack();
-                    return $this->error('Insufficient BellaVella Coins balance.', 422);
-                }
-            }
-
-            if ($discountSettings['enabled']) {
-                if ($validated['payment_method'] === 'online') {
-                    $paymentDiscountPaise = $this->calculateConfiguredDiscount($subtotalPaise, $discountSettings['online']);
-                }
-
-                if ($coinsUsed > 0) {
-                    $walletDiscountPaise = $this->calculateConfiguredDiscount($subtotalPaise, $discountSettings['wallet']);
-                }
-            }
-
-            if (!$discountSettings['allow_combined_discount']) {
-                if ($paymentDiscountPaise >= $walletDiscountPaise) {
-                    $walletDiscountPaise = 0;
-                } else {
-                    $paymentDiscountPaise = 0;
-                }
-            }
-
-            $remainingSubtotalPaise = max(0, $subtotalPaise - $offerDiscountPaise);
-            $paymentDiscountPaise = min($paymentDiscountPaise, $remainingSubtotalPaise);
-            $remainingSubtotalPaise -= $paymentDiscountPaise;
-            $walletDiscountPaise = min($walletDiscountPaise, $remainingSubtotalPaise);
-
-            if ($discountSettings['total_discount_max_cap_paise'] > 0) {
-                $remainingGlobalCapPaise = $discountSettings['total_discount_max_cap_paise'];
-                $paymentDiscountPaise = min($paymentDiscountPaise, $remainingGlobalCapPaise);
-                $remainingGlobalCapPaise -= $paymentDiscountPaise;
-                $walletDiscountPaise = min($walletDiscountPaise, $remainingGlobalCapPaise);
-            }
-
             $tipAmountPaise = (int) ($validated['tip_amount_paise'] ?? 0);
-            $totalDiscountPaise = $offerDiscountPaise + $paymentDiscountPaise + $walletDiscountPaise;
-            $payableBeforeWalletRedemptionPaise = max(0, $subtotalPaise - $totalDiscountPaise + $tipAmountPaise);
-            $walletRedemptionPaise = $this->calculateWalletRedemptionPaise($coinsUsed, $payableBeforeWalletRedemptionPaise);
-
-            if ($validated['payment_method'] === 'wallet') {
-                if ($coinsUsed <= 0) {
-                    DB::rollBack();
-                    return $this->error('Select BellaVella Coins to pay using BellaVella Wallet.', 422);
-                }
-
-                if ($walletRedemptionPaise < $payableBeforeWalletRedemptionPaise) {
-                    DB::rollBack();
-                    return $this->error('Insufficient BellaVella Coins to pay fully by wallet.', 422);
-                }
-            }
-
-            $totalPaise = max(0, $payableBeforeWalletRedemptionPaise - $walletRedemptionPaise);
-
-            $appliedRules = [];
-            if ($paymentDiscountPaise > 0) {
-                $appliedRules[] = 'online_payment_discount';
-            }
-            if ($walletDiscountPaise > 0) {
-                $appliedRules[] = 'wallet_usage_discount';
-            }
-            if ($offerDiscountPaise > 0) {
-                $appliedRules[] = 'offer_discount';
-            }
-            if ($walletRedemptionPaise > 0) {
-                $appliedRules[] = 'wallet_redemption';
-            }
-
-            $discountSnapshot = [
-                'subtotal_paise' => $subtotalPaise,
-                'payment_method' => $validated['payment_method'],
-                'coins_used' => $coinsUsed,
-                'settings' => [
-                    'checkout_discounts_enabled' => $discountSettings['enabled'],
-                    'online_enabled' => $discountSettings['online']['enabled'],
-                    'online_type' => $discountSettings['online']['type'],
-                    'online_value' => $discountSettings['online']['value'],
-                    'online_min_order_paise' => $discountSettings['online']['min_order_paise'],
-                    'online_max_cap_paise' => $discountSettings['online']['max_cap_paise'],
-                    'wallet_enabled' => $discountSettings['wallet']['enabled'],
-                    'wallet_type' => $discountSettings['wallet']['type'],
-                    'wallet_value' => $discountSettings['wallet']['value'],
-                    'wallet_min_order_paise' => $discountSettings['wallet']['min_order_paise'],
-                    'wallet_max_cap_paise' => $discountSettings['wallet']['max_cap_paise'],
-                    'allow_combined_discount' => $discountSettings['allow_combined_discount'],
-                    'total_discount_max_cap_paise' => $discountSettings['total_discount_max_cap_paise'],
-                ],
-                'applied' => [
-                    'payment_discount_paise' => $paymentDiscountPaise,
-                    'wallet_discount_paise' => $walletDiscountPaise,
-                    'offer_discount_paise' => $offerDiscountPaise,
-                    'total_discount_paise' => $totalDiscountPaise,
-                    'wallet_redeemed_paise' => $walletRedemptionPaise,
-                ],
-                'applied_rules' => $appliedRules,
-            ];
+            $totalPaise = max(0, $subtotalPaise - $offerDiscountPaise + $tipAmountPaise);
 
             $selectedAddress = null;
             if (!empty($validated['address_id'])) {
@@ -732,16 +439,10 @@ class CartController extends BaseController
             $resolvedCity = trim((string) ($selectedAddress?->city ?? $validated['city'] ?? ''));
             $resolvedPhone = trim((string) ($selectedAddress?->phone ?? $customer->mobile ?? ''));
             if ($resolvedCity === '') {
-                Log::warning('Checkout city missing', [
-                    'customer_id' => $customer->id,
-                    'address_id' => $validated['address_id'] ?? null,
-                    'raw_address' => $validated['address'],
-                ]);
-
                 return $this->error('Selected address is incomplete. City is missing.', 422);
             }
 
-            $initialStatus = ($validated['payment_method'] === 'wallet' || $totalPaise === 0) ? 'confirmed' : 'pending';
+            $initialStatus = ($totalPaise === 0) ? 'confirmed' : 'pending';
 
             $orderPayload = [
                 'order_number' => 'ORD-' . strtoupper(Str::random(8)),
@@ -754,9 +455,8 @@ class CartController extends BaseController
                 'scheduled_date' => $validated['scheduled_date'],
                 'scheduled_slot' => $validated['scheduled_slot'],
                 'subtotal_paise' => $subtotalPaise,
-                'discount_paise' => $totalDiscountPaise,
+                'discount_paise' => $offerDiscountPaise,
                 'total_paise' => $totalPaise,
-                'coins_used' => $coinsUsed,
                 'payment_method' => $validated['payment_method'],
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'status' => $initialStatus,
@@ -765,26 +465,6 @@ class CartController extends BaseController
 
             if (Schema::hasColumn('orders', 'offer_id')) {
                 $orderPayload['offer_id'] = $offerId;
-            }
-
-            if (Schema::hasColumn('orders', 'payment_discount_paise')) {
-                $orderPayload['payment_discount_paise'] = $paymentDiscountPaise;
-            }
-
-            if (Schema::hasColumn('orders', 'wallet_discount_paise')) {
-                $orderPayload['wallet_discount_paise'] = $walletDiscountPaise;
-            }
-
-            if (Schema::hasColumn('orders', 'offer_discount_paise')) {
-                $orderPayload['offer_discount_paise'] = $offerDiscountPaise;
-            }
-
-            if (Schema::hasColumn('orders', 'total_discount_paise')) {
-                $orderPayload['total_discount_paise'] = $totalDiscountPaise;
-            }
-
-            if (Schema::hasColumn('orders', 'discount_snapshot')) {
-                $orderPayload['discount_snapshot'] = $discountSnapshot;
             }
 
             $order = Order::create($orderPayload);
@@ -851,15 +531,10 @@ class CartController extends BaseController
                 }
             }
 
-            if ($coinsUsed > 0 && ($validated['payment_method'] !== 'online' || $totalPaise === 0)) {
-                $this->debitCoinsForOrder($order->fresh('customer'));
-            }
-
             $response = [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'amount' => $totalPaise,
-                'wallet_redeemed_paise' => $walletRedemptionPaise,
             ];
 
             if ($validated['payment_method'] === 'online' && $totalPaise > 0) {
@@ -867,18 +542,13 @@ class CartController extends BaseController
                     $response['razorpay_order_id'] = 'order_mock_' . strtolower(Str::random(14));
                     $response['is_mock'] = true;
                 } else {
-                    try {
-                        $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-                        $razorpayOrder = $api->order->create([
-                            'receipt' => $order->order_number,
-                            'amount' => $totalPaise,
-                            'currency' => 'INR',
-                        ]);
-                        $response['razorpay_order_id'] = $razorpayOrder['id'];
-                    } catch (\Exception $e) {
-                        DB::rollBack();
-                        return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
-                    }
+                    $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                    $razorpayOrder = $api->order->create([
+                        'receipt' => $order->order_number,
+                        'amount' => $totalPaise,
+                        'currency' => 'INR',
+                    ]);
+                    $response['razorpay_order_id'] = $razorpayOrder['id'];
                 }
             }
 
@@ -891,7 +561,6 @@ class CartController extends BaseController
             return $this->success($response, 'Order placed successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-
             return $this->error('Failed to create order: ' . $e->getMessage(), 500);
         }
     }
@@ -920,7 +589,6 @@ class CartController extends BaseController
 
             DB::transaction(function () use ($validated) {
                 $order = Order::with('customer')->findOrFail($validated['order_id']);
-                $this->debitCoinsForOrder($order);
                 $order->update(['status' => 'confirmed']);
                 $order->customer->carts()->delete();
             });

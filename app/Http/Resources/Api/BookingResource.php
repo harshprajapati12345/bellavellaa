@@ -48,17 +48,21 @@ class BookingResource extends JsonResource
             'display_name' => $this->sellable_name,
             'total_amount' => $this->price,
             'display_price' => data_get($this->meta, 'totals.final_total')
-                ?? $sellable->display_price
-                ?? $sellable->price
+                ?? optional($sellable)->display_price
+                ?? optional($sellable)->price
                 ?? $this->price,
             'duration_minutes' => data_get($this->meta, 'totals.duration_minutes')
-                ?? $sellable->resolved_duration_minutes
-                ?? $sellable->duration_minutes
-                ?? $sellable->duration
+                ?? optional($sellable)->resolved_duration_minutes
+                ?? optional($sellable)->duration_minutes
+                ?? optional($sellable)->duration
                 ?? null,
             'address' => $this->order?->address,
+            'city' => $this->city, // Fallback for address in model
             'lat' => $this->lat,
             'lng' => $this->lng,
+            'slot' => $this->slot, // Used by Flutter model
+            'date' => $this->date?->format('Y-m-d'), // Used by Flutter model
+            'price' => (float) $this->price, // Used by Flutter model
             'notes' => $this->notes,
             'meta' => $this->meta,
             'package_snapshot' => data_get($this->meta, 'package_snapshot'),

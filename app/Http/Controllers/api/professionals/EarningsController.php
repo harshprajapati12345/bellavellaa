@@ -112,13 +112,13 @@ class EarningsController extends BaseController
         $type = $tab === 'coins' ? 'coin' : 'cash';
 
         $cashWallet = Wallet::firstOrCreate(
-        ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
-        ['balance' => 0]
+            ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'cash'],
+            ['balance' => 0]
         );
 
         $coinWallet = Wallet::firstOrCreate(
-        ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'coin'],
-        ['balance' => 0]
+            ['holder_type' => 'professional', 'holder_id' => $professional->id, 'type' => 'coin'],
+            ['balance' => 0]
         );
 
         $activeWallet = $type === 'coin' ? $coinWallet : $cashWallet;
@@ -128,38 +128,66 @@ class EarningsController extends BaseController
             ->limit(20)
             ->get()
             ->map(function ($t) use ($type) {
-            // UI Formatting logic
-            $title = $t->description ?: 'Earnings Payout';
-            if ($t->source === 'withdrawal') {
-                $title = 'Successful Withdrawal';
-            }
+                $title = $t->description ?: 'Earnings Payout';
+                if ($t->source === 'withdrawal') {
+                    $title = 'Successful Withdrawal';
+                }
 
-            $subtitle = $t->created_at->isToday()
-                ? 'Today, ' . $t->created_at->format('g:i A')
-                : ($t->created_at->isYesterday()
-                ? 'Yesterday, ' . $t->created_at->format('g:i A')
-                : $t->created_at->format('d M, g:i A'));
+                $subtitle = $t->created_at->isToday()
+                    ? 'Today, ' . $t->created_at->format('g:i A')
+                    : ($t->created_at->isYesterday()
+                        ? 'Yesterday, ' . $t->created_at->format('g:i A')
+                        : $t->created_at->format('d M, g:i A'));
 
-            $val = $type === 'coin' ? $t->amount : ($t->amount / 100);
-            $prefix = $t->type === 'debit' ? '-' : '+';
-            $currency = $type === 'coin' ? '' : '₹';
-            $formattedAmount = "{$prefix}{$currency}" . number_format($val, 0);
+                $val = $type === 'coin' ? $t->amount : ($t->amount / 100);
+                $prefix = $t->type === 'debit' ? '-' : '+';
+                $currency = $type === 'coin' ? '' : '₹';
+                $formattedAmount = "{$prefix}{$currency}" . number_format($val, 0);
 
-            return [
-            'id' => $t->id,
-            'title' => $title,
-            'subtitle' => $subtitle,
-            'amount' => $val,
-            'display_amount' => $formattedAmount,
-            'type' => $t->type,
-            'created_at' => $t->created_at,
-            ];
-        });
+                return [
+                    'id' => $t->id,
+                    'title' => $title,
+                    'subtitle' => $subtitle,
+                    'amount' => $val,
+                    'display_amount' => $formattedAmount,
+                    'type' => $t->type,
+                    'created_at' => $t->created_at,
+                ];
+            });
+
+        // Calculate Withdrawal Delay Logic (Hardened)
+        $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 3);
+        $cutoffDate = now()->subDays($withdrawDelayDays);
+
+        $totalCashBalancePaise = $cashWallet->balance;
+
+        // Sum earnings that are still in "cooldown"
+        $pendingEarningsPaise = Booking::where('professional_id', $professional->id)
+            ->where('status', 'completed')
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>', $cutoffDate)
+            ->get()
+            ->sum(fn($b) => ($b->price - ($b->commission ?? 0)) * 100);
+
+        $availableBalancePaise = (float) max(0, $totalCashBalancePaise - $pendingEarningsPaise);
+        $availableBalancePaise = min($availableBalancePaise, (float) $totalCashBalancePaise);
+        $pendingBalancePaise = (float) max(0, $totalCashBalancePaise - $availableBalancePaise);
+
+        // Deposit balance
+        $totalDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('source', 'deposit')
+            ->sum(DB::raw('CASE WHEN type = "credit" THEN amount ELSE -amount END'));
+        $depositBalancePaise = (float) max(0, $totalDepositPaise);
 
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
         $commissionRate = (100 - ($professional->commission ?? 0)) / 100;
+
+        $todayEarnings = Booking::where('professional_id', $professional->id)
+            ->where('status', 'completed')
+            ->where('date', $today)
+            ->sum(DB::raw("price * {$commissionRate}"));
 
         $weeklyEarnings = Booking::where('professional_id', $professional->id)
             ->where('status', 'completed')
@@ -171,50 +199,24 @@ class EarningsController extends BaseController
             ->whereBetween('date', [$startOfMonth, $today])
             ->sum(DB::raw("price * {$commissionRate}"));
 
-        $totalJobs = Booking::where('professional_id', $professional->id)
-            ->where('status', 'completed')
-            ->count();
-
-        $depositAmountPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
-            ->where('source', 'deposit')
-            ->where('type', 'credit')
-            ->sum('amount');
-
-        $withdrawnDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
-            ->where('source', 'withdrawal')
-            ->where('reference_type', 'deposit') // Assuming we track this
-            ->sum('amount');
-
-        // For now, simpler: anything from 'deposit' source is deposit.
-        // Everything else is earnings.
-        $totalDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
-            ->where('source', 'deposit')
-            ->sum(DB::raw('CASE WHEN type = "credit" THEN amount ELSE -amount END'));
-
-        $totalCashBalancePaise = $cashWallet->balance;
-        $depositBalancePaise = max(0, $totalDepositPaise);
-        $earningsBalancePaise = max(0, $totalCashBalancePaise - $depositBalancePaise);
-
-        $todayEarnings = Booking::where('professional_id', $professional->id)
-            ->where('status', 'completed')
-            ->where('date', $today)
-            ->sum(DB::raw("price * {$commissionRate}"));
-
         return $this->success([
             'cash_balance' => $totalCashBalancePaise / 100,
-            'earnings_balance' => $earningsBalancePaise / 100,
+            'available_balance' => $availableBalancePaise / 100,
+            'pending_balance' => $pendingBalancePaise / 100,
+            'earnings_balance' => ($totalCashBalancePaise - $depositBalancePaise) / 100,
             'deposit_balance' => $depositBalancePaise / 100,
             'total_balance' => $totalCashBalancePaise / 100,
-            'coin_balance' => $professional->coins_balance, // New direct column
-            'coins_balance' => $professional->coins_balance, // For Flutter compatibility
+            'withdraw_delay_days' => $withdrawDelayDays,
+            'coin_balance' => $professional->coins_balance,
+            'coins_balance' => $professional->coins_balance,
             'kit_count' => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'active_balance' => $type === 'coin' ? $professional->coins_balance : ($totalCashBalancePaise / 100),
             'transactions' => $transactions,
             'today_earnings' => $todayEarnings,
             'weekly_earnings' => $weeklyEarnings,
             'monthly_earnings' => $monthlyEarnings,
-            'total_jobs' => $professional->total_completed_jobs, // Use new safe column
-            'total_completed_jobs' => $professional->total_completed_jobs, // For Flutter
+            'total_jobs' => $professional->total_completed_jobs,
+            'total_completed_jobs' => $professional->total_completed_jobs,
             'kit_orders' => \App\Models\KitOrder::with('product')
             ->where('professional_id', $professional->id)
             ->orderBy('created_at', 'desc')

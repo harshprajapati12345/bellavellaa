@@ -38,7 +38,7 @@ class ProfessionalVerificationController extends BaseController
         ]);
 
         if ($request->status === 'Verified') {
-            app(\App\Services\RewardService::class)->rewardProfileVerification($professional);
+            // Profile verification reward decommissioned
         }
 
         return $this->success(new ProfessionalResource($professional), "Professional status updated to {$request->status}.");

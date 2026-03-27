@@ -166,6 +166,35 @@
 
         </div>
 
+        <!-- Withdrawal Settings -->
+        <div class="mt-8 bg-white rounded-3xl p-8 shadow-[0_2px_16px_rgba(0,0,0,0.04)] border border-gray-50">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Withdrawal Settings</h2>
+                <p class="text-sm text-gray-400 mt-1">Configure the cooldown period for professional earnings. Money is locked for X days after job completion.</p>
+            </div>
+
+            <form action="{{ route('settings.update') }}" method="POST" class="max-w-md">
+                @csrf
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-orange-500"></i>
+                        Withdraw Delay (Days)
+                    </label>
+                    <input type="number" name="withdraw_delay_days" min="1" max="7" 
+                        value="{{ \App\Models\Setting::get('withdraw_delay_days', 3) }}"
+                        class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-black focus:outline-none"
+                        required>
+                    <p class="text-[11px] text-gray-400 mt-1.5 ml-1">Must be between 1 and 7 days. Higher value reduces fraud risk.</p>
+                </div>
+
+                <button type="submit" 
+                    class="bg-black text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-gray-800 transition-all shadow-lg shadow-black/5 flex items-center justify-center gap-2">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    Update Withdrawal Delay
+                </button>
+            </form>
+        </div>
+
         @if(false)
         <div class="mt-8 bg-white rounded-3xl p-8 shadow-[0_2px_16px_rgba(0,0,0,0.04)] border border-gray-50">
             <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

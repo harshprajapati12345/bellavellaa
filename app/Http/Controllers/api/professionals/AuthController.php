@@ -6,7 +6,6 @@ use App\Http\Requests\Api\SendOtpRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Models\Professional;
 use App\Models\Otp;
-use App\Services\RewardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -79,9 +78,7 @@ class AuthController extends BaseController
             return $this->error('Could not create token.', 500);
         }
 
-        // Award Login Reward
-        $rewardService = app(\App\Services\RewardService::class);
-        $rewardService->awardLoginReward($professional, 'professional');
+        // Login reward decommissioned
 
         return $this->success([
             'access_token' => $token,
@@ -204,15 +201,7 @@ class AuthController extends BaseController
 
         $professional = Professional::create($data);
 
-        // --- AUTOMATED REWARDS (PROFESSIONAL: FIRST JOB TRIGGERED) ---
-        if ($request->referral_code) {
-            $referrer = Professional::where('referral_code', $request->referral_code)->first();
-
-            if ($referrer) {
-                $rewardService = app(RewardService::class);
-                $rewardService->createPendingReferral($professional, $referrer, $request->referral_code);
-            }
-        }
+        // Referral reward system decommissioned (handled on first job completion if active)
 
         try {
             $token = $this->guard()->login($professional);

@@ -20,7 +20,6 @@ use App\Http\Controllers\adminroutes\KitOrderController;
 use App\Http\Controllers\adminroutes\LeaveRequestController;
 use App\Http\Controllers\adminroutes\SettingController;
 use App\Http\Controllers\adminroutes\ReferralController;
-use App\Http\Controllers\adminroutes\RewardSettingController;
 use App\Http\Controllers\adminroutes\ServiceGroupController;
 use App\Http\Controllers\adminroutes\ServiceVariantController;
 use App\Http\Controllers\adminroutes\ServiceTypeController;
@@ -127,6 +126,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('professionals/{id}/suspend', [ProfessionalController::class , 'suspend'])->name('professionals.suspend');
     Route::post('professionals/{id}/activate', [ProfessionalController::class , 'activate'])->name('professionals.activate');
 
+    Route::get('professionals/leaderboard', [ProfessionalController::class , 'leaderboard'])->name('professionals.leaderboard');
     // Professionals Resource (Should be AFTER sub-routes)
     Route::resource('professionals', ProfessionalController::class);
 
@@ -152,7 +152,7 @@ Route::middleware(['auth:admin'])->group(function () {
 
 
     // Settings
-    Route::get('settings/checkout-discounts', [SettingController::class , 'checkoutDiscounts'])->name('settings.checkout-discounts');
+    Route::get('settings/shifts', [SettingController::class , 'shifts'])->name('settings.shifts');
     Route::post('settings/update', [SettingController::class , 'update'])->name('settings.update');
     Route::post('settings/theme/save', [SettingController::class , 'saveTheme'])->name('settings.theme.save');
     Route::post('settings/theme/reset', [SettingController::class , 'resetTheme'])->name('settings.theme.reset');
@@ -167,8 +167,6 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('referrals/{id}', [ReferralController::class , 'show'])->name('referrals.show');
     Route::post('referrals/{id}/toggle-status', [ReferralController::class , 'toggleStatus'])->name('referrals.toggle-status');
 
-    // Reward Point Settings
-    Route::get('settings/rewards', [RewardSettingController::class , 'index'])->name('settings.rewards.index');
-    Route::post('settings/rewards/update', [RewardSettingController::class , 'update'])->name('settings.rewards.update');
+
 
 });

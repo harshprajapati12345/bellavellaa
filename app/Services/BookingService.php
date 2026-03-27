@@ -78,6 +78,7 @@ class BookingService
         // as per DashboardController ("total_earnings" vs "todays_earnings" comparison)
         $netEarningsRupees = $netEarningsPaise / 100;
         $professional->increment('earnings', $netEarningsRupees);
-        $professional->increment('orders');
+        $professional->increment('orders'); // Legacy
+        $professional->increment('total_completed_jobs'); // New system
     }
 }
