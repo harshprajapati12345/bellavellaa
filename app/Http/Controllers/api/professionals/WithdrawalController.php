@@ -60,9 +60,33 @@ class WithdrawalController extends BaseController
                     ->lockForUpdate()
                     ->first();
 
-                if (!$wallet || $wallet->balance < $amountInPaise) {
-                    return $this->error('Insufficient wallet balance.', 400);
+                if (!$wallet) {
+                    return $this->error('Wallet not found.', 404);
                 }
+
+                // --- Withdrawal Delay Enforcement (Hardened) ---
+                $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 3);
+                $cutoffDate = now()->subDays($withdrawDelayDays);
+
+                $pendingEarningsPaise = \App\Models\Booking::where('professional_id', $professional->id)
+                    ->where('status', 'completed')
+                    ->whereNotNull('completed_at')
+                    ->where('completed_at', '>', $cutoffDate)
+                    ->get()
+                    ->sum(fn($b) => ($b->price - ($b->commission ?? 0)) * 100);
+
+                $availableBalancePaise = (float) max(0, $wallet->balance - $pendingEarningsPaise);
+                $availableBalancePaise = min($availableBalancePaise, (float) $wallet->balance);
+
+                if ($amountInPaise > $availableBalancePaise) {
+                    $availableFormatted = number_format($availableBalancePaise / 100, 2);
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Insufficient available balance. You can only withdraw ₹{$availableFormatted} at this time. Remaining earnings are locked for {$withdrawDelayDays} days after job completion.",
+                        'available_balance' => (float)($availableBalancePaise / 100)
+                    ], 403);
+                }
+                // ------------------------------------
 
                 // Create withdrawal record (PENDING)
                 $withdrawal = WithdrawalRequest::create([

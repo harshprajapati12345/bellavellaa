@@ -12,6 +12,7 @@ use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
 use App\Services\FirebaseService;
 use Illuminate\Support\Str;
 use App\Events\JobUpdate;
+use Illuminate\Support\Facades\Log;
 
 class JobController extends BaseController
 {
@@ -21,21 +22,51 @@ class JobController extends BaseController
     {
         $this->firebase = $firebase;
     }
+
+    /**
+     * Checks if a status transition is allowed.
+     */
+    private function canTransition(string $current, string $next): bool
+    {
+        $map = config('booking.transitions');
+        return in_array($next, $map[$current] ?? []);
+    }
+
+    private function validateOwnership(\App\Models\Booking $booking, Request $request): void
+    {
+        if ($booking->professional_id !== $request->user('professional-api')->id) {
+            throw new \Exception('Unauthorized access.', 403);
+        }
+    }
     public function arrived(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
-        if ($booking) {
-            $booking->applyStatusTransition('arrived', [
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'arrived')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to arrived.', 400);
+            }
+
+            // ✅ PERSIST STATE
+            $booking->update([
+                'status' => 'arrived',
                 'current_step' => 'kit_scan',
             ]);
-            if ($booking->status !== 'scan_kit') {
-                $booking->status = 'scan_kit';
-                $booking->save();
-            }
+
             $this->sendDashboardUpdate($booking);
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully. Transitioning to kit scan.');
+            
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
+        } catch (\Throwable $e) {
+            \Log::error('JobController::arrived error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while marking arrival.', $e->getCode() ?: 500);
         }
-        return $this->error('Booking not found.', 404);
     }
 
     /**
@@ -43,42 +74,95 @@ class JobController extends BaseController
      */
     public function startJourney(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
-        if ($booking) {
-            $booking->applyStatusTransition('on_the_way', [
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'on_the_way')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to on_the_way.', 400);
+            }
+
+            // ✅ PERSIST STATE
+            $booking->update([
+                'status' => 'on_the_way',
                 'current_step' => 'journey',
             ]);
+
             $this->sendDashboardUpdate($booking);
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started.');
+
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started successfully.');
+        } catch (\Throwable $e) {
+            \Log::error('JobController::startJourney error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while starting journey.', $e->getCode() ?: 500);
         }
-        return $this->error('Booking not found.', 404);
     }
 
     public function startService(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
-        if ($booking) {
-            $booking->applyStatusTransition('in_progress', [
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'in_progress')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to in_progress.', 400);
+            }
+
+            // ✅ PERSIST STATE
+            $booking->update([
+                'status' => 'in_progress',
                 'current_step' => 'service',
             ]);
+
             $this->sendDashboardUpdate($booking);
+
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
+        } catch (\Throwable $e) {
+            Log::error('JobController::startService error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while starting service.', $e->getCode() ?: 500);
         }
-        return $this->error('Booking not found.', 404);
     }
 
     public function finishService(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
-        if ($booking) {
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'payment_pending')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to payment_pending.', 400);
+            }
+
+            // ✅ PERSIST STATE
             $booking->update([
                 'status' => 'payment_pending',
                 'current_step' => 'payment',
             ]);
+
             $this->sendDashboardUpdate($booking);
+
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
+        } catch (\Throwable $e) {
+            Log::error('JobController::finishService error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while finishing service.', $e->getCode() ?: 500);
         }
-        return $this->error('Booking not found.', 404);
     }
 
     /**
@@ -86,25 +170,53 @@ class JobController extends BaseController
      */
     public function scanKit(ScanKitRequest $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
-        if ($booking) {
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'scan_kit')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to scan_kit.', 400);
+            }
+
+            // ✅ PERSIST STATE
             $booking->update([
                 'status' => 'scan_kit',
                 'current_step' => 'kit_scan',
             ]);
+
             $this->sendDashboardUpdate($booking);
+
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');
+        } catch (\Throwable $e) {
+            Log::error('JobController::scanKit error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while scanning kit.', $e->getCode() ?: 500);
         }
-        return $this->error('Booking not found.', 404);
     }
 
     public function complete(CompleteJobRequest $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::find($id);
+        try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
 
-        if ($booking) {
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+
+            // ✅ STATE VALIDATION (Strict Transition)
+            if (!$this->canTransition($booking->status, 'completed')) {
+                return $this->error('Invalid state transition from ' . $booking->status . ' to completed.', 400);
+            }
+
+            // ✅ EXECUTE COMPLETION LOGIC (Production Shield)
             \App\Services\BookingService::completeJob($booking);
-            $this->sendDashboardUpdate($booking);
             
             // Mark professional as idle in Firestore and set isActive to false
             $this->firebase->pushJobToFirestore([
@@ -116,10 +228,13 @@ class JobController extends BaseController
                 'updated_at'      => time(),
             ]);
 
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Job marked as complete.');
-        }
+            $this->sendDashboardUpdate($booking);
 
-        return $this->error('Booking not found.', 404);
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Job marked as complete.');
+        } catch (\Throwable $e) {
+            Log::error('JobController::complete error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while completing job.', $e->getCode() ?: 500);
+        }
     }
 
     /**
@@ -171,15 +286,21 @@ class JobController extends BaseController
 
     public function verifyPayment(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::findOrFail($id);
-        
-        $validated = $request->validate([
-            'razorpay_payment_id' => 'required|string',
-            'razorpay_order_id'   => 'required|string',
-            'razorpay_signature'  => 'required|string',
-        ]);
-
         try {
+            $booking = \App\Models\Booking::find($id);
+            if (!$booking) {
+                return $this->error('Booking not found.', 404);
+            }
+
+            // ✅ OWNERSHIP CHECK
+            $this->validateOwnership($booking, $request);
+            
+            $validated = $request->validate([
+                'razorpay_payment_id' => 'required|string',
+                'razorpay_order_id'   => 'required|string',
+                'razorpay_signature'  => 'required|string',
+            ]);
+
             if (!config('services.razorpay.mock')) {
                 $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
                 $attributes = [
@@ -189,25 +310,27 @@ class JobController extends BaseController
                 ];
                 $api->utility->verifyPaymentSignature($attributes);
             }
-        } catch (\Exception $e) {
-            return $this->error('Payment verification failed.', 422);
+
+            // Use BookingService to handle completion, wallet credits, and referral check
+            \App\Services\BookingService::completeJob($booking);
+            
+            // Mark professional as idle in Firestore and set isActive to false
+            $this->firebase->pushJobToFirestore([
+                'professional_id' => $booking->professional_id,
+                'booking_id'      => $booking->id,
+                'status'          => 'idle',
+                'current_step'    => 'completed',
+                'isActive'        => false,
+                'updated_at'      => time(),
+            ]);
+
+            $this->sendDashboardUpdate($booking);
+
+            return $this->success(null, 'Payment verified and job completed.');
+        } catch (\Throwable $e) {
+            Log::error('JobController::verifyPayment error: ' . $e->getMessage());
+            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Payment verification failed: ' . $e->getMessage(), $e->getCode() ?: 500);
         }
-
-        // Use BookingService to handle completion, wallet credits, and referral check
-        BookingService::completeJob($booking);
-        $this->sendDashboardUpdate($booking);
-
-        // Mark professional as idle in Firestore and set isActive to false
-        $this->firebase->pushJobToFirestore([
-            'professional_id' => $booking->professional_id,
-            'booking_id'      => $booking->id,
-            'status'          => 'idle',
-            'current_step'    => 'completed',
-            'isActive'        => false,
-            'updated_at'      => time(),
-        ]);
-
-        return $this->success(null, 'Payment verified and job completed.');
     }
 
     protected function sendDashboardUpdate($booking)

@@ -41,16 +41,12 @@ class SettingController extends BaseController
     {
         $settingsData = $request->input('settings');
 
-        if (collect(array_keys($settingsData))->contains(fn ($key) => str_starts_with((string) $key, 'checkout_'))) {
-            $settingsData = $this->normalizeCheckoutSettings($settingsData);
-        }
-
         foreach ($settingsData as $key => $value) {
             Setting::updateOrCreate(
                 ['key' => $key],
                 [
                     'value' => (string) $value,
-                    'group' => str_starts_with($key, 'checkout_') ? 'checkout' : 'general',
+                    'group' => 'general',
                 ]
             );
         }
@@ -59,32 +55,5 @@ class SettingController extends BaseController
         $settings = Setting::whereIn('key', array_keys($settingsData))->get();
 
         return $this->success(SettingResource::collection($settings), 'Settings updated successfully.');
-    }
-
-    private function normalizeCheckoutSettings(array $settings): array
-    {
-        $amountKeys = [
-            'checkout_online_discount_min_order_paise',
-            'checkout_online_discount_max_cap_paise',
-            'checkout_wallet_discount_min_order_paise',
-            'checkout_wallet_discount_max_cap_paise',
-            'checkout_total_discount_max_cap_paise',
-        ];
-
-        foreach ($amountKeys as $key) {
-            if (array_key_exists($key, $settings)) {
-                $settings[$key] = (string) max(0, (int) round(((float) $settings[$key]) * 100));
-            }
-        }
-
-        if (($settings['checkout_online_discount_type'] ?? 'percentage') === 'fixed' && array_key_exists('checkout_online_discount_value', $settings)) {
-            $settings['checkout_online_discount_value'] = (string) max(0, (int) round(((float) $settings['checkout_online_discount_value']) * 100));
-        }
-
-        if (($settings['checkout_wallet_discount_type'] ?? 'percentage') === 'fixed' && array_key_exists('checkout_wallet_discount_value', $settings)) {
-            $settings['checkout_wallet_discount_value'] = (string) max(0, (int) round(((float) $settings['checkout_wallet_discount_value']) * 100));
-        }
-
-        return $settings;
     }
 }

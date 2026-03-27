@@ -22,9 +22,8 @@ elseif (str_starts_with($routeName, 'kit-products')) $section = 'kit-products';
 elseif (str_starts_with($routeName, 'kit-orders')) $section = 'kit-orders';
 elseif (str_starts_with($routeName, 'leaves')) $section = 'leaves';
 elseif (str_starts_with($routeName, 'referrals')) $section = 'referrals';
-elseif (str_starts_with($routeName, 'settings.checkout-discounts')) $section = 'settings.checkout-discounts';
-elseif (str_starts_with($routeName, 'settings.rewards')) $section = 'settings.rewards';
-elseif (str_starts_with($routeName, 'settings')) $section = 'settings';
+elseif (str_starts_with($routeName, 'settings.shifts')) $section = 'settings.shifts';
+else $section = 'settings.index';
 
 $isProActive = ($section === 'professionals');
 $isAssignActive = ($section === 'assign');
@@ -161,9 +160,14 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
             <!-- Submenu -->
             <div id="professionals-submenu" class="submenu{{ $isProActive ? ' open' : '' }} pl-4 mt-1 space-y-1">
               <a href="{{ route('professionals.index') }}"
-                class="flex items-center gap-3 px-4 py-2.5 {{ ($section === 'professionals' && !request()->is('*/verification*') && !request()->is('*/orders*') && !request()->is('*/history*')) ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                class="flex items-center gap-3 px-4 py-2.5 {{ ($section === 'professionals' && !request()->is('*/verification*') && !request()->is('*/orders*') && !request()->is('*/history*') && !request()->is('*/leaderboard*')) ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="users" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">Overview</span>
+              </a>
+              <a href="{{ route('professionals.leaderboard') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ request()->is('*/leaderboard*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="trophy" class="w-4 h-4 text-orange-500 opacity-90 group-hover:opacity-100"></i>
+                <span class="font-semibold text-sm text-black">Leaderboard</span>
               </a>
               <a href="{{ route('professionals.verification') }}"
                 class="flex items-center justify-between px-4 py-2.5 {{ request()->is('*/verification*') ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
@@ -382,15 +386,10 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
                 <i data-lucide="sliders" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">General Settings</span>
               </a>
-              <a href="{{ route('settings.checkout-discounts') }}"
-                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.checkout-discounts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
-                <i data-lucide="badge-percent" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                <span class="font-normal text-sm text-black">Pricing &amp; Discounts</span>
-              </a>
-              <a href="{{ route('settings.rewards.index') }}"
-                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.rewards.index' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
-                <i data-lucide="coins" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
-                <span class="font-normal text-sm text-black">Rewards &amp; Wallet</span>
+              <a href="{{ route('settings.shifts') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.shifts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="clock" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Shift Management</span>
               </a>
             </div>
           </div>

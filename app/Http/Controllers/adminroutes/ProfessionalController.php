@@ -288,6 +288,31 @@ class ProfessionalController extends Controller
         return back()->with('success', 'Professional activated.');
     }
 
+    public function leaderboard()
+    {
+        $topProfessionals = Professional::query()
+            ->withCount(['bookings as completed_jobs_count' => function ($query) {
+                $query->where('status', 'completed');
+            }])
+            ->where('status', 'Active')
+            ->orderByDesc('completed_jobs_count')
+            ->take(3)
+            ->get();
+
+        $topProfessionals = $topProfessionals->values()->map(function ($pro, $index) {
+            return [
+                'id' => $pro->id,
+                'name' => $pro->name,
+                'role' => $pro->category ?? 'Professional',
+                'image' => $pro->avatar ?: 'https://i.pravatar.cc/150?u=' . $pro->id,
+                'completed_jobs_count' => (int) $pro->completed_jobs_count,
+                'rank' => $index + 1,
+            ];
+        });
+
+        return view('admin.leaderboard', compact('topProfessionals'));
+    }
+
     public function destroy(Professional $professional)
     {
         $professional->delete();

@@ -184,6 +184,7 @@ Route::prefix('professional')->group(function () {
             Route::get('active-job', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'activeJob']);
             Route::post('toggle-availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'toggleAvailability']);
             Route::post('update-online-status', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'updateOnlineStatus']);
+            Route::get('leaderboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'leaderboard']);
 
             // Booking Requests
             Route::get('booking-requests', [\App\Http\Controllers\Api\Professionals\BookingController::class , 'requests']);

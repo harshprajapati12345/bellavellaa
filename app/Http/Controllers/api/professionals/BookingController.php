@@ -185,24 +185,9 @@ class BookingController extends BaseController
             // Real-time WebSocket Dashboard Sync
             broadcast(new JobUpdate($booking));
 
-            // If completed, update earnings + orders count on professional
+            // If completed, update earnings + orders count using centralized service
             if ($validated['status'] === 'completed' && $originalStatus !== 'completed') {
-                $commissionAmt = ($booking->price * ($professional->commission ?? 0)) / 100;
-                $earnings = $booking->price - $commissionAmt;
-
-                // 🔥 Sane & Safe Increment
-                $professional = Professional::where('id', $professional->id)->lockForUpdate()->first();
-                $professional->increment('orders'); // Legacy support
-                $professional->increment('total_completed_jobs'); // New system
-                $professional->increment('earnings', $earnings);
-
-                // 🔥 Trigger Referral Logic
-                $rewardService = app(\App\Services\RewardService::class);
-                $rewardService->processFirstJobReferralReward($professional);
-
-                // 🪙 Trigger New Rewards
-                $rewardService->rewardWeeklyPremiumJobs($professional);
-                $rewardService->rewardOnTimeCompletion($professional, $booking);
+                \App\Services\BookingService::completeJob($booking);
             }
 
             DB::commit();

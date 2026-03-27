@@ -7,71 +7,47 @@ use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
-    private const CHECKOUT_DISCOUNT_DEFAULTS = [
-        'checkout_discounts_enabled' => '0',
-        'checkout_online_discount_enabled' => '0',
-        'checkout_online_discount_type' => 'percentage',
-        'checkout_online_discount_value' => '0',
-        'checkout_online_discount_min_order_paise' => '0',
-        'checkout_online_discount_max_cap_paise' => '0',
-        'checkout_wallet_discount_enabled' => '0',
-        'checkout_wallet_discount_type' => 'percentage',
-        'checkout_wallet_discount_value' => '0',
-        'checkout_wallet_discount_min_order_paise' => '0',
-        'checkout_wallet_discount_max_cap_paise' => '0',
-        'checkout_allow_combined_discount' => '0',
-        'checkout_total_discount_max_cap_paise' => '0',
-    ];
-
     public function index()
     {
         $settings = Setting::all();
         return view('settings.index', compact('settings'));
     }
 
-    public function checkoutDiscounts()
+    public function shifts()
     {
-        $settings = Setting::all();
-        return view('settings.checkout-discounts', compact('settings'));
+        $shiftStart = Setting::get('shift_start_time', '09:00');
+        $shiftDuration = Setting::get('shift_duration', '480');
+
+        return view('settings.shifts', compact('shiftStart', 'shiftDuration'));
     }
 
     public function update(Request $request)
     {
         $data = $request->validate([
-            'settings' => 'required|array',
-            'settings.checkout_discounts_enabled' => 'nullable|boolean',
-            'settings.checkout_online_discount_enabled' => 'nullable|boolean',
-            'settings.checkout_online_discount_type' => 'nullable|in:percentage,fixed',
-            'settings.checkout_online_discount_value' => 'nullable|numeric|min:0',
-            'settings.checkout_online_discount_min_order_paise' => 'nullable|numeric|min:0',
-            'settings.checkout_online_discount_max_cap_paise' => 'nullable|numeric|min:0',
-            'settings.checkout_wallet_discount_enabled' => 'nullable|boolean',
-            'settings.checkout_wallet_discount_type' => 'nullable|in:percentage,fixed',
-            'settings.checkout_wallet_discount_value' => 'nullable|numeric|min:0',
-            'settings.checkout_wallet_discount_min_order_paise' => 'nullable|numeric|min:0',
-            'settings.checkout_wallet_discount_max_cap_paise' => 'nullable|numeric|min:0',
-            'settings.checkout_allow_combined_discount' => 'nullable|boolean',
-            'settings.checkout_total_discount_max_cap_paise' => 'nullable|numeric|min:0',
+            'settings' => 'required_without_all:shift_start_time,shift_duration|array',
+            'shift_start_time' => 'nullable|string',
+            'shift_duration' => 'nullable|integer|min:1|max:1440',
+            'withdraw_delay_days' => 'nullable|integer|min:1|max:7',
         ]);
+
+        if ($request->has('withdraw_delay_days')) {
+            Setting::set('withdraw_delay_days', $request->withdraw_delay_days);
+            if (!$request->has(['shift_start_time', 'shift_duration', 'settings'])) {
+                return redirect()->back()->with('success', 'Withdrawal delay updated successfully!');
+            }
+        }
+
+        if ($request->has(['shift_start_time', 'shift_duration'])) {
+            Setting::set('shift_start_time', $request->shift_start_time);
+            Setting::set('shift_duration', $request->shift_duration);
+
+            return redirect()->back()->with('success', 'Shift updated successfully!');
+        }
 
         $settings = $data['settings'];
 
-        $hasCheckoutSettings = collect(array_keys($settings))
-            ->contains(fn ($key) => str_starts_with((string) $key, 'checkout_'));
-
-        if ($hasCheckoutSettings) {
-            foreach (self::CHECKOUT_DISCOUNT_DEFAULTS as $key => $default) {
-                if (!array_key_exists($key, $settings)) {
-                    $settings[$key] = $default;
-                }
-            }
-
-            $settings = $this->normalizeCheckoutSettings($settings);
-        }
-
         foreach ($settings as $key => $value) {
-            $group = str_starts_with($key, 'checkout_') ? 'checkout' : 'general';
-            Setting::updateOrCreate(['key' => $key], ['value' => (string) $value, 'group' => $group]);
+            Setting::updateOrCreate(['key' => $key], ['value' => (string) $value, 'group' => 'general']);
         }
 
         return redirect()->back()->with('success', 'Settings updated successfully!');
@@ -114,48 +90,5 @@ class SettingController extends Controller
             'secondary_color'  => '#6B7280',
             'background_color' => '#F6F7F9',
         ]);
-    }
-
-    private function normalizeCheckoutSettings(array $settings): array
-    {
-        $amountKeys = [
-            'checkout_online_discount_min_order_paise',
-            'checkout_online_discount_max_cap_paise',
-            'checkout_wallet_discount_min_order_paise',
-            'checkout_wallet_discount_max_cap_paise',
-            'checkout_total_discount_max_cap_paise',
-        ];
-
-        foreach ($amountKeys as $key) {
-            $settings[$key] = $this->rupeesToPaise($settings[$key] ?? 0);
-        }
-
-        if (($settings['checkout_online_discount_type'] ?? 'percentage') === 'fixed') {
-            $settings['checkout_online_discount_value'] = $this->rupeesToPaise($settings['checkout_online_discount_value'] ?? 0);
-        } else {
-            $settings['checkout_online_discount_value'] = $this->normalizeDecimal($settings['checkout_online_discount_value'] ?? 0);
-        }
-
-        if (($settings['checkout_wallet_discount_type'] ?? 'percentage') === 'fixed') {
-            $settings['checkout_wallet_discount_value'] = $this->rupeesToPaise($settings['checkout_wallet_discount_value'] ?? 0);
-        } else {
-            $settings['checkout_wallet_discount_value'] = $this->normalizeDecimal($settings['checkout_wallet_discount_value'] ?? 0);
-        }
-
-        return $settings;
-    }
-
-    private function rupeesToPaise($value): string
-    {
-        return (string) max(0, (int) round(((float) $value) * 100));
-    }
-
-    private function normalizeDecimal($value): string
-    {
-        $normalized = max(0, (float) $value);
-
-        return fmod($normalized, 1.0) === 0.0
-            ? (string) (int) $normalized
-            : (string) $normalized;
     }
 }

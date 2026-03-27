@@ -7,7 +7,6 @@ use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Http\Resources\Api\CustomerResource;
 use App\Models\Customer;
 use App\Models\Otp;
-use App\Services\RewardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
@@ -95,36 +94,7 @@ class AuthController extends BaseController
             $customerData
         );
 
-        $coinsAwarded = 0;
-        if ($isNewUser) {
-            $rewardService = app(RewardService::class);
-            
-            // 1. Award Signup Reward (Automatic)
-            $coinsAwarded += $rewardService->awardSignupReward($customer, 'customer');
-
-            // 2. Award Referral Rewards (Automatic)
-            if (isset($customerData['referred_by'])) {
-                // We re-fetch referrer to ensure we have the model instance
-                $referrer = \App\Models\Professional::find($customerData['referred_by']);
-                $referrerType = 'professional';
-                
-                if (!$referrer) {
-                    $referrer = Customer::find($customerData['referred_by']);
-                    $referrerType = 'customer';
-                }
-
-                if ($referrer) {
-                    $coinsAwarded += $rewardService->awardReferralRewards(
-                        $customer, 
-                        'customer', 
-                        $referrer, 
-                        $referrerType, 
-                        $request->referral_code
-                    );
-                }
-
-            }
-        }
+        // Coins system decommissioned
 
         if ($customer->status === 'Blocked') {
             return $this->error('Your account has been blocked. Please contact support.', 403);
@@ -141,7 +111,7 @@ class AuthController extends BaseController
                 'expires_in'   => $this->guard()->factory()->getTTL() * 60,
                 'user'         => $customer,
                 'is_new'       => $isNewUser,
-                'coins_awarded' => $coinsAwarded,
+                'coins_awarded' => 0,
             ], 'Verification successful.');
         } catch (JWTException $e) {
             return $this->error('Could not create token.', 500);
