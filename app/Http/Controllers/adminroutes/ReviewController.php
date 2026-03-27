@@ -9,7 +9,16 @@ class ReviewController extends Controller
 {
     public function index()
     {
-        $reviews = Review::with(['customer', 'booking.service'])->orderBy('created_at', 'desc')->get();
+        $reviews = Review::with(['customer', 'booking.service'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($review) {
+                $review->service_name = $review->service_name
+                    ?? $review->booking?->service?->name
+                    ?? '—';
+
+                return $review;
+            });
         $stats = [
             'total' => $reviews->count(),
             'video' => $reviews->where('review_type', 'video')->count(),

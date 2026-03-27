@@ -136,7 +136,7 @@
                 data-date="{{ $r->created_at ? \Carbon\Carbon::parse($r->created_at)->format('d M Y') : '—' }}"
                 data-service="{{ $r->service_name ?? $r->service ?? '—' }}" data-type="{{ $r->review_type }}"
                 data-rating="{{ $r->rating }}" data-featured="{{ $r->is_featured ?? 0 }}" data-status="{{ $r->status }}"
-                data-message="{{ $r->comment ?? '' }}" data-video="{{ $r->video_path ?? '' }}"
+                data-message="{{ $r->comment ?? '' }}" data-video="{{ \App\Support\MediaPathNormalizer::url($r->video_path) ?? '' }}"
                 data-points="{{ $r->points_given ?? 0 }}">
                 <td class="px-5 py-4">
                   <div class="flex items-center gap-3">
@@ -199,10 +199,10 @@
                   @if(($r->review_type ?? 'text') === 'video' && !empty($r->video_path))
                     <div
                       class="relative w-16 h-24 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 mx-auto group cursor-pointer"
-                      onclick="openVideoModal('{{ $r->video_path }}')">
+                      onclick="openVideoModal('{{ \App\Support\MediaPathNormalizer::url($r->video_path) }}')">
                       <video class="w-full h-full object-cover" muted playsinline onmouseover="this.play()"
                         onmouseout="this.pause(); this.currentTime = 0;">
-                        <source src="{{ $r->video_path }}" type="video/mp4">
+                        <source src="{{ \App\Support\MediaPathNormalizer::url($r->video_path) }}" type="video/mp4">
                       </video>
                       <div
                         class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:hidden transition-all">
@@ -286,7 +286,20 @@
   </div>
 
   <!-- Video Preview Modal -->
-  </div>
+  <div id="videoModal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300 bg-black/70">
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="relative w-full max-w-md rounded-2xl bg-black shadow-2xl overflow-hidden">
+        <button type="button"
+          onclick="closeVideoModal()"
+          class="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-white/10 text-white hover:bg-white/20 transition flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <video id="modalVideo" class="w-full h-auto max-h-[80vh] bg-black" controls playsinline>
+          <source src="" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
   </div>
 
 @endsection
@@ -319,9 +332,25 @@
 @push('scripts')
   <script>
     /* Video Modal */
-    function openVideoModal(src) { const m = document.getElementById('videoModal'), v = document.getElementById('modalVideo'); v.src = src; m.classList.remove('hidden'); requestAnimationFrame(() => m.classList.remove('opacity-0')); v.play(); }
-    function closeVideoModal() { const m = document.getElementById('videoModal'), v = document.getElementById('modalVideo'); v.pause(); v.src = ''; m.classList.add('opacity-0'); setTimeout(() => m.classList.add('hidden'), 300); }
-    document.getElementById('videoModal').addEventListener('click', function (e) { if (e.target === this) closeVideoModal(); });
+    function openVideoModal(src) {
+      const m = document.getElementById('videoModal');
+      const v = document.getElementById('modalVideo');
+      if (!m || !v) return;
+      v.src = src;
+      m.classList.remove('hidden');
+      requestAnimationFrame(() => m.classList.remove('opacity-0'));
+      v.play();
+    }
+    function closeVideoModal() {
+      const m = document.getElementById('videoModal');
+      const v = document.getElementById('modalVideo');
+      if (!m || !v) return;
+      v.pause();
+      v.src = '';
+      m.classList.add('opacity-0');
+      setTimeout(() => m.classList.add('hidden'), 300);
+    }
+    document.getElementById('videoModal')?.addEventListener('click', function (e) { if (e.target === this) closeVideoModal(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeVideoModal(); });
 
     /* Removed local drawer logic — handled by global AJAX sidebar */

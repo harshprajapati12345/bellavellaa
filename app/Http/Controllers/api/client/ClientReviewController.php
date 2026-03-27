@@ -7,6 +7,7 @@ use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ClientReviewController extends Controller
@@ -45,6 +46,7 @@ class ClientReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
             'video_path' => 'nullable|string',
+            'video' => 'nullable|file|mimes:mp4,mov,avi,wmv,webm|max:20480',
         ]);
 
         if ($validator->fails()) {
@@ -71,6 +73,12 @@ class ClientReviewController extends Controller
 
         DB::beginTransaction();
         try {
+            $videoPath = $request->input('video_path');
+
+            if ($request->hasFile('video')) {
+                $videoPath = $request->file('video')->store('reviews/videos', 'public');
+            }
+
             $review = Review::create([
                 'booking_id' => $bookingId,
                 'customer_id' => $user->id,
@@ -78,9 +86,9 @@ class ClientReviewController extends Controller
                 'service_variant_id' => $booking->service_variant_id,
                 'rating' => $request->integer('rating'),
                 'comment' => $request->input('comment'),
-                'video_path' => $request->input('video_path'),
+                'video_path' => $videoPath,
                 'status' => 'Pending',
-                'review_type' => 'Service',
+                'review_type' => !empty($videoPath) ? 'video' : 'text',
             ]);
 
             DB::commit();
