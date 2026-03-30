@@ -219,9 +219,8 @@ Route::prefix('professional')->group(function () {
                 Route::get('jobs-history', [\App\Http\Controllers\Api\Professionals\EarningsController::class , 'history']);
                 Route::get('schedule', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'schedule']);
                 Route::post('schedule/slots', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'updateSlots']);
-                Route::post('request-withdrawal', [\App\Http\Controllers\Api\Professionals\EarningsController::class , 'requestWithdrawal']);
                 Route::get('withdrawals/history', [\App\Http\Controllers\Api\Professionals\WithdrawalController::class , 'history']);
-                Route::post('withdrawals/request', [\App\Http\Controllers\Api\Professionals\WithdrawalController::class , 'store']);
+                Route::post('withdraw', [\App\Http\Controllers\Api\Professionals\WithdrawalController::class , 'store']);
 
                 // Kit Store / Orders
                 Route::get('kit-products', [\App\Http\Controllers\Api\Professionals\KitController::class , 'products']);

@@ -13,7 +13,7 @@ class WithdrawalRequest extends Model
     const STATUS_COMPLETED = 'completed';
 
     protected $fillable = [
-        'professional_id', 'amount', 'method', 'status',
+        'professional_id', 'amount', 'method', 'status', 'request_id',
         'account_holder', 'account_number', 'ifsc_code', 'bank_name',
         'bank_account_id', 'upi_id', 'transaction_reference', 'admin_note',
         'rejection_reason', 'processed_at'

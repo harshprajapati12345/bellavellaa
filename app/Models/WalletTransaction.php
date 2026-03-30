@@ -25,4 +25,9 @@ class WalletTransaction extends Model
     public function scopeCredits($q) { return $q->where('type', 'credit'); }
     public function scopeDebits($q) { return $q->where('type', 'debit'); }
     public function scopeExpired($q) { return $q->whereNotNull('expires_at')->where('expires_at', '<', now()); }
+
+    public function scopeMatured($q, int $delayDays = 7)
+    {
+        return $q->where('created_at', '<=', now()->subDays($delayDays));
+    }
 }

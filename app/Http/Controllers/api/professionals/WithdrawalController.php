@@ -50,63 +50,76 @@ class WithdrawalController extends BaseController
 
             $amount = $request->amount;
             $amountInPaise = (int)($amount * 100);
+            $requestId = $request->request_id; // Frontend UUID
 
-            // 2. Process Transaction
-            return DB::transaction(function () use ($professional, $amount, $amountInPaise, $request) {
-                // Find cash wallet
-                $wallet = Wallet::where('holder_type', 'professional')
-                    ->where('holder_id', $professional->id)
-                    ->where('type', 'cash')
+            return DB::transaction(function () use ($professional, $amount, $amountInPaise, $request, $requestId) {
+                // 🔒 STEP 1: Lock Professional FIRST
+                $professional = \App\Models\Professional::where('id', $professional->id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$wallet) {
-                    return $this->error('Wallet not found.', 404);
+                // 🔑 STEP 2: Idempotency Check
+                if ($requestId && \App\Models\WithdrawalRequest::where('request_id', $requestId)->exists()) {
+                    return $this->error('Duplicate withdrawal request.', 422);
                 }
 
-                // --- Withdrawal Delay Enforcement (Hardened) ---
-                $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 3);
-                $cutoffDate = now()->subDays($withdrawDelayDays);
+                // STEP 3: Cooldown Check
+                $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 7);
+                if ($professional->last_withdrawal_at) {
+                    $nextAllowed = $professional->last_withdrawal_at->copy()->addDays($withdrawDelayDays);
+                    if (now()->lt($nextAllowed)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Withdrawal not allowed yet. Please wait for the cooldown.",
+                            'next_withdrawal_at' => $nextAllowed->toIso8601String(),
+                        ], 403);
+                    }
+                }
 
-                $pendingEarningsPaise = \App\Models\Booking::where('professional_id', $professional->id)
-                    ->where('status', 'completed')
-                    ->whereNotNull('completed_at')
-                    ->where('completed_at', '>', $cutoffDate)
-                    ->get()
-                    ->sum(fn($b) => ($b->price - ($b->commission ?? 0)) * 100);
+                // STEP 4: Balance Maturity Check (Ground Truth)
+                $wallet = $professional->wallet;
+                if (!$wallet) return $this->error('Wallet not found.', 404);
 
-                $availableBalancePaise = (float) max(0, $wallet->balance - $pendingEarningsPaise);
-                $availableBalancePaise = min($availableBalancePaise, (float) $wallet->balance);
+                $maturedBalancePaise = $wallet->transactions()
+                    ->where('source', 'earnings')
+                    ->where('type', 'credit')
+                    ->matured($withdrawDelayDays)
+                    ->sum('amount');
+                
+                // Also check total cash balance (sanity check)
+                $actualAvailablePaise = min((int)$wallet->balance, (int)$maturedBalancePaise);
 
-                if ($amountInPaise > $availableBalancePaise) {
-                    $availableFormatted = number_format($availableBalancePaise / 100, 2);
+                if ($amountInPaise > $actualAvailablePaise) {
                     return response()->json([
                         'success' => false,
-                        'message' => "Insufficient available balance. You can only withdraw ₹{$availableFormatted} at this time. Remaining earnings are locked for {$withdrawDelayDays} days after job completion.",
-                        'available_balance' => (float)($availableBalancePaise / 100)
+                        'message' => "Insufficient matured balance. Only ₹" . ($actualAvailablePaise / 100) . " is available.",
+                        'available_balance' => $actualAvailablePaise / 100
                     ], 403);
                 }
-                // ------------------------------------
 
-                // Create withdrawal record (PENDING)
+                // STEP 5: Create withdrawal record
                 $withdrawal = WithdrawalRequest::create([
                     'professional_id' => $professional->id,
                     'amount' => $amountInPaise,
-                    'method' => $request->method ?? 'direct',
+                    'method' => $request->input('method', 'direct'),
                     'status' => WithdrawalRequest::STATUS_PENDING,
-                    'transaction_reference' => 'PENDING-' . strtoupper(bin2hex(random_bytes(4))),
+                    'request_id' => $requestId,
+                    'transaction_reference' => 'WDR-' . strtoupper(bin2hex(random_bytes(4))),
                 ]);
 
-                // Debit the wallet (Deduction on request - Option B)
+                // Debit the wallet
                 $wallet->debit(
                     $amountInPaise,
                     'withdrawal_request',
-                    "Withdrawal request of ₹{$amount} (Pending)",
+                    "Withdrawal of ₹{$amount}",
                     $withdrawal->id,
                     WithdrawalRequest::class
                 );
 
-                return $this->success($withdrawal, 'Withdrawal request submitted for approval.');
+                // Update cooldown
+                $professional->update(['last_withdrawal_at' => now()]);
+
+                return $this->success($withdrawal, 'Withdrawal request submitted.');
             });
 
         }

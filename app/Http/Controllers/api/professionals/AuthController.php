@@ -127,6 +127,7 @@ class AuthController extends BaseController
             'account_number' => 'nullable|string|max:50',
             'ifsc_code' => 'nullable|string|max:20',
             'upi_id' => 'nullable|string|max:100',
+            'bank_proof' => 'nullable|image|max:2048',
         ]);
 
         $alreadyVerified = Otp::where('mobile', $request->mobile)
@@ -169,6 +170,11 @@ class AuthController extends BaseController
             'verification' => 'Pending',
             'joined' => now()->toDateString(),
         ];
+
+        if ($request->hasFile('bank_proof')) {
+            $path = $request->file('bank_proof')->store('professionals/bank_proofs', 'public');
+            $data['bank_proof'] = '/storage/' . $path;
+        }
 
         // Handle Referral
         if ($request->filled('referral_code')) {

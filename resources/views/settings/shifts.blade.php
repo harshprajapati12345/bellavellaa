@@ -48,6 +48,20 @@
                     <p class="mt-2 text-xs text-gray-500">Total duration of the shift in minutes (e.g., 480 for 8 hours).</p>
                 </div>
 
+                <!-- Withdrawal Cooldown -->
+                <div>
+                    <label for="withdraw_delay_days" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Withdrawal Cooldown (Days)
+                    </label>
+                    <div class="relative">
+                        <input type="number" name="withdraw_delay_days" id="withdraw_delay_days" 
+                               value="{{ $withdrawDelayDays }}" 
+                               class="block w-full px-4 py-3 rounded-xl border-gray-200 focus:border-black focus:ring-0 transition-all text-gray-900 bg-gray-50 focus:bg-white"
+                               min="1" max="30" required>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">Number of days a professional must wait between withdrawals (default 7).</p>
+                </div>
+
                 <div class="pt-4">
                     <button type="submit" 
                             class="w-full bg-black text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2">

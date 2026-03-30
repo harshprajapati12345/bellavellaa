@@ -17,8 +17,9 @@ class SettingController extends Controller
     {
         $shiftStart = Setting::get('shift_start_time', '09:00');
         $shiftDuration = Setting::get('shift_duration', '480');
+        $withdrawDelayDays = Setting::get('withdraw_delay_days', '7');
 
-        return view('settings.shifts', compact('shiftStart', 'shiftDuration'));
+        return view('settings.shifts', compact('shiftStart', 'shiftDuration', 'withdrawDelayDays'));
     }
 
     public function update(Request $request)

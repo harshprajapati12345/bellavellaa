@@ -155,142 +155,93 @@ class EarningsController extends BaseController
                 ];
             });
 
-        // Calculate Withdrawal Delay Logic (Hardened)
-        $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 3);
-        $cutoffDate = now()->subDays($withdrawDelayDays);
+        $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 7);
+        $nextAllowed = $professional->last_withdrawal_at 
+            ? $professional->last_withdrawal_at->copy()->addDays($withdrawDelayDays) 
+            : null;
 
-        $totalCashBalancePaise = $cashWallet->balance;
+        $totalCashBalancePaise = (int) $cashWallet->balance;
 
-        // Sum earnings that are still in "cooldown"
-        $pendingEarningsPaise = Booking::where('professional_id', $professional->id)
-            ->where('status', 'completed')
-            ->whereNotNull('completed_at')
-            ->where('completed_at', '>', $cutoffDate)
-            ->get()
-            ->sum(fn($b) => ($b->price - ($b->commission ?? 0)) * 100);
+        // --- Ground Truth Balance Logic ---
+        // 1. Matured Balance: Earnings credits that are older than X days.
+        $maturedBalancePaise = (int) $cashWallet->transactions()
+            ->where('source', 'earnings')
+            ->where('type', 'credit')
+            ->matured($withdrawDelayDays)
+            ->sum('amount');
+        
+        // 2. Locked Balance: Earnings credits created within the cooldown period.
+        $lockedBalancePaise = (int) $cashWallet->transactions()
+            ->where('source', 'earnings')
+            ->where('type', 'credit')
+            ->where('created_at', '>', now()->subDays($withdrawDelayDays))
+            ->sum('amount');
 
-        $availableBalancePaise = (float) max(0, $totalCashBalancePaise - $pendingEarningsPaise);
-        $availableBalancePaise = min($availableBalancePaise, (float) $totalCashBalancePaise);
-        $pendingBalancePaise = (float) max(0, $totalCashBalancePaise - $availableBalancePaise);
-
-        // Deposit balance
-        $totalDepositPaise = WalletTransaction::where('wallet_id', $cashWallet->id)
+        // 3. Deposit Balance: All manual top-ups/deposits (always available).
+        $depositBalancePaise = (int) $cashWallet->transactions()
             ->where('source', 'deposit')
             ->sum(DB::raw('CASE WHEN type = "credit" THEN amount ELSE -amount END'));
-        $depositBalancePaise = (float) max(0, $totalDepositPaise);
+        
+        // 4. Available to Withdraw: Deposit + Matured Earnings (capped by total balance).
+        $availableToWithdrawPaise = min($totalCashBalancePaise, max(0, $depositBalancePaise + $maturedBalancePaise));
 
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
         $commissionRate = (100 - ($professional->commission ?? 0)) / 100;
 
-        $todayEarnings = Booking::where('professional_id', $professional->id)
+        $todayEarnings = (float) Booking::where('professional_id', $professional->id)
             ->where('status', 'completed')
             ->where('date', $today)
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price * $commissionRate);
 
-        $weeklyEarnings = Booking::where('professional_id', $professional->id)
+        $weeklyEarnings = (float) Booking::where('professional_id', $professional->id)
             ->where('status', 'completed')
             ->whereBetween('date', [$startOfWeek, $today])
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price * $commissionRate);
 
-        $monthlyEarnings = Booking::where('professional_id', $professional->id)
+        $monthlyEarnings = (float) Booking::where('professional_id', $professional->id)
             ->where('status', 'completed')
             ->whereBetween('date', [$startOfMonth, $today])
-            ->sum(DB::raw("price * {$commissionRate}"));
+            ->get()
+            ->sum(fn($b) => $b->price * $commissionRate);
 
         return $this->success([
             'cash_balance' => $totalCashBalancePaise / 100,
-            'available_balance' => $availableBalancePaise / 100,
-            'pending_balance' => $pendingBalancePaise / 100,
-            'earnings_balance' => ($totalCashBalancePaise - $depositBalancePaise) / 100,
-            'deposit_balance' => $depositBalancePaise / 100,
+            'available_balance' => $availableToWithdrawPaise / 100,
+            'locked_balance' => $lockedBalancePaise / 100,
+            'deposit_balance' => max(0, $depositBalancePaise) / 100,
+            'earnings_balance' => ($totalCashBalancePaise - max(0, $depositBalancePaise)) / 100,
             'total_balance' => $totalCashBalancePaise / 100,
             'withdraw_delay_days' => $withdrawDelayDays,
-            'coin_balance' => $professional->coins_balance,
-            'coins_balance' => $professional->coins_balance,
-            'kit_count' => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
+            'can_withdraw' => (!$nextAllowed || now()->gte($nextAllowed)) && ($availableToWithdrawPaise >= 10000), // Min ₹100
+            'next_withdrawal_at' => $nextAllowed ? $nextAllowed->toIso8601String() : null,
+            'remaining_seconds' => $nextAllowed ? max(0, now()->diffInSeconds($nextAllowed, false)) : 0,
+            'coin_balance' => (int) $professional->coins_balance,
+            'coins_balance' => (int) $professional->coins_balance,
             'active_balance' => $type === 'coin' ? $professional->coins_balance : ($totalCashBalancePaise / 100),
             'transactions' => $transactions,
-            'today_earnings' => $todayEarnings,
-            'weekly_earnings' => $weeklyEarnings,
-            'monthly_earnings' => $monthlyEarnings,
-            'total_jobs' => $professional->total_completed_jobs,
-            'total_completed_jobs' => $professional->total_completed_jobs,
+            'today_earnings' => round($todayEarnings, 2),
+            'weekly_earnings' => round($weeklyEarnings, 2),
+            'monthly_earnings' => round($monthlyEarnings, 2),
+            'total_completed_jobs' => $professional->total_completed_jobs ?? 0,
             'kit_orders' => \App\Models\KitOrder::with('product')
-            ->where('professional_id', $professional->id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($order) {
-            return [
-                    'id' => $order->id,
-                    'title' => $order->product->name ?? 'Service Kit',
-                    'quantity' => $order->quantity,
-                    'amount' => (double)$order->quantity,
-                    'status' => $order->status,
-                    'type' => 'credit',
-                    'created_at' => $order->created_at->format('d M, Y'),
-                    'description' => "Assigned " . $order->quantity . " kits",
-                ];
-        }),
-        ], 'Wallet retrieved.');
+                ->where('professional_id', $professional->id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(fn($o) => [
+                    'id' => $o->id,
+                    'title' => $o->product->name ?? 'Service Kit',
+                    'quantity' => $o->quantity,
+                    'status' => $o->status,
+                    'created_at' => $o->created_at->format('d M, Y'),
+                ]),
+        ], 'Wallet overview retrieved.');
     }
 
-    /**
-     * POST /api/professional/request-withdrawal
-     */
-    public function requestWithdrawal(Request $request): JsonResponse
-    {
-        $professional = $request->user('professional-api');
-
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:100', // Minimum ₹100
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $amountInPaise = (int)($request->amount * 100);
-
-        return DB::transaction(function () use ($professional, $amountInPaise, $request) {
-            $wallet = Wallet::where('holder_type', 'professional')
-                ->where('holder_id', $professional->id)
-                ->where('type', 'cash')
-                ->lockForUpdate()
-                ->first();
-
-            if (!$wallet || $wallet->balance < $amountInPaise) {
-                return $this->error('Insufficient wallet balance.', 400);
-            }
-
-            // Create withdrawal request record (PENDING)
-            $withdrawal = \App\Models\WithdrawalRequest::create([
-                'professional_id' => $professional->id,
-                'amount' => $amountInPaise,
-                'method' => 'direct',
-                'status' => \App\Models\WithdrawalRequest::STATUS_PENDING,
-                'transaction_reference' => 'PENDING-' . strtoupper(Str::random(8)),
-            ]);
-
-            // Debit the wallet (Deduction on request - Option B)
-            $wallet->debit(
-                $amountInPaise,
-                'withdrawal_request',
-                "Withdrawal request of ₹" . $request->amount . " (Pending)",
-                $withdrawal->id,
-                \App\Models\WithdrawalRequest::class
-            );
-
-            return $this->success([
-                'balance' => $wallet->balance / 100
-            ], 'Withdrawal request submitted for approval.');
-        });
-    }
+    // Removing redundant requestWithdrawal as it's moved to WithdrawalController
 
     /**
      * POST /api/professional/wallet/deposit/create-order
