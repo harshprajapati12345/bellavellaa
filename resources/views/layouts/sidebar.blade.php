@@ -14,6 +14,7 @@ elseif (str_starts_with($routeName, 'customers')) $section = 'customers';
 elseif (str_starts_with($routeName, 'offers')) $section = 'offers';
 elseif (str_starts_with($routeName, 'assign')) $section = 'assign';
 elseif (str_starts_with($routeName, 'reviews')) $section = 'reviews';
+elseif (str_starts_with($routeName, 'user-reviews')) $section = 'user-reviews';
 elseif (str_starts_with($routeName, 'homepage')) $section = 'homepage';
 elseif (str_starts_with($routeName, 'media')) $section = 'media';
 elseif (str_starts_with($routeName, 'banners')) $section = 'banners';
@@ -28,6 +29,7 @@ else $section = 'settings.index';
 $isProActive = ($section === 'professionals');
 $isAssignActive = ($section === 'assign');
 $isReviewsActive = ($section === 'reviews');
+$isUserReviewsActive = ($section === 'user-reviews');
 $isServicesActive = ($section === 'services');
 $isHomepageActive = ($section === 'homepage');
 $isMediaActive = ($section === 'media' || $section === 'banners' || $section === 'videos');
@@ -43,6 +45,7 @@ $isCRMActive = ($isHomepageActive || $isMediaActive);
 $pendingAssignCount = \App\Models\Booking::where('status', 'unassigned')->count();
 // Count pending reviews for badge
 try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->count(); } catch (\Exception $e) { $pendingReviewsCount = 0; }
+try { $pendingUserReviewsCount = \App\Models\UserReview::where('status', 'Pending')->count(); } catch (\Exception $e) { $pendingUserReviewsCount = 0; }
 @endphp
 @push('styles')
 <style>
@@ -322,6 +325,19 @@ try { $pendingReviewsCount = \App\Models\Review::where('status', 'pending')->cou
             @if($pendingReviewsCount > 0)
             <span class="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none shadow-sm">
               {{ $pendingReviewsCount }}
+            </span>
+            @endif
+          </a>
+
+          <a href="{{ route('user-reviews.index') }}"
+            class="flex items-center justify-between px-4 py-3 {{ $isUserReviewsActive ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+            <div class="flex items-center gap-3">
+              <i data-lucide="messages-square" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+              <span class="font-normal text-base text-black">User Reviews</span>
+            </div>
+            @if($pendingUserReviewsCount > 0)
+            <span class="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold leading-none shadow-sm">
+              {{ $pendingUserReviewsCount }}
             </span>
             @endif
           </a>

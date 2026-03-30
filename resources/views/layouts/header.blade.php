@@ -62,6 +62,7 @@
             { name: 'Offers & Coupons', url: '{{ route("offers.index") }}', icon: 'tag', category: 'Marketing' },
             { name: 'Assign Tasks', url: '{{ route("assign.index") }}', icon: 'clipboard-list', category: 'Workflow' },
             { name: 'Reviews', url: '{{ route("reviews.index") }}', icon: 'star', category: 'Feedback' },
+            { name: 'User Reviews', url: '{{ route("user-reviews.index") }}', icon: 'messages-square', category: 'Feedback' },
             { name: 'Homepage Manager', url: '{{ route("homepage.index") }}', icon: 'layout-template', category: 'Content' },
             { name: 'Banners', url: '{{ route("media.banners.index") }}', icon: 'gallery-horizontal', category: 'Content' },
             { name: 'Videos', url: '{{ route("media.videos.index") }}', icon: 'video', category: 'Content' },

@@ -133,6 +133,7 @@ Route::prefix('client')->group(function () {
 
                 // Reviews
                 Route::post('bookings/{bookingId}/reviews', [\App\Http\Controllers\api\client\ClientReviewController::class , 'store']);
+                Route::post('review/professional', [\App\Http\Controllers\Api\Client\UserReviewController::class , 'storeProfessionalReview']);
                 Route::post('app-feedback', [\App\Http\Controllers\Api\Client\AppFeedbackController::class , 'store']);
 
                 Route::get('offers', [ClientOfferController::class , 'index']);
@@ -237,6 +238,9 @@ Route::prefix('professional')->group(function () {
                 Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\Professionals\NotificationController::class , 'read']);
                 Route::post('notifications/read-all', [\App\Http\Controllers\Api\Professionals\NotificationController::class , 'readAll']);
                 Route::delete('notifications/{id}', [\App\Http\Controllers\Api\Professionals\NotificationController::class , 'destroy']);
+
+                // User Reviews
+                Route::post('review/client', [\App\Http\Controllers\Api\Professionals\UserReviewController::class , 'storeClientReview']);
 
                 // Referrals
                 Route::get('referrals', [\App\Http\Controllers\Api\Professionals\ReferralController::class , 'index']);
@@ -347,4 +351,3 @@ Route::prefix('admin')->group(function () {
             }
             );
         });
-

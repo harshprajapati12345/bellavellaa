@@ -12,6 +12,7 @@ use App\Http\Controllers\adminroutes\ProfessionalController;
 use App\Http\Controllers\adminroutes\CustomerController;
 use App\Http\Controllers\adminroutes\OfferController;
 use App\Http\Controllers\adminroutes\ReviewController;
+use App\Http\Controllers\adminroutes\UserReviewController;
 use App\Http\Controllers\adminroutes\MediaController;
 use App\Http\Controllers\adminroutes\AssignController;
 use App\Http\Controllers\adminroutes\HomepageController;
@@ -138,6 +139,9 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('reviews/{review}/reject', [ReviewController::class , 'reject'])->name('reviews.reject');
     Route::post('reviews/{review}/toggle-featured', [ReviewController::class , 'toggleFeatured'])->name('reviews.toggle-featured');
     Route::post('reviews/{review}/award-points', [ReviewController::class , 'awardPoints'])->name('reviews.award-points');
+    Route::get('user-reviews', [UserReviewController::class, 'index'])->name('user-reviews.index');
+    Route::post('user-reviews/{userReview}/approve', [UserReviewController::class, 'approve'])->name('user-reviews.approve');
+    Route::post('user-reviews/{userReview}/reject', [UserReviewController::class, 'reject'])->name('user-reviews.reject');
 
     Route::get('media/banners', [MediaController::class , 'banners'])->name('media.banners.index');
     Route::get('media/videos', [MediaController::class , 'videos'])->name('media.videos.index');
