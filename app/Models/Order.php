@@ -24,15 +24,14 @@ class Order extends Model
         'scheduled_date',
         'scheduled_slot',
         'subtotal_paise',
-        'offer_discount_paise',
+        'discount_paise',
         'payment_discount_paise',
         'wallet_discount_paise',
+        'offer_discount_paise',
         'total_discount_paise',
-        'wallet_redeemed_paise',
         'discount_snapshot',
         'tax_paise',
         'total_paise',
-        'final_payable_paise',
         'coins_used',
         'status',
         'payment_status',
@@ -49,20 +48,18 @@ class Order extends Model
     protected $casts = [
         'scheduled_date' => 'date',
         'subtotal_paise' => 'integer',
-        'offer_discount_paise' => 'integer',
+        'discount_paise' => 'integer',
         'payment_discount_paise' => 'integer',
         'wallet_discount_paise' => 'integer',
+        'offer_discount_paise' => 'integer',
         'total_discount_paise' => 'integer',
-        'wallet_redeemed_paise' => 'integer',
         'discount_snapshot' => 'array',
         'tax_paise' => 'integer',
         'total_paise' => 'integer',
-        'final_payable_paise' => 'integer',
         'coins_used' => 'integer',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
     ];
-
 
     public function getSubtotalAttribute(): float
     {

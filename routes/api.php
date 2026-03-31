@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Client\ProfileController;
 use App\Http\Controllers\Api\Client\ReviewController;
 use App\Http\Controllers\Api\Client\CartController;
 use App\Http\Controllers\Api\Client\WalletController;
+use App\Http\Controllers\Api\Client\ScratchCardController;
 use App\Http\Controllers\Api\Client\AuthController as ClientAuthController;
 use App\Http\Controllers\Api\Client\PromotionController;
 use App\Http\Controllers\Api\Client\SlotController;
@@ -102,6 +103,10 @@ Route::prefix('client')->group(function () {
                 Route::get('wallet', [WalletController::class , 'index']);
                 Route::post('wallet/deposit', [WalletController::class , 'deposit']);
                 Route::post('wallet/withdraw', [WalletController::class , 'withdraw']);
+
+                // Scratch Cards
+                Route::get('scratch-cards', [ScratchCardController::class , 'index']);
+                Route::post('scratch-cards/{id}/scratch', [ScratchCardController::class , 'scratch']);
 
                 // Addresses
                 Route::apiResource('addresses', AddressController::class);

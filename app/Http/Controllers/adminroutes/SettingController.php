@@ -22,49 +22,44 @@ class SettingController extends Controller
         return view('settings.shifts', compact('shiftStart', 'shiftDuration', 'withdrawDelayDays'));
     }
 
-    public function discounts()
-    {
-        return view('settings.discounts');
-    }
-
-
     public function update(Request $request)
     {
         $data = $request->validate([
-            'settings' => 'required_without_all:shift_start_time,shift_duration,withdraw_delay_days|array',
-            'settings.checkout_online_discount_percent' => 'nullable|integer|min:0|max:100',
-            'settings.checkout_wallet_discount_percent' => 'nullable|integer|min:0|max:100',
-            'settings.checkout_online_discount_enabled' => 'nullable|in:0,1',
-            'settings.checkout_wallet_discount_enabled' => 'nullable|in:0,1',
+            'settings' => 'nullable|array',
             'shift_start_time' => 'nullable|string',
             'shift_duration' => 'nullable|integer|min:1|max:1440',
-            'withdraw_delay_days' => 'nullable|integer|min:1|max:7',
+            'withdraw_delay_days' => 'nullable|integer|min:1|max:30',
         ]);
 
-
+        $updated = false;
 
         if ($request->has('withdraw_delay_days')) {
             Setting::set('withdraw_delay_days', $request->withdraw_delay_days);
-            if (!$request->has(['shift_start_time', 'shift_duration', 'settings'])) {
-                return redirect()->back()->with('success', 'Withdrawal delay updated successfully!');
-            }
+            $updated = true;
         }
 
-        if ($request->has(['shift_start_time', 'shift_duration'])) {
+        if ($request->has('shift_start_time')) {
             Setting::set('shift_start_time', $request->shift_start_time);
+            $updated = true;
+        }
+
+        if ($request->has('shift_duration')) {
             Setting::set('shift_duration', $request->shift_duration);
-
-            return redirect()->back()->with('success', 'Shift updated successfully!');
+            $updated = true;
         }
 
-        $settings = $data['settings'];
-
-        foreach ($settings as $key => $value) {
-            Setting::set($key, (string) $value, 'general');
+        if ($request->has('settings')) {
+            foreach ($request->settings as $key => $value) {
+                Setting::set($key, (string) $value);
+            }
+            $updated = true;
         }
 
+        if ($updated) {
+            return redirect()->back()->with('success', 'Settings updated successfully!');
+        }
 
-        return redirect()->back()->with('success', 'Settings updated successfully!');
+        return redirect()->back();
     }
 
     public function store(Request $request)

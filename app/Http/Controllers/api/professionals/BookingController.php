@@ -128,36 +128,76 @@ class BookingController extends BaseController
         return $this->success(new BookingResource($booking->fresh()), 'Booking accepted successfully.');
     }
 
-    /**
-     * POST /api/professionals/bookings/{id}/reject
-     */
     public function reject(Request $request, $id): JsonResponse
     {
         $professional = $request->user('professional-api');
 
+        // 🔒 Already suspended check
+        if ($professional->is_suspended || strtolower($professional->status) === 'suspended') {
+            return $this->error('Account already suspended.', 403);
+        }
+
+        // ✅ Reset logic (SAFE)
+        $today = now()->toDateString();
+        if (!$professional->last_reset_date || $professional->last_reset_date != $today) {
+            $professional->update([
+                'reject_count' => 0,
+                'last_reset_date' => $today,
+                'is_suspended' => false,
+            ]);
+            $professional->refresh();
+        }
+
         $booking = Booking::findOrFail($id);
 
-        if ((int)$booking->professional_id !== (int)$professional->id) {
-            return $this->error('Unauthorized access.', 403);
+        // Prevent double reject/already processed
+        if ($booking->status === 'rejected' || $booking->status === 'cancelled' || $booking->status === 'completed') {
+            return $this->error('Booking already processed.', 400);
+        }
+
+        // Ensure authorization
+        if ($booking->professional_id && (int)$booking->professional_id !== (int)$professional->id) {
+             return $this->error('Unauthorized to reject this booking.', 403);
+        }
+
+        // ✅ Increment safely
+        $professional->increment('reject_count');
+        $newCount = $professional->reject_count;
+        
+        $maxLimit = 3;
+        $remaining = max(0, $maxLimit - $newCount);
+
+        // 🔥 Suspension trigger
+        if ($newCount >= $maxLimit) {
+            $professional->update([
+                'is_suspended' => true,
+                'status' => 'Suspended'
+            ]);
+            
+            $booking->update([
+                'status' => 'rejected',
+                'professional_id' => null,
+            ]);
+
+            \Log::info("Professional #{$professional->id} suspended after {$newCount} rejects.");
+
+            return $this->success([
+                'message' => 'Account suspended.',
+                'is_suspended' => true,
+                'remaining_rejects' => 0
+            ], 'Booking request rejected (Limit Reached).');
         }
 
         $booking->update([
+            'status' => 'rejected',
             'professional_id' => null,
-            'status' => 'unassigned',
         ]);
 
-        // Reset Firestore job status to idle
-        $this->firebase->pushJobToFirestore([
-            'professional_id' => $professional->id,
-            'booking_id' => $booking->id,
-            'status' => 'idle',
-            'updated_at' => time(),
-        ]);
-
-        // Real-time WebSocket Dashboard Sync
-        broadcast(new JobUpdate($booking->setAttribute('professional_id', $professional->id)));
-
-        return $this->success(null, 'Booking request rejected.');
+        return $this->success([
+            'message' => 'Booking rejected.',
+            'is_suspended' => false,
+            'remaining_rejects' => $remaining
+        ], 'Booking request rejected.');
     }
 
     /**

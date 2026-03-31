@@ -34,23 +34,31 @@ class WalletController extends BaseController
 
         $transactions = $coinWallet->transactions()
             ->latest()
+            ->limit(10) // Limiting for improved performance as requested
             ->get(['id', 'type', 'amount', 'source', 'description', 'created_at'])
             ->map(function ($tx) {
                 return [
-                    'id' => (string) $tx->id, // Ensure string
+                    'id' => (string) $tx->id,
                     'title' => $this->normalizeTransactionTitle($tx->description, $tx->source),
                     'date' => $tx->created_at->format('d M Y, h:i A'),
                     'amount' => (int) $tx->amount,
                     'type' => (string) $tx->type,
                 ];
-            })->values(); // Reindex array
+            })->values();
+
+        // Get unscratched cards
+        $scratchCards = \App\Models\ScratchCard::where('customer_id', $customer->id)
+            ->where('is_scratched', false)
+            ->latest()
+            ->get();
 
         return $this->success([
             'wallet_type' => 'coin',
-            'balance' => (int) $coinWallet->balance, // Force string
+            'balance' => (int) $coinWallet->balance,
             'currency_label' => 'BellaVella Coins',
             'exchange_rate' => '1 Coin = ₹1.00',
             'transactions' => $transactions->toArray(),
+            'scratch_cards' => $scratchCards,
         ], 'Wallet data retrieved successfully.');
     }
 

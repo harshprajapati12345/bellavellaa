@@ -23,7 +23,6 @@ class ProfessionalTestSeeder extends Seeder
                 'status' => 'Active',
                 'verification' => 'Verified',
                 'joined' => now(),
-                'coins_balance' => 10000,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -47,12 +46,6 @@ class ProfessionalTestSeeder extends Seeder
         } else {
             $custId = $customer->id;
         }
-
-        // Initialize coin wallet for test customer
-        DB::table('wallets')->updateOrInsert(
-            ['holder_type' => 'customer', 'holder_id' => $custId, 'type' => 'coin'],
-            ['balance' => 10000, 'version' => 1, 'updated_at' => now()]
-        );
 
 
         // 3. Create 3 Pending Bookings for this Professional

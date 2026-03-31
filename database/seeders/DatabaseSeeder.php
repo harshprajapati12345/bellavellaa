@@ -15,13 +15,6 @@ class DatabaseSeeder extends Seeder
             CategoryBannerSeeder::class,
             HomepageContentSeeder::class,
             HierarchyBannerSeeder::class,
-            // New seeders for updated schema
-            RewardRulesSeeder::class,
-            ReferralsSeeder::class,
-            CustomerAppFeedbackSeeder::class,
-            UserReviewsSeeder::class,
-            VerificationRequestsSeeder::class,
-            WithdrawalRequestsSeeder::class,
         ]);
     }
 }
