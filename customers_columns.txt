@@ -1,1 +1,0 @@
-["id","name","email","mobile","referral_code","referred_by","avatar","date_of_birth","status","bookings","joined","created_at","updated_at","deleted_at"]
