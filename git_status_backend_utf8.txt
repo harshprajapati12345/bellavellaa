@@ -1,0 +1,17 @@
+﻿ M app/Http/Controllers/adminroutes/AssignController.php
+ M app/Http/Controllers/adminroutes/DashboardController.php
+ M app/Http/Controllers/adminroutes/ProfessionalController.php
+ M app/Http/Controllers/api/admin/AssignmentController.php
+ M app/Http/Controllers/api/client/CartController.php
+ M app/Http/Controllers/api/professionals/BookingController.php
+ M app/Http/Controllers/api/professionals/DashboardController.php
+ M app/Http/Controllers/api/professionals/JobController.php
+ M app/Http/Resources/Api/BookingResource.php
+ M app/Http/Resources/Api/ProfessionalResource.php
+ M app/Services/FirebaseService.php
+ M database/seeders/MasterSeeder.php
+ M resources/views/assign/index.blade.php
+ M resources/views/dashboard/index.blade.php
+ M resources/views/layouts/sidebar.blade.php
+ M resources/views/professionals/history/index.blade.php
+ M resources/views/professionals/orders/index.blade.php

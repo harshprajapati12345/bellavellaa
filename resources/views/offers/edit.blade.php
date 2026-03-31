@@ -1,0 +1,152 @@
+@extends('layouts.app')
+@section('content')
+  @php
+    $validFromValue = old('valid_from', $offer->valid_from?->format('Y-m-d'));
+    $validUntilValue = old('valid_until', $offer->valid_until?->format('Y-m-d'));
+  @endphp
+  <div class="flex flex-col gap-6">
+    @if($errors->any())
+      <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3.5 rounded-2xl text-sm">
+        <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+      </div>
+    @endif
+
+    <div class="flex items-center gap-4">
+      <a href="{{ route('offers.index') }}"
+        class="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
+        <i data-lucide="arrow-left" class="w-4 h-4 text-gray-600"></i>
+      </a>
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-900 tracking-tight">Edit Offer</h2>
+        <p class="text-sm text-gray-400 mt-0.5">{{ $offer->name }}</p>
+      </div>
+    </div>
+
+    {{-- ── Main Update Form ── --}}
+    <form method="POST" action="{{ route('offers.update', $offer->id) }}" enctype="multipart/form-data" id="edit-offer-form">
+      @csrf
+      @method('PUT')
+
+      <div class="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div class="px-8 pt-7 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {{-- Left Column --}}
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-400">*</span></label>
+              <input type="text" name="name" value="{{ old('name', $offer->name) }}"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all" required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label id="discount-value-label" class="block text-sm font-medium text-gray-700 mb-1">
+                  Discount {{ $offer->discount_type === 'percentage' ? 'Percentage (%)' : 'Amount (₹)' }}
+                </label>
+                <input type="number" name="discount_value" value="{{ old('discount_value', $offer->discount_value) }}" min="0"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select name="discount_type" id="discount_type"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all bg-white">
+                  <option value="percentage" {{ $offer->discount_type === 'percentage' ? 'selected' : '' }}>Percentage (%)</option>
+                  <option value="fixed" {{ $offer->discount_type === 'fixed' ? 'selected' : '' }}>Fixed (₹)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Promo Code</label>
+              <input type="text" name="code" value="{{ old('code', $offer->code) }}"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all font-mono">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valid From</label>
+                <input type="date" name="valid_from" value="{{ $validFromValue }}"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valid Until</label>
+                <input type="date" name="valid_until" value="{{ $validUntilValue }}"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all">
+              </div>
+            </div>
+          </div>
+
+          {{-- Right Column --}}
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Image</label>
+              @if($offer->image)
+                <img src="{{ asset('storage/' . $offer->image) }}" id="offer-img-preview"
+                  class="w-full h-32 object-cover rounded-xl border border-gray-100 mb-2" alt="Current image">
+              @else
+                <img id="offer-img-preview" src="" alt="Preview" class="hidden w-full h-32 object-cover rounded-xl border border-gray-100 mb-2">
+              @endif
+              <input type="file" name="image" accept="image/*"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all"
+                onchange="previewImage(this, 'offer-img-preview')">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea name="description" rows="4"
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all resize-none">{{ old('description', $offer->description) }}</textarea>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="status" {{ $offer->status === 'Active' ? 'checked' : '' }} class="w-4 h-4 accent-black">
+              <span class="text-sm text-gray-700">Active</span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+
+      {{-- Actions Row --}}
+      <div class="flex items-center justify-between">
+        <div class="flex gap-3">
+          <a href="{{ route('offers.index') }}"
+            class="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium">Cancel</a>
+          <button type="submit"
+            class="px-6 py-3 rounded-xl bg-black text-white font-medium hover:bg-gray-800 transition-all shadow-lg shadow-black/10">Update Offer</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="pt-6 border-t border-gray-100 mt-6">
+      <div class="bg-red-50/30 rounded-[2rem] p-8 border border-red-100/50 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h4 class="text-lg font-bold text-red-900">Danger Zone</h4>
+          <p class="text-sm text-red-600/70 mt-1">Once you delete an offer, it cannot be recovered. Please be certain.</p>
+        </div>
+        <form action="{{ route('offers.destroy', $offer->id) }}" method="POST"
+          onsubmit="return confirm('Are you sure you want to delete this offer? This cannot be undone.')">
+          @csrf
+          @method('DELETE')
+          <button type="submit"
+            class="px-6 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Offer Permanently
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  @push('scripts')
+    <script>
+      document.getElementById('discount_type').addEventListener('change', function () {
+        const label = document.getElementById('discount-value-label');
+        if (this.value === 'percentage') {
+          label.innerText = 'Discount Percentage (%)';
+        } else {
+          label.innerText = 'Discount Amount (₹)';
+        }
+      });
+    </script>
+  @endpush
+@endsection
