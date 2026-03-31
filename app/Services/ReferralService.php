@@ -37,18 +37,19 @@ class ReferralService
         // 3. Grant reward in a transaction
         DB::transaction(function () use ($referral, $customer) {
             $referrer = $referral->referrer;
-            $coinWallet = $referrer->coinWallet;
-
-            if (!$coinWallet) {
-                // Should not happen if wallet generation is standard, but safety first
-                $coinWallet = Wallet::create([
+            
+            // Use firstOrCreate to prevent duplicate entry errors if wallet already exists
+            $coinWallet = Wallet::firstOrCreate(
+                [
                     'holder_type' => 'customer',
-                    'holder_id' => $referrer->id,
-                    'type' => 'coin',
+                    'holder_id'   => $referrer->id,
+                    'type'        => 'coin',
+                ],
+                [
                     'balance' => 0,
                     'version' => 1,
-                ]);
-            }
+                ]
+            );
 
             // Grant bonus
             $rewardAmount = $referral->reward_amount ?: 100;

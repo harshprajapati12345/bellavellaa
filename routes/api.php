@@ -41,9 +41,10 @@ use App\Http\Controllers\Api\ThemeController;
 Route::get('theme', [ThemeController::class , 'index']);
 
 // ═══════════════════════════════════════════════════════════════════
-// CLIENT — Customer Mobile App
+// RAZORPAY WEBHOOK (Public)
 // ═══════════════════════════════════════════════════════════════════
-
+use App\Http\Controllers\Api\RazorpayWebhookController;
+Route::post('razorpay/webhook', [RazorpayWebhookController::class, 'handle']);
 
 Route::prefix('client')->group(function () {
     // Public Routes
@@ -201,7 +202,7 @@ Route::prefix('professional')->group(function () {
             Route::post('jobs/{id}/finish-service', [\App\Http\Controllers\Api\Professionals\JobController::class , 'finishService']);
             Route::post('jobs/{id}/scan-kit', [\App\Http\Controllers\Api\Professionals\JobController::class , 'scanKit']);
             Route::post('jobs/{id}/complete', [\App\Http\Controllers\Api\Professionals\JobController::class , 'complete']);
-            Route::post('jobs/{id}/payment-confirm', [\App\Http\Controllers\Api\Professionals\JobController::class , 'paymentConfirm']);
+            Route::post('jobs/{id}/collect-cash', [\App\Http\Controllers\Api\Professionals\JobController::class , 'collectCash']);
             Route::prefix('jobs/{id}/payment')->group(function () {
                     Route::post('create-order', [\App\Http\Controllers\Api\Professionals\JobController::class , 'createPaymentOrder']);
                     Route::post('verify', [\App\Http\Controllers\Api\Professionals\JobController::class , 'verifyPayment']);

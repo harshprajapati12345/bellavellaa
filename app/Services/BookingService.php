@@ -23,12 +23,23 @@ class BookingService
         }
 
         DB::transaction(function () use ($booking) {
-            $booking->applyStatusTransition('completed', [
+            $booking->update([
+                'status' => 'completed',
                 'current_step' => 'completed',
             ]);
 
-            if ($booking->professional) {
-                self::distributeEarnings($booking, $booking->professional);
+            // Step 8: Only distribute earnings if the order is SUCCESS
+            $order = $booking->order;
+            if ($order && $order->payment_status === 'SUCCESS') {
+                if ($booking->professional) {
+                    self::distributeEarnings($booking, $booking->professional);
+                }
+            } else {
+                \Illuminate\Support\Facades\Log::warning('BookingService::completeJob : Attempted to distribute earnings for unpaid order', [
+                    'booking_id' => $booking->id,
+                    'order_id' => $order?->id,
+                    'payment_status' => $order?->payment_status
+                ]);
             }
 
             if ($booking->customer) {

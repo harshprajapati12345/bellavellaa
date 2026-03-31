@@ -7,6 +7,7 @@ use App\Models\Cart;
 use App\Models\Offer;
 use App\Models\OfferUsage;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Package;
 use App\Models\Service;
 use App\Models\ServiceVariant;
@@ -591,6 +592,7 @@ class CartController extends BaseController
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'coins_used' => $actualCoinsUsed, // Store actual coins used
                 'status' => $initialStatus,
+                'payment_status' => ($initialStatus === 'confirmed') ? 'captured' : 'pending',
                 'customer_notes' => $tipAmountPaise > 0 ? 'Tip included: Rs ' . ($tipAmountPaise / 100) : null,
             ];
 
@@ -609,6 +611,30 @@ class CartController extends BaseController
             }
 
             $order = Order::create($orderPayload);
+
+            // Create Payment Record (Step 3.2)
+            $paymentMethodMapped = strtoupper($validated['payment_method']); // ONLINE, COD, WALLET
+            $gatewayMapped = $validated['payment_method'] === 'online' ? 'razorpay' : ($validated['payment_method'] === 'wallet' ? 'wallet' : 'cash');
+            
+            $payment = Payment::create([
+                'order_id' => $order->id,
+                'customer_id' => $customer->id,
+                'payment_method' => $paymentMethodMapped,
+                'gateway' => $gatewayMapped,
+                'amount_paise' => $finalPayablePaise,
+                'status' => 'PENDING',
+                'meta_json' => [
+                    'wallet_redeemed_paise' => $walletRedeemedPaise,
+                    'coins_used' => $actualCoinsUsed,
+                    'snapshot' => $snapshot
+                ]
+            ]);
+
+            // Handle immediate SUCCESS methods
+            if ($validated['payment_method'] === 'wallet' || $finalPayablePaise === 0) {
+                $payment->update(['status' => 'SUCCESS', 'paid_at' => now()]);
+                $order->update(['payment_status' => 'SUCCESS', 'status' => 'confirmed']);
+            }
 
             foreach ($cartItems as $cart) {
                 $displayPrice = (float) $cart->resolved_unit_price;
@@ -678,10 +704,11 @@ class CartController extends BaseController
                 'amount' => $finalPayablePaise,
             ];
 
-
             if ($validated['payment_method'] === 'online' && $finalPayablePaise > 0) {
                 if (config('services.razorpay.mock')) {
-                    $response['razorpay_order_id'] = 'order_mock_' . strtolower(Str::random(14));
+                    $mockOrderId = 'order_mock_' . strtolower(Str::random(14));
+                    $payment->update(['gateway_order_id' => $mockOrderId]);
+                    $response['razorpay_order_id'] = $mockOrderId;
                     $response['is_mock'] = true;
                 } else {
                     $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
@@ -690,17 +717,16 @@ class CartController extends BaseController
                         'amount' => $finalPayablePaise,
                         'currency' => 'INR',
                     ]);
+                    $payment->update(['gateway_order_id' => $razorpayOrder['id']]);
                     $response['razorpay_order_id'] = $razorpayOrder['id'];
                 }
             }
 
-            if ($validated['payment_method'] !== 'online' || $finalPayablePaise === 0) {
+            if ($order->payment_status === 'SUCCESS') {
                 $customer->carts()->delete();
             }
 
-
             DB::commit();
-
             return $this->success($response, 'Order placed successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -720,24 +746,63 @@ class CartController extends BaseController
         try {
             if (!config('services.razorpay.mock')) {
                 $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-
                 $attributes = [
                     'razorpay_order_id' => $validated['razorpay_order_id'],
                     'razorpay_payment_id' => $validated['razorpay_payment_id'],
                     'razorpay_signature' => $validated['razorpay_signature'],
                 ];
-
                 $api->utility->verifyPaymentSignature($attributes);
             }
 
             DB::transaction(function () use ($validated) {
                 $order = Order::with('customer')->findOrFail($validated['order_id']);
-                $order->update(['status' => 'confirmed']);
+                
+                // Update Payment record
+                $payment = Payment::where('order_id', $order->id)
+                    ->where('gateway_order_id', $validated['razorpay_order_id'])
+                    ->first();
+                
+                if ($payment) {
+                    $payment->update([
+                        'status' => 'SUCCESS',
+                        'gateway_payment_id' => $validated['razorpay_payment_id'],
+                        'gateway_signature' => $validated['razorpay_signature'],
+                        'paid_at' => now(),
+                    ]);
+                }
+
+                // Update Order
+                $order->update([
+                    'status' => 'confirmed',
+                    'payment_status' => 'SUCCESS',
+                ]);
+
                 $order->customer->carts()->delete();
             });
 
             return $this->success(null, 'Payment verified successfully.');
         } catch (\Razorpay\Api\Errors\SignatureVerificationError $e) {
+            // Update Payment to FAILED
+            $payment = Payment::where('order_id', $request->order_id)
+                ->where('gateway_order_id', $request->razorpay_order_id)
+                ->first();
+            
+            if ($payment) {
+                $payment->update(['status' => 'FAILED', 'meta_json->error' => 'Signature verification failed']);
+                
+                // Step 6.3: Auto refund wallet if it was a mixed payment
+                $coinsUsed = data_get($payment->meta_json, 'coins_used', 0);
+                if ($coinsUsed > 0) {
+                    $order = $payment->order;
+                    if ($order && $order->customer) {
+                        $coinWallet = $order->customer->coinWallet;
+                        if ($coinWallet) {
+                            $coinWallet->credit($coinsUsed, 'refund', "Refund for failed payment of order #{$order->order_number}");
+                        }
+                    }
+                }
+            }
+            
             return $this->error('Invalid payment signature', 400);
         } catch (\Exception $e) {
             return $this->error('Verification failed: ' . $e->getMessage(), 500);

@@ -12,7 +12,10 @@ use App\Http\Requests\Professional\Job\PaymentConfirmRequest;
 use App\Services\FirebaseService;
 use Illuminate\Support\Str;
 use App\Events\JobUpdate;
+use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\PaymentService;
 
 class JobController extends BaseController
 {
@@ -65,7 +68,11 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
         } catch (\Throwable $e) {
             \Log::error('JobController::arrived error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while marking arrival.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while marking arrival.', $code);
         }
     }
 
@@ -99,7 +106,11 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started successfully.');
         } catch (\Throwable $e) {
             \Log::error('JobController::startJourney error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while starting journey.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while starting journey.', $code);
         }
     }
 
@@ -130,7 +141,11 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
         } catch (\Throwable $e) {
             Log::error('JobController::startService error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while starting service.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while starting service.', $code);
         }
     }
 
@@ -161,7 +176,11 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
         } catch (\Throwable $e) {
             Log::error('JobController::finishService error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while finishing service.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while finishing service.', $code);
         }
     }
 
@@ -195,7 +214,11 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');
         } catch (\Throwable $e) {
             Log::error('JobController::scanKit error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while scanning kit.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while scanning kit.', $code);
         }
     }
 
@@ -211,8 +234,8 @@ class JobController extends BaseController
             $this->validateOwnership($booking, $request);
 
             // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'completed')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to completed.', 400);
+            if ($booking->status === 'completed') {
+                return $this->success(new \App\Http\Resources\Api\BookingResource($booking), 'Job already completed.');
             }
 
             // ✅ EXECUTE COMPLETION LOGIC (Production Shield)
@@ -233,53 +256,161 @@ class JobController extends BaseController
             return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Job marked as complete.');
         } catch (\Throwable $e) {
             Log::error('JobController::complete error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Something went wrong while completing job.', $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Something went wrong while completing job.', $code);
         }
     }
 
     /**
-     * POST /api/professional/jobs/{id}/payment-confirm
+     * POST /api/professional/jobs/{id}/collect-cash
      */
-    public function paymentConfirm(PaymentConfirmRequest $request, $id): JsonResponse
+    public function collectCash(Request $request, $id): JsonResponse
     {
-        // Logic for payment confirmation
-        return $this->success(null, 'Payment confirmed.');
+        try {
+            return DB::transaction(function () use ($id, $request) {
+                $booking = \App\Models\Booking::with('order')->lockForUpdate()->find($id);
+                if (!$booking) {
+                    return $this->error('Booking not found.', 404);
+                }
+
+                $this->validateOwnership($booking, $request);
+
+                $order = $booking->order;
+                if (!$order) {
+                    return $this->error('Order not found for this booking.', 404);
+                }
+
+                // Step 7.1 & 8.1: ENFORCE PAID STATUS
+                if ($order->payment_status === 'SUCCESS') {
+                    return $this->error('Payment is already SUCCESS for this order.', 400);
+                }
+
+                // SECURITY GUARD: Only COD orders allowed
+                if ($order->payment_method !== 'cod') {
+                    return $this->error('Invalid payment method for cash collection.', 400);
+                }
+
+                // Step 7.2 & 10.2: Create Auditable Payment Record
+                Payment::create([
+                    'order_id' => $order->id,
+                    'customer_id' => $order->customer_id,
+                    'payment_method' => 'COD',
+                    'gateway' => 'cash',
+                    'amount_paise' => $order->final_payable_paise,
+                    'status' => 'SUCCESS',
+                    'paid_at' => now(),
+                    'meta_json' => [
+                        'collected_by_professional_id' => $request->user('professional-api')->id,
+                        'booking_id' => $booking->id,
+                        'collected_at' => now()->toIso8601String()
+                    ]
+                ]);
+
+                // Step 7.3: Update Order
+                $order->update([
+                    'payment_status' => 'SUCCESS',
+                    'status' => 'confirmed'
+                ]);
+
+                // Optional: Progress the booking step
+                $booking->update(['current_step' => 'complete']);
+
+                $this->sendDashboardUpdate($booking->fresh());
+
+                return $this->success(null, 'Cash payment recorded as SUCCESS.');
+            });
+        } catch (\Exception $e) {
+            Log::error('JobController::collectCash error: ' . $e->getMessage());
+            return $this->error('Failed to collect cash: ' . $e->getMessage(), 500);
+        }
     }
 
     public function createPaymentOrder(Request $request, $id): JsonResponse
     {
-        $booking = \App\Models\Booking::findOrFail($id);
-        $amountPaise = (int) round($booking->price * 100);
-
         try {
-            if (config('services.razorpay.mock')) {
+            return DB::transaction(function () use ($id, $request) {
+                $booking = \App\Models\Booking::with('order')->lockForUpdate()->find($id);
+                if (!$booking) {
+                    return $this->error('Booking not found.', 404);
+                }
+
+                $this->validateOwnership($booking, $request);
+
+                $order = $booking->order;
+                if (!$order) {
+                    return $this->error('Order not found for this booking.', 404);
+                }
+
+                if ($order->payment_status === 'SUCCESS') {
+                    return $this->error('Payment is already SUCCESS for this order.', 400);
+                }
+
+                $amountPaise = $order->final_payable_paise ?? (int)round($booking->price * 100);
+
+                if (config('services.razorpay.mock')) {
+                    $mockOrderId = 'order_mock_' . strtolower(Str::random(14));
+                    
+                    Payment::create([
+                        'order_id' => $order->id,
+                        'customer_id' => $order->customer_id,
+                        'payment_method' => 'ONLINE',
+                        'gateway' => 'razorpay',
+                        'gateway_order_id' => $mockOrderId,
+                        'amount_paise' => $amountPaise,
+                        'status' => 'PENDING',
+                        'meta_json' => [
+                            'collected_by_professional_id' => $request->user('professional-api')->id,
+                            'booking_id' => $booking->id,
+                            'is_mock' => true
+                        ]
+                    ]);
+
+                    return $this->success([
+                        'order_id'     => $mockOrderId,
+                        'amount'       => $amountPaise,
+                        'currency'     => 'INR',
+                        'receipt'      => 'booking_mock_' . $id . '_' . Str::random(4),
+                        'is_mock'      => true,
+                    ], 'Razorpay mock order created.');
+                }
+
+                $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+                $rzpOrder = $api->order->create([
+                    'receipt'  => 'booking_' . $id . '_' . Str::random(4),
+                    'amount'   => $amountPaise,
+                    'currency' => 'INR',
+                    'notes'    => [
+                        'booking_id' => $id,
+                        'professional_id' => $request->user('professional-api')->id
+                    ]
+                ]);
+
+                Payment::create([
+                    'order_id' => $order->id,
+                    'customer_id' => $order->customer_id,
+                    'payment_method' => 'ONLINE',
+                    'gateway' => 'razorpay',
+                    'gateway_order_id' => $rzpOrder['id'],
+                    'amount_paise' => $amountPaise,
+                    'status' => 'PENDING',
+                    'meta_json' => [
+                        'collected_by_professional_id' => $request->user('professional-api')->id,
+                        'booking_id' => $booking->id
+                    ]
+                ]);
+                
                 return $this->success([
-                    'order_id'     => 'order_mock_' . strtolower(Str::random(14)),
+                    'order_id'     => $rzpOrder['id'],
                     'amount'       => $amountPaise,
                     'currency'     => 'INR',
-                    'receipt'      => 'booking_mock_' . $id . '_' . Str::random(4),
-                    'is_mock'      => true,
-                ], 'Razorpay mock order created.');
-            }
-
-            $api = new \Razorpay\Api\Api(config('services.razorpay.key'), config('services.razorpay.secret'));
-            $order = $api->order->create([
-                'receipt'  => 'booking_' . $id . '_' . Str::random(4),
-                'amount'   => $amountPaise,
-                'currency' => 'INR',
-                'notes'    => [
-                    'booking_id' => $id,
-                    'professional_id' => $request->user('professional-api')->id
-                ]
-            ]);
-            
-            return $this->success([
-                'order_id'     => $order['id'],
-                'amount'       => $amountPaise,
-                'currency'     => 'INR',
-                'receipt'      => $order['receipt'],
-            ], 'Razorpay order created.');
+                    'receipt'      => $rzpOrder['receipt'],
+                ], 'Razorpay order created.');
+            });
         } catch (\Exception $e) {
+            Log::error('JobController::createPaymentOrder error: ' . $e->getMessage());
             return $this->error('Failed to create Razorpay order: ' . $e->getMessage(), 500);
         }
     }
@@ -287,13 +418,23 @@ class JobController extends BaseController
     public function verifyPayment(Request $request, $id): JsonResponse
     {
         try {
-            $booking = \App\Models\Booking::find($id);
+            $booking = \App\Models\Booking::with('order')->find($id);
             if (!$booking) {
                 return $this->error('Booking not found.', 404);
             }
 
             // ✅ OWNERSHIP CHECK
             $this->validateOwnership($booking, $request);
+
+            $order = $booking->order;
+            if (!$order) {
+                return $this->error('Order not found.', 404);
+            }
+
+            // Step 8.1: ENFORCE PAID STATUS (Check backend truth)
+            if ($order->payment_status === 'SUCCESS' || $booking->status === 'completed') {
+                return $this->success(null, 'Payment verified or job already completed.');
+            }
             
             $validated = $request->validate([
                 'razorpay_payment_id' => 'required|string',
@@ -311,8 +452,13 @@ class JobController extends BaseController
                 $api->utility->verifyPaymentSignature($attributes);
             }
 
-            // Use BookingService to handle completion, wallet credits, and referral check
-            \App\Services\BookingService::completeJob($booking);
+            // 🛡️ SHARED ATOMIC TRUTH: Use PaymentService to process the capture.
+            // Whichever hits first (Webhook or this API) will process the transaction.
+            PaymentService::processCapture(
+                $validated['razorpay_order_id'], 
+                $validated['razorpay_payment_id'], 
+                $validated
+            );
             
             // Mark professional as idle in Firestore and set isActive to false
             $this->firebase->pushJobToFirestore([
@@ -324,12 +470,16 @@ class JobController extends BaseController
                 'updated_at'      => time(),
             ]);
 
-            $this->sendDashboardUpdate($booking);
+            $this->sendDashboardUpdate($booking->fresh());
 
             return $this->success(null, 'Payment verified and job completed.');
         } catch (\Throwable $e) {
             Log::error('JobController::verifyPayment error: ' . $e->getMessage());
-            return $this->error($e->getCode() == 403 ? $e->getMessage() : 'Payment verification failed: ' . $e->getMessage(), $e->getCode() ?: 500);
+            $code = $e->getCode();
+            if (!is_numeric($code) || $code < 100 || $code > 599) {
+                $code = 500;
+            }
+            return $this->error($code == 403 ? $e->getMessage() : 'Payment verification failed: ' . $e->getMessage(), $code);
         }
     }
 

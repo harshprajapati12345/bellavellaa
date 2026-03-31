@@ -11,14 +11,14 @@ class Payment extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'order_id', 'customer_id', 'gateway', 'gateway_payment_id',
-        'gateway_order_id', 'gateway_signature', 'amount_paise',
-        'currency', 'status', 'gateway_response', 'paid_at',
+        'order_id', 'customer_id', 'payment_method', 'gateway', 
+        'gateway_payment_id', 'gateway_order_id', 'gateway_signature', 
+        'amount_paise', 'currency', 'status', 'meta_json', 'paid_at',
     ];
 
     protected $casts = [
         'amount_paise' => 'integer',
-        'gateway_response' => 'array',
+        'meta_json' => 'array',
         'paid_at' => 'datetime',
     ];
 
@@ -28,6 +28,6 @@ class Payment extends Model
     public function order(): BelongsTo { return $this->belongsTo(Order::class); }
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
 
-    public function scopePending($q) { return $q->where('status', 'pending'); }
-    public function scopeCaptured($q) { return $q->where('status', 'captured'); }
+    public function scopePending($q) { return $q->where('status', 'PENDING'); }
+    public function scopeSuccess($q) { return $q->where('status', 'SUCCESS'); }
 }
