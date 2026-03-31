@@ -23,6 +23,8 @@ elseif (str_starts_with($routeName, 'kit-products')) $section = 'kit-products';
 elseif (str_starts_with($routeName, 'kit-orders')) $section = 'kit-orders';
 elseif (str_starts_with($routeName, 'leaves')) $section = 'leaves';
 elseif (str_starts_with($routeName, 'referrals')) $section = 'referrals';
+elseif (str_starts_with($routeName, 'scratch-cards')) $section = 'scratch-cards';
+
 elseif (str_starts_with($routeName, 'settings.shifts')) $section = 'settings.shifts';
 else $section = 'settings.index';
 
@@ -300,6 +302,14 @@ try { $pendingUserReviewsCount = \App\Models\UserReview::where('status', 'Pendin
             <i data-lucide="gift" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
             <span class="font-normal text-base text-black">Refer & Earn</span>
           </a>
+
+          <!-- Scratch Cards -->
+          <a href="{{ route('scratch-cards.index') }}"
+            class="flex items-center gap-3 px-4 py-3 {{ $section === 'scratch-cards' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+            <i data-lucide="ticket" class="w-5 h-5 text-black opacity-80 group-hover:opacity-100"></i>
+            <span class="font-normal text-base text-black">Scratch Cards</span>
+          </a>
+
 
           <!-- Assign -->
           <a href="{{ route('assign.index') }}"

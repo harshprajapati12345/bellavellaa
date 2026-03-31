@@ -46,11 +46,16 @@ class WalletController extends BaseController
                 ];
             })->values();
 
-        // Get unscratched cards
+        // Get unscratched cards (excluding expired ones)
         $scratchCards = \App\Models\ScratchCard::where('customer_id', $customer->id)
             ->where('is_scratched', false)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
             ->latest()
             ->get();
+
 
         return $this->success([
             'wallet_type' => 'coin',

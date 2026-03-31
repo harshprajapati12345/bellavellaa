@@ -43,4 +43,17 @@ class ProfileController extends BaseController
 
         return $this->success(new CustomerResource($customer), 'Profile updated successfully.');
     }
+    public function updateFcmToken(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        $this->guard()->user()->update([
+            'fcm_token' => $request->token
+        ]);
+
+        return $this->success(null, 'FCM token updated successfully.');
+    }
 }
+

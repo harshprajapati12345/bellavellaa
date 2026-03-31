@@ -10,6 +10,11 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Package;
 use App\Models\Service;
+use App\Models\ScratchCard;
+use App\Events\ScratchCardCreated;
+
+
+
 use App\Models\ServiceVariant;
 use App\Models\Setting;
 use App\Services\ConfigurablePackageService;
@@ -637,7 +642,61 @@ class CartController extends BaseController
                 ]);
 
                 $order->customer->carts()->delete();
+
+                // 🎯 Create Scratch Card Reward for Payment
+                $user = $order->customer;
+                
+                // 🛡️ PRODUCTION HARDENING 🛡️
+                // 1. Min value check (₹100 = 10000 paise)
+                // 2. Idempotency via reference_id (1 per order)
+                if ($order->total_paise < 10000) {
+                    \Log::info("Order {$order->id} below ₹100. No scratch card issued.");
+                    return;
+                }
+
+                $already = ScratchCard::where('customer_id', $user->id)
+                    ->where('source', 'payment')
+                    ->where('reference_id', $order->id)
+                    ->exists();
+
+                if (!$already) {
+                    $rewards = [
+                        ['amount' => 10, 'chance' => 50],
+                        ['amount' => 20, 'chance' => 30],
+                        ['amount' => 50, 'chance' => 15],
+                        ['amount' => 100, 'chance' => 5],
+                    ];
+
+                    $rand = rand(1, 100);
+                    $sum = 0;
+
+                    foreach ($rewards as $reward) {
+                        $sum += $reward['chance'];
+                        if ($rand <= $sum) {
+                            $card = ScratchCard::create([
+                                'customer_id' => $user->id,
+
+                                'amount' => $reward['amount'],
+                                'title' => 'Payment Reward',
+                                'description' => 'Great choice! Scratch & Win 🎊',
+                                'source' => 'payment',
+                                'reference_id' => $order->id,
+                                'expires_at' => now()->addDays(30),
+                            ]);
+                            \Log::info("ScratchCard created for user {$user->id} for order {$order->id}");
+                            
+                            // 🔔 Dispatch Event for Push Notification (Async/Decoupled)
+                            event(new ScratchCardCreated($user, $card));
+
+                            break;
+
+
+                        }
+                    }
+                }
+
             });
+
 
             return $this->success(null, 'Payment verified successfully.');
         } catch (\Razorpay\Api\Errors\SignatureVerificationError $e) {

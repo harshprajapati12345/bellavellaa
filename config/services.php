@@ -44,4 +44,11 @@ return [
         'private_key' => env('FIREBASE_PRIVATE_KEY'),
     ],
 
+    'fcm' => [
+        'key' => env('FCM_SERVER_KEY'), // Legacy support
+        'project_id' => env('FCM_PROJECT_ID'), // v1 support
+    ],
+
+
 ];
+

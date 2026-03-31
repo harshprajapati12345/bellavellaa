@@ -28,6 +28,8 @@ use App\Http\Controllers\adminroutes\CategoryBannerController;
 use App\Http\Controllers\adminroutes\HierarchyBannerController;
 use App\Http\Controllers\adminroutes\WithdrawalRequestController;
 use App\Http\Controllers\adminroutes\PayoutVerificationController;
+use App\Http\Controllers\adminroutes\ScratchCardController;
+
 
 // ─── Storage File Server ───────────────────────────────────────────────────────
 // Workaround for Windows + artisan serve: the public/storage symlink may not
@@ -171,6 +173,14 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('referrals/{id}', [ReferralController::class , 'show'])->name('referrals.show');
     Route::post('referrals/{id}/toggle-status', [ReferralController::class , 'toggleStatus'])->name('referrals.toggle-status');
 
+    // Scratch Cards
+    Route::group(['prefix' => 'scratch-cards', 'as' => 'scratch-cards.'], function () {
+        Route::get('/', [ScratchCardController::class, 'index'])->name('index');
+        Route::get('/search-customers', [ScratchCardController::class, 'searchCustomers'])->name('search-customers');
+        Route::post('/', [ScratchCardController::class, 'store'])->name('store');
+        Route::post('/{id}/force-scratch', [ScratchCardController::class, 'forceScratch'])->name('force-scratch');
+    });
 
 
 });
+

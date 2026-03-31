@@ -18,8 +18,13 @@ class ScratchCardController extends BaseController
     {
         $cards = ScratchCard::where('customer_id', auth()->id())
             ->where('is_scratched', false)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
             ->latest()
             ->get();
+
 
         return $this->success($cards, 'Scratch cards retrieved successfully.');
     }
@@ -52,7 +57,7 @@ class ScratchCardController extends BaseController
                 'scratched_at' => now(),
             ]);
 
-            // 2. Credit the wallet (using coins column as per WalletController index)
+            // 2. Credit the wallet with automatic transaction logging
             $wallet = $user->coinWallet()->firstOrCreate([
                 'holder_type' => 'customer',
                 'type' => 'coin',
@@ -61,19 +66,14 @@ class ScratchCardController extends BaseController
                 'version' => 1,
             ]);
 
-            $wallet->increment('balance', $card->amount);
+            $wallet->credit(
+                amount: $card->amount,
+                source: 'scratch',
+                description: "Reward from Scratch Card #{$card->id}",
+                referenceId: $card->id,
+                referenceType: 'scratch_card'
+            );
 
-            // 3. Log transaction
-            WalletTransaction::create([
-                'wallet_id' => $wallet->id,
-                'type' => 'credit',
-                'amount' => $card->amount,
-                'balance_after' => $wallet->balance,
-                'source' => 'scratch',
-                'reference_id' => $card->id,
-                'reference_type' => 'scratch_card',
-                'description' => "Reward from Scratch Card #{$card->id}",
-            ]);
 
             DB::commit();
 

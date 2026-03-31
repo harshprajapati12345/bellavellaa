@@ -98,6 +98,8 @@ Route::prefix('client')->group(function () {
                 // Profile & Account
                 Route::get('profile', [ProfileController::class , 'show']);
                 Route::post('profile/update', [ProfileController::class , 'update']);
+                Route::post('profile/update-fcm-token', [ProfileController::class , 'updateFcmToken']);
+
 
                 // Wallet
                 Route::get('wallet', [WalletController::class , 'index']);

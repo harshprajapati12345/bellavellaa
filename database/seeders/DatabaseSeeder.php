@@ -15,6 +15,10 @@ class DatabaseSeeder extends Seeder
             CategoryBannerSeeder::class,
             HomepageContentSeeder::class,
             HierarchyBannerSeeder::class,
+            ClientHomeSeeder::class,
+            ClientTestSeeder::class,
+            ScratchCardSeeder::class,
         ]);
+
     }
 }
