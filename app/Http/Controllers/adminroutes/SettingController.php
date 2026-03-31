@@ -22,14 +22,26 @@ class SettingController extends Controller
         return view('settings.shifts', compact('shiftStart', 'shiftDuration', 'withdrawDelayDays'));
     }
 
+    public function discounts()
+    {
+        return view('settings.discounts');
+    }
+
+
     public function update(Request $request)
     {
         $data = $request->validate([
-            'settings' => 'required_without_all:shift_start_time,shift_duration|array',
+            'settings' => 'required_without_all:shift_start_time,shift_duration,withdraw_delay_days|array',
+            'settings.checkout_online_discount_percent' => 'nullable|integer|min:0|max:100',
+            'settings.checkout_wallet_discount_percent' => 'nullable|integer|min:0|max:100',
+            'settings.checkout_online_discount_enabled' => 'nullable|in:0,1',
+            'settings.checkout_wallet_discount_enabled' => 'nullable|in:0,1',
             'shift_start_time' => 'nullable|string',
             'shift_duration' => 'nullable|integer|min:1|max:1440',
             'withdraw_delay_days' => 'nullable|integer|min:1|max:7',
         ]);
+
+
 
         if ($request->has('withdraw_delay_days')) {
             Setting::set('withdraw_delay_days', $request->withdraw_delay_days);
@@ -48,8 +60,9 @@ class SettingController extends Controller
         $settings = $data['settings'];
 
         foreach ($settings as $key => $value) {
-            Setting::updateOrCreate(['key' => $key], ['value' => (string) $value, 'group' => 'general']);
+            Setting::set($key, (string) $value, 'general');
         }
+
 
         return redirect()->back()->with('success', 'Settings updated successfully!');
     }

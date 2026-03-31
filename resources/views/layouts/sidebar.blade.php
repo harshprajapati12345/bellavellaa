@@ -23,8 +23,10 @@ elseif (str_starts_with($routeName, 'kit-products')) $section = 'kit-products';
 elseif (str_starts_with($routeName, 'kit-orders')) $section = 'kit-orders';
 elseif (str_starts_with($routeName, 'leaves')) $section = 'leaves';
 elseif (str_starts_with($routeName, 'referrals')) $section = 'referrals';
+elseif (str_starts_with($routeName, 'settings.discounts')) $section = 'settings.discounts';
 elseif (str_starts_with($routeName, 'settings.shifts')) $section = 'settings.shifts';
 else $section = 'settings.index';
+
 
 $isProActive = ($section === 'professionals');
 $isAssignActive = ($section === 'assign');
@@ -402,6 +404,12 @@ try { $pendingUserReviewsCount = \App\Models\UserReview::where('status', 'Pendin
                 <i data-lucide="sliders" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">General Settings</span>
               </a>
+              <a href="{{ route('settings.discounts') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.discounts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="badge-percent" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Checkout Discounts</span>
+              </a>
+
               <a href="{{ route('settings.shifts') }}"
                 class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.shifts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="clock" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
