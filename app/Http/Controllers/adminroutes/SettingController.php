@@ -22,6 +22,34 @@ class SettingController extends Controller
         return view('settings.shifts', compact('shiftStart', 'shiftDuration', 'withdrawDelayDays'));
     }
 
+    public function discounts()
+    {
+        $onlineDiscountEnabled = (bool) Setting::get('checkout_online_discount_enabled', '0');
+        $onlineDiscountPercent = Setting::get('checkout_online_discount_percent', '0');
+        $walletDiscountEnabled = (bool) Setting::get('checkout_wallet_discount_enabled', '0');
+        $walletDiscountPercent = Setting::get('checkout_wallet_discount_percent', '0');
+
+        return view('settings.discounts', compact(
+            'onlineDiscountEnabled', 'onlineDiscountPercent',
+            'walletDiscountEnabled', 'walletDiscountPercent'
+        ));
+    }
+
+    public function updateDiscounts(Request $request)
+    {
+        // Checkboxes: if unchecked they are not submitted, so default to '0'
+        Setting::set('checkout_online_discount_enabled', $request->has('settings.checkout_online_discount_enabled') ? '1' : '0');
+        Setting::set('checkout_wallet_discount_enabled', $request->has('settings.checkout_wallet_discount_enabled') ? '1' : '0');
+
+        if ($request->has('settings')) {
+            foreach ($request->input('settings', []) as $key => $value) {
+                Setting::set($key, (string) $value);
+            }
+        }
+
+        return redirect()->route('settings.discounts')->with('success', 'Checkout discount settings updated successfully!');
+    }
+
     public function update(Request $request)
     {
         $data = $request->validate([

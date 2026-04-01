@@ -159,6 +159,8 @@ Route::middleware(['auth:admin'])->group(function () {
 
     // Settings
     Route::get('settings/shifts', [SettingController::class , 'shifts'])->name('settings.shifts');
+    Route::get('settings/discounts', [SettingController::class , 'discounts'])->name('settings.discounts');
+    Route::post('settings/discounts', [SettingController::class , 'updateDiscounts'])->name('settings.discounts.update');
     Route::post('settings/update', [SettingController::class , 'update'])->name('settings.update');
     Route::post('settings/theme/save', [SettingController::class , 'saveTheme'])->name('settings.theme.save');
     Route::post('settings/theme/reset', [SettingController::class , 'resetTheme'])->name('settings.theme.reset');
