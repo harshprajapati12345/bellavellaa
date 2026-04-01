@@ -130,74 +130,93 @@ class BookingController extends BaseController
 
     public function reject(Request $request, $id): JsonResponse
     {
-        $professional = $request->user('professional-api');
+        try {
+            $professional = $request->user('professional-api');
+            if (!$professional) {
+                return $this->error('Unauthorized.', 401);
+            }
 
-        // 🔒 Already suspended check
-        if ($professional->is_suspended || strtolower($professional->status) === 'suspended') {
-            return $this->error('Account already suspended.', 403);
+            // ⌚ Timezone Awareness (IST)
+            $today = now()->timezone('Asia/Kolkata')->toDateString();
+
+            return DB::transaction(function () use ($professional, $today, $id) {
+                // Atomic lock for professional record
+                $pro = Professional::lockForUpdate()->find($professional->id);
+
+                // ✅ Reset daily rejection count if it's a new day
+                if ($pro->last_reject_date != $today) {
+                    $pro->update([
+                        'reject_count' => 0,
+                        'last_reject_date' => $today,
+                        'is_suspended' => false,
+                    ]);
+                    
+                    if (strtolower($pro->status) === 'suspended') {
+                        $pro->update(['status' => 'Active']);
+                    }
+                    $pro->refresh();
+                }
+
+                // ❌ Already suspended check (Strict 403)
+                if ($pro->is_suspended || strtolower($pro->status) === 'suspended') {
+                    return $this->error('Account suspended for today.', 403, [
+                        'reject_count' => (int)$pro->reject_count,
+                        'remaining' => 0,
+                        'status' => 'suspended'
+                    ]);
+                }
+
+                // 🔒 Security: Ensure professional owns this booking
+                $booking = Booking::where('id', $id)
+                    ->where('professional_id', $pro->id)
+                    ->first();
+
+                if (!$booking) {
+                    return $this->error("Unauthorized booking access.", 403);
+                }
+
+                // Prevent double reject/already processed (Check for fresh status)
+                if ($booking->status !== 'assigned') {
+                    return $this->error("Booking request is in '{$booking->status}' state.", 400);
+                }
+
+                // ✅ Increment atomically
+                $pro->increment('reject_count');
+                $pro->update(['last_reject_date' => $today]);
+                
+                $newCount = (int)$pro->reject_count;
+                $maxLimit = 3;
+                $remaining = max(0, $maxLimit - $newCount);
+                $isSuspended = ($newCount >= $maxLimit);
+
+                // 🔥 Suspension trigger
+                if ($isSuspended) {
+                    $pro->update([
+                        'is_suspended' => true,
+                        'status' => 'Suspended'
+                    ]);
+                    \Log::info("Professional #{$pro->id} suspended (limit reached).");
+                }
+
+                // Update booking status
+                $booking->update([
+                    'status' => 'rejected',
+                    'professional_id' => null,
+                ]);
+
+                return $this->success([
+                    'reject_count' => $newCount,
+                    'remaining' => $remaining,
+                    'status' => $isSuspended ? 'suspended' : 'active',
+                    'is_suspended' => $isSuspended,
+                    'message' => $isSuspended ? 'Account suspended.' : 'Booking rejected.'
+                ], 'Booking request rejected.');
+            });
+
+        } catch (\Exception $e) {
+            \Log::error("Reject API Error: " . $e->getMessage());
+            return $this->error("Failed to process rejection: " . $e->getMessage(), 500);
         }
-
-        // ✅ Reset logic (SAFE)
-        $today = now()->toDateString();
-        if (!$professional->last_reset_date || $professional->last_reset_date != $today) {
-            $professional->update([
-                'reject_count' => 0,
-                'last_reset_date' => $today,
-                'is_suspended' => false,
-            ]);
-            $professional->refresh();
-        }
-
-        $booking = Booking::findOrFail($id);
-
-        // Prevent double reject/already processed
-        if ($booking->status === 'rejected' || $booking->status === 'cancelled' || $booking->status === 'completed') {
-            return $this->error('Booking already processed.', 400);
-        }
-
-        // Ensure authorization
-        if ($booking->professional_id && (int)$booking->professional_id !== (int)$professional->id) {
-             return $this->error('Unauthorized to reject this booking.', 403);
-        }
-
-        // ✅ Increment safely
-        $professional->increment('reject_count');
-        $newCount = $professional->reject_count;
-        
-        $maxLimit = 3;
-        $remaining = max(0, $maxLimit - $newCount);
-
-        // 🔥 Suspension trigger
-        if ($newCount >= $maxLimit) {
-            $professional->update([
-                'is_suspended' => true,
-                'status' => 'Suspended'
-            ]);
-            
-            $booking->update([
-                'status' => 'rejected',
-                'professional_id' => null,
-            ]);
-
-            \Log::info("Professional #{$professional->id} suspended after {$newCount} rejects.");
-
-            return $this->success([
-                'message' => 'Account suspended.',
-                'is_suspended' => true,
-                'remaining_rejects' => 0
-            ], 'Booking request rejected (Limit Reached).');
-        }
-
-        $booking->update([
-            'status' => 'rejected',
-            'professional_id' => null,
-        ]);
-
-        return $this->success([
-            'message' => 'Booking rejected.',
-            'is_suspended' => false,
-            'remaining_rejects' => $remaining
-        ], 'Booking request rejected.');
     }
 
     /**

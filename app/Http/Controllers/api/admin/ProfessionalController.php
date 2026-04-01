@@ -81,4 +81,21 @@ class ProfessionalController extends BaseController
         $professional->delete();
         return $this->success(null, 'Professional deleted successfully.');
     }
+
+    /**
+     * Reactivate a suspended professional.
+     */
+    public function reactivate(Request $request, $id): JsonResponse
+    {
+        $professional = Professional::findOrFail($id);
+        
+        $professional->update([
+            'is_suspended' => false,
+            'reject_count' => 0,
+            'status' => 'Active',
+            'last_reset_date' => now()->toDateString(),
+        ]);
+
+        return $this->success(new ProfessionalResource($professional), 'Professional reactivated successfully.');
+    }
 }

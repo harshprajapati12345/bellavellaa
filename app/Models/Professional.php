@@ -30,6 +30,7 @@ class Professional extends Authenticatable implements JWTSubject
         'last_withdrawal_at' => 'datetime',
         'reject_count' => 'integer',
         'last_reset_date' => 'date',
+        'last_reject_date' => 'date',
         'is_suspended' => 'boolean',
     ];
 

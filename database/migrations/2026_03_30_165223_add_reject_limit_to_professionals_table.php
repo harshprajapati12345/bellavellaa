@@ -18,6 +18,9 @@ return new class extends Migration
             if (!Schema::hasColumn('professionals', 'last_reset_date')) {
                 $table->date('last_reset_date')->nullable();
             }
+            if (!Schema::hasColumn('professionals', 'last_reject_date')) {
+                $table->date('last_reject_date')->nullable();
+            }
             if (!Schema::hasColumn('professionals', 'is_suspended')) {
                 $table->boolean('is_suspended')->default(false);
             }
@@ -30,7 +33,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('professionals', function (Blueprint $table) {
-            $table->dropColumn(['reject_count', 'last_reset_date', 'is_suspended']);
+            $table->dropColumn(['reject_count', 'last_reset_date', 'last_reject_date', 'is_suspended']);
         });
     }
 };

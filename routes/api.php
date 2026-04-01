@@ -326,6 +326,7 @@ Route::prefix('admin')->group(function () {
 
             // Professionals Management
             Route::apiResource('professionals', App\Http\Controllers\Api\Admin\ProfessionalController::class);
+            Route::post('professionals/{id}/reactivate', [App\Http\Controllers\Api\Admin\ProfessionalController::class, 'reactivate']);
             Route::get('professionals-verification', [
                 App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class ,
                 'index'

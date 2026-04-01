@@ -1,0 +1,5 @@
+﻿
+   INFO  Running migrations.  
+
+  2026_04_01_105546_add_last_reject_date_to_professionals_table  368.42ms DONE
+
