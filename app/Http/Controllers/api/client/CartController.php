@@ -334,9 +334,10 @@ class CartController extends BaseController
         }
 
         $validated = $request->validate([
-            'payment_method' => 'required|string',
-            'coupon_code' => 'nullable|string',
+            'payment_method'   => 'required|string',
+            'coupon_code'      => 'nullable|string',
             'tip_amount_paise' => 'nullable|integer|min:0',
+            'coins_used'       => 'nullable|integer|min:0',
         ]);
 
         $subtotalPaise = $cartItems->sum(function ($cart) {
@@ -344,14 +345,13 @@ class CartController extends BaseController
             return $cart->quantity * (int) round($price);
         });
 
+        // ── Coupon discount ────────────────────────────────────────────
         $offerDiscountPaise = 0;
         $offerId = null;
-
         if (!empty($validated['coupon_code'])) {
             $offer = Offer::active()
                 ->where('code', strtoupper($validated['coupon_code']))
                 ->first();
-
             if ($offer && $subtotalPaise >= $offer->min_order_paise) {
                 $usageCount = Schema::hasTable('offer_usages')
                     ? OfferUsage::query()
@@ -359,7 +359,6 @@ class CartController extends BaseController
                         ->where('customer_id', $customer->id)
                         ->count()
                     : 0;
-
                 if ($offer->per_user_limit === null || $usageCount < $offer->per_user_limit) {
                     $offerId = $offer->id;
                     $offerDiscountPaise = $offer->calculateDiscount((int) $subtotalPaise);
@@ -367,17 +366,47 @@ class CartController extends BaseController
             }
         }
 
-        $tipAmountPaise = (int) ($validated['tip_amount_paise'] ?? 0);
-        $payablePaise = max(0, $subtotalPaise - $offerDiscountPaise + $tipAmountPaise);
+        $tipAmountPaise    = (int) ($validated['tip_amount_paise'] ?? 0);
+        $afterCouponPaise  = max(0, $subtotalPaise - $offerDiscountPaise + $tipAmountPaise);
+
+        // ── Wallet coins deduction ─────────────────────────────────────
+        $coinsUsed            = (int) ($validated['coins_used'] ?? 0);
+        $walletRedeemedPaise  = min($coinsUsed * 100, $afterCouponPaise); // 1 coin = ₹1 = 100 paise
+        $afterWalletPaise     = max(0, $afterCouponPaise - $walletRedeemedPaise);
+
+        // ── Admin checkout discounts (from Settings) ───────────────────
+        $checkoutDiscountPaise = 0;
+        $paymentMethod = $validated['payment_method'];
+
+        if ($paymentMethod === 'online') {
+            $onlineEnabled = (bool) Setting::get('checkout_online_discount_enabled', '0');
+            $onlinePercent = (float) Setting::get('checkout_online_discount_percent', '0');
+            if ($onlineEnabled && $onlinePercent > 0) {
+                $checkoutDiscountPaise = (int) round($afterWalletPaise * $onlinePercent / 100);
+            }
+        }
+
+        if ($coinsUsed > 0) {
+            $walletEnabled = (bool) Setting::get('checkout_wallet_discount_enabled', '0');
+            $walletPercent = (float) Setting::get('checkout_wallet_discount_percent', '0');
+            if ($walletEnabled && $walletPercent > 0) {
+                $checkoutDiscountPaise += (int) round($afterWalletPaise * $walletPercent / 100);
+            }
+        }
+
+        $finalPayablePaise   = max(0, $afterWalletPaise - $checkoutDiscountPaise);
+        $totalDiscountPaise  = $offerDiscountPaise + $checkoutDiscountPaise;
 
         return $this->success([
-            'subtotal_paise' => $subtotalPaise,
-            'payment_method' => $validated['payment_method'],
-            'offer_id' => $offerId,
-            'tip_amount_paise' => $tipAmountPaise,
-            'offer_discount_paise' => $offerDiscountPaise,
-            'total_discount_paise' => $offerDiscountPaise,
-            'total_paise' => $payablePaise,
+            'subtotal_paise'          => $subtotalPaise,
+            'payment_method'          => $paymentMethod,
+            'offer_id'                => $offerId,
+            'tip_amount_paise'        => $tipAmountPaise,
+            'offer_discount_paise'    => $offerDiscountPaise,
+            'checkout_discount_paise' => $checkoutDiscountPaise,
+            'total_discount_paise'    => $totalDiscountPaise,
+            'wallet_redeemed_paise'   => $walletRedeemedPaise,
+            'total_paise'             => $finalPayablePaise,
         ], 'Checkout preview calculated successfully.');
     }
 
@@ -391,16 +420,17 @@ class CartController extends BaseController
         }
 
         $validated = $request->validate([
-            'address' => 'required|string',
-            'address_id' => 'nullable|integer|exists:addresses,id',
-            'city' => 'nullable|string|max:100',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-            'scheduled_date' => 'required|date|after_or_equal:today',
-            'scheduled_slot' => 'required|string',
-            'payment_method' => 'required|string',
-            'coupon_code' => 'nullable|string',
+            'address'          => 'required|string',
+            'address_id'       => 'nullable|integer|exists:addresses,id',
+            'city'             => 'nullable|string|max:100',
+            'latitude'         => 'nullable|numeric',
+            'longitude'        => 'nullable|numeric',
+            'scheduled_date'   => 'required|date|after_or_equal:today',
+            'scheduled_slot'   => 'required|string',
+            'payment_method'   => 'required|string',
+            'coupon_code'      => 'nullable|string',
             'tip_amount_paise' => 'nullable|integer|min:0',
+            'coins_used'       => 'nullable|integer|min:0',
         ]);
 
         DB::beginTransaction();
@@ -415,12 +445,10 @@ class CartController extends BaseController
             // 2. OFFER DISCOUNT (Paise)
             $offerDiscountPaise = 0;
             $offerId = null;
-
             if (!empty($validated['coupon_code'])) {
                 $offer = Offer::active()
                     ->where('code', strtoupper($validated['coupon_code']))
                     ->first();
-
                 if ($offer && $subtotalPaise >= $offer->min_order_paise) {
                     $usageCount = Schema::hasTable('offer_usages')
                         ? OfferUsage::query()
@@ -428,7 +456,6 @@ class CartController extends BaseController
                             ->where('customer_id', $customer->id)
                             ->count()
                         : 0;
-
                     if ($offer->per_user_limit === null || $usageCount < $offer->per_user_limit) {
                         $offerId = $offer->id;
                         $offerDiscountPaise = $offer->calculateDiscount((int) $subtotalPaise);
@@ -436,59 +463,42 @@ class CartController extends BaseController
                 }
             }
 
-            // 3. ONLINE PAYMENT DISCOUNT (Paise)
-            $onlineDiscountPaise = 0;
-            $currentBase = max(0, $subtotalPaise - $offerDiscountPaise);
+            $tipAmountPaise   = (int) ($validated['tip_amount_paise'] ?? 0);
+            $afterCouponPaise = max(0, $subtotalPaise - $offerDiscountPaise + $tipAmountPaise);
 
+            // 3. WALLET REDEMPTION
+            $actualCoinsUsed     = (int) ($validated['coins_used'] ?? 0);
+            $walletRedeemedPaise = min($actualCoinsUsed * 100, $afterCouponPaise);
+            $afterWalletPaise    = max(0, $afterCouponPaise - $walletRedeemedPaise);
+
+            // 4. ADMIN CHECKOUT DISCOUNTS
+            $checkoutDiscountPaise = 0;
             if ($validated['payment_method'] === 'online') {
-                $onlineEnabled = Setting::getBool('checkout_online_discount_enabled', false);
-                $onlinePercent = (float) Setting::get('checkout_online_discount_percent', 0);
-
+                $onlineEnabled = (bool) Setting::get('checkout_online_discount_enabled', '0');
+                $onlinePercent = (float) Setting::get('checkout_online_discount_percent', '0');
                 if ($onlineEnabled && $onlinePercent > 0) {
-                    $onlineDiscountPaise = (int) round($currentBase * ($onlinePercent / 100));
+                    $checkoutDiscountPaise = (int) round($afterWalletPaise * $onlinePercent / 100);
+                }
+            }
+            if ($actualCoinsUsed > 0) {
+                $walletEnabled = (bool) Setting::get('checkout_wallet_discount_enabled', '0');
+                $walletPercent = (float) Setting::get('checkout_wallet_discount_percent', '0');
+                if ($walletEnabled && $walletPercent > 0) {
+                    $checkoutDiscountPaise += (int) round($afterWalletPaise * $walletPercent / 100);
                 }
             }
 
-            // 4. TIP (Paise)
-            $tipPaise = (int) ($validated['tip_amount_paise'] ?? 0);
+            $finalPayablePaise = max(0, $afterWalletPaise - $checkoutDiscountPaise);
 
-            // 5. GROSS PAYABLE (Paise)
-            $grossPayablePaise = max(0, $subtotalPaise - $offerDiscountPaise - $onlineDiscountPaise + $tipPaise);
-
-            // 6. WALLET REDEMPTION (Integer Coins Only Safety)
-            $coinToPaiseRatio = (int) Setting::getInt('coin_to_paise_ratio', 100);
-            $userCoins = $customer->coinWallet->balance ?? 0;
-            $requestedCoins = (int) ($validated['coins_used'] ?? 0);
-
-            // Cap by available balance
-            $usableCoinsRequested = min($requestedCoins, $userCoins);
-            $maxPaiseCoverable = $usableCoinsRequested * $coinToPaiseRatio;
-
-            // We can cover at most the gross payable amount
-            $maxPaiseNeeded = min($maxPaiseCoverable, $grossPayablePaise);
-
-            // Determine how many FULL coins are needed to cover the needed amount
-            // If total is 150 paise and 1 coin = 100 paise, we use 1 coin (floor)
-            // The user pays the remaining 50 paise online/COD.
-            $actualCoinsUsed = (int) floor($maxPaiseNeeded / $coinToPaiseRatio);
-
-            // The actual value being covered by full coins
-            $walletRedeemedPaise = $actualCoinsUsed * $coinToPaiseRatio;
-
-            // 7. FINAL PAYABLE (Paise)
-            $finalPayablePaise = max(0, $grossPayablePaise - $walletRedeemedPaise);
-
-            // 8. SNAPSHOT (For DB Audit)
+            // 5. SNAPSHOT (For DB Audit)
             $snapshot = [
-                'subtotal' => $subtotalPaise,
-                'offer_discount' => $offerDiscountPaise,
-                'online_discount' => $onlineDiscountPaise,
-                'tip' => $tipPaise,
-                'gross_payable' => $grossPayablePaise,
-                'wallet_redeemed' => $walletRedeemedPaise,
-                'coins_used' => $actualCoinsUsed,
-                'final_payable' => $finalPayablePaise,
-                'priority' => ['offer', 'online', 'wallet']
+                'subtotal_paise'          => $subtotalPaise,
+                'offer_discount_paise'    => $offerDiscountPaise,
+                'wallet_redeemed_paise'   => $walletRedeemedPaise,
+                'checkout_discount_paise' => $checkoutDiscountPaise,
+                'tip_amount_paise'        => $tipAmountPaise,
+                'final_payable_paise'     => $finalPayablePaise,
+                'coins_used'              => $actualCoinsUsed,
             ];
 
             // Address Resolution
@@ -507,24 +517,29 @@ class CartController extends BaseController
             $initialStatus = ($finalPayablePaise === 0) ? 'confirmed' : 'pending';
 
             $orderPayload = [
-                'order_number' => 'ORD-' . strtoupper(Str::random(8)),
-                'customer_id' => $customer->id,
-                'address_id' => $selectedAddress?->id,
-                'address' => $validated['address'],
-                'city' => $resolvedCity,
-                'latitude' => $validated['latitude'] ?? $selectedAddress?->latitude,
-                'longitude' => $validated['longitude'] ?? $selectedAddress?->longitude,
-                'scheduled_date' => $validated['scheduled_date'],
-                'scheduled_slot' => $validated['scheduled_slot'],
-                'subtotal_paise' => $subtotalPaise,
-                'discount_paise' => $offerDiscountPaise + $onlineDiscountPaise,
-                'total_paise' => $finalPayablePaise,
-                'payment_method' => $validated['payment_method'],
-                'coupon_code' => $validated['coupon_code'] ?? null,
-                'status' => $initialStatus,
-                'payment_status' => ($initialStatus === 'confirmed') ? 'captured' : 'pending',
-                'customer_notes' => $tipPaise > 0 ? 'Tip included: Rs ' . ($tipPaise / 100) : null,
-                'amount_paise' => $finalPayablePaise,
+                'order_number'            => 'ORD-' . strtoupper(Str::random(8)),
+                'customer_id'             => $customer->id,
+                'address_id'              => $selectedAddress?->id,
+                'address'                 => $validated['address'],
+                'city'                    => $resolvedCity,
+                'latitude'                => $validated['latitude'] ?? $selectedAddress?->latitude,
+                'longitude'               => $validated['longitude'] ?? $selectedAddress?->longitude,
+                'scheduled_date'          => $validated['scheduled_date'],
+                'scheduled_slot'          => $validated['scheduled_slot'],
+                'subtotal_paise'          => $subtotalPaise,
+                'offer_discount_paise'    => $offerDiscountPaise,
+                'wallet_redeemed_paise'   => $walletRedeemedPaise,
+                'payment_discount_paise'  => $checkoutDiscountPaise,
+                'total_discount_paise'    => $offerDiscountPaise + $walletRedeemedPaise + $checkoutDiscountPaise,
+                'final_payable_paise'     => $finalPayablePaise,
+                'total_paise'             => $finalPayablePaise,
+                'coins_used'              => $actualCoinsUsed,
+                'discount_snapshot'       => $snapshot,
+                'payment_method'          => $validated['payment_method'],
+                'coupon_code'             => $validated['coupon_code'] ?? null,
+                'status'                  => $initialStatus,
+                'payment_status'          => ($initialStatus === 'confirmed') ? 'captured' : 'pending',
+                'customer_notes'          => $tipAmountPaise > 0 ? 'Tip included: Rs ' . ($tipAmountPaise / 100) : null,
             ];
 
             if (Schema::hasColumn('orders', 'offer_id')) {
@@ -535,16 +550,16 @@ class CartController extends BaseController
 
             // Handle Wallet Deduction immediately if applicable
             if ($actualCoinsUsed > 0) {
-                $customer->coinWallet->debit(
-                    $actualCoinsUsed, 
-                    'order_payment', 
-                    "Payment for order #{$order->order_number}",
-                    $order->id,
-                    'order'
-                );
+                $coinWallet = $customer->coinWallet;
+                if ($coinWallet && $coinWallet->balance >= $actualCoinsUsed) {
+                    $coinWallet->debit($actualCoinsUsed, 'order_payment', 'Coins used for order checkout', $order->id, 'order');
+                } else {
+                    DB::rollBack();
+                    return $this->error('Insufficient wallet balance at point of checkout.', 422);
+                }
             }
 
-            // Payment Record (Production-Safe Gateway Mapping)
+            // Payment Record
             $gateway = 'wallet';
             if ($finalPayablePaise > 0) {
                 $gateway = ($validated['payment_method'] === 'online') ? 'razorpay' : 'cash';
@@ -553,7 +568,7 @@ class CartController extends BaseController
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'customer_id' => $customer->id,
-                'payment_method' => $validated['payment_method'],
+                'payment_method' => strtoupper($validated['payment_method']),
                 'gateway' => $gateway,
                 'amount_paise' => $finalPayablePaise,
                 'currency' => 'INR',
