@@ -63,20 +63,30 @@ class WithdrawalController extends BaseController
                     return $this->error('Duplicate withdrawal request.', 422);
                 }
 
-                // STEP 3: Cooldown Check (Bypassed for Professionals as per new hardening policy)
-                /*
-                $cooldownDays = (int) (\App\Models\Setting::get('withdrawal_cooldown_days', 7));
-                $withdrawUnlock = $professional->last_withdrawal_at ? $professional->last_withdrawal_at->copy()->addDays($cooldownDays) : null;
+                // STEP 3: Cooldown Check (Enforced to prevent spam)
+                $cooldownDays = (int) (\App\Models\Setting::get('withdraw_cooldown_days', 7));
+                $lastWithdrawal = $professional->last_withdrawal_at;
 
-                if ($withdrawUnlock && now()->lt($withdrawUnlock)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Next withdrawal available in " . $withdrawUnlock->diffForHumans(['parts' => 2]),
-                        'unlock_date' => $withdrawUnlock->toIso8601String(),
-                        'lock_reason' => 'withdrawal_cooldown'
-                    ], 403);
+                \Illuminate\Support\Facades\Log::info('Withdrawal cooldown check', [
+                    'pro_id' => $professional->id,
+                    'last_withdrawal' => $lastWithdrawal ? $lastWithdrawal->toDateTimeString() : 'NULL',
+                    'now' => now()->toDateTimeString(),
+                    'cooldown_days' => $cooldownDays
+                ]);
+
+                if ($lastWithdrawal) {
+                    $unlockDate = $lastWithdrawal->copy()->addDays($cooldownDays);
+
+                    if (now()->lt($unlockDate)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Withdraw allowed only once every $cooldownDays days",
+                            'remaining_seconds' => max(0, $unlockDate->timestamp - now()->timestamp),
+                            'unlock_date' => $unlockDate->toIso8601String(),
+                            'lock_reason' => 'withdrawal_cooldown'
+                        ], 403);
+                    }
                 }
-                */
 
                 // STEP 4: Fraud Protection (Daily Limit)
                 $withdrawalsToday = \App\Models\WithdrawalRequest::where('professional_id', $professional->id)

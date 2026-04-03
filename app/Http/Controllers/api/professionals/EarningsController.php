@@ -155,7 +155,7 @@ class EarningsController extends BaseController
                 ];
             });
 
-        $cooldownDays = (int) (\App\Models\Setting::get('withdrawal_cooldown_days', 7));
+        $cooldownDays = (int) (\App\Models\Setting::get('withdraw_cooldown_days', 7));
 
         $unlockDate = $professional->last_withdrawal_at 
             ? $professional->last_withdrawal_at->copy()->addDays($cooldownDays) 
@@ -166,9 +166,6 @@ class EarningsController extends BaseController
         $finalRemainingSeconds = $unlockDate ? (int) max(0, now()->diffInSeconds($unlockDate, false)) : 0;
 
         $totalCashBalancePaise = (int) $cashWallet->balance;
-
-        // Simplified balance: everything in the cash wallet is withdrawable once the 7-day cooldown is met
-        // Simplified balance: everything in the cash wallet is withdrawable for professionals
         $availableToWithdrawPaise = $totalCashBalancePaise;
 
         $today = Carbon::today()->toDateString();
@@ -199,7 +196,7 @@ class EarningsController extends BaseController
             ->count();
 
         return $this->success([
-            'is_professional' => true, // Flag for APK UI role-handling
+            'is_professional' => true,
             'server_time' => now()->toIso8601String(),
             'cash_balance' => (float) max(0, $totalCashBalancePaise / 100),
             'available_balance' => (float) max(0, $availableToWithdrawPaise / 100),
@@ -207,15 +204,15 @@ class EarningsController extends BaseController
             'deposit_balance' => 0.0,
             'earnings_balance' => (float) ($totalCashBalancePaise / 100),
             'total_balance' => (float) max(0, $totalCashBalancePaise / 100),
-            'withdraw_delay_days' => 0, // Bypass 7-day rule
-            'cooldown_days' => 0,
-            'withdraw_unlocked' => true,
-            'lock_reason' => null,
-            'unlock_date' => null,
-            'days_remaining' => 0,
-            'can_withdraw' => (bool) ($totalCashBalancePaise >= 10000), // Min ₹100
-            'next_withdrawal_at' => null,
-            'remaining_seconds' => 0,
+            'withdraw_delay_days' => (int) $cooldownDays, 
+            'cooldown_days' => (int) $cooldownDays,
+            'withdraw_unlocked' => (bool) $withdrawUnlocked,
+            'lock_reason' => $withdrawUnlocked ? null : "Withdrawal locked for $cooldownDays days cooldown",
+            'unlock_date' => $unlockDate ? $unlockDate->toIso8601String() : null,
+            'days_remaining' => (int) $daysRemaining,
+            'can_withdraw' => (bool) ($withdrawUnlocked && $totalCashBalancePaise >= 10000), 
+            'next_withdrawal_at' => $unlockDate ? $unlockDate->toIso8601String() : null,
+            'remaining_seconds' => (int) $finalRemainingSeconds,
             'coin_balance' => (int) $professional->coins_balance,
             'coins_balance' => (int) $professional->coins_balance,
             'coins' => (int) $professional->coins_balance,

@@ -143,8 +143,10 @@ class BookingController extends BaseController
                 // Atomic lock for professional record
                 $pro = Professional::lockForUpdate()->find($professional->id);
 
-                // ✅ Reset daily rejection count if it's a new day
-                if ($pro->last_reject_date != $today) {
+                // ✅ Reset daily rejection count if it's a new day (String-safe comparison)
+                $lastDate = $pro->last_reject_date ? $pro->last_reject_date->format('Y-m-d') : null;
+                
+                if ($lastDate !== $today) {
                     $pro->update([
                         'reject_count' => 0,
                         'last_reject_date' => $today,
@@ -157,11 +159,25 @@ class BookingController extends BaseController
                     $pro->refresh();
                 }
 
-                // ❌ Already suspended check (Strict 403)
+                // ❌ STEP 2: Already suspended check
                 if ($pro->is_suspended || strtolower($pro->status) === 'suspended') {
                     return $this->error('Account suspended for today.', 403, [
-                        'reject_count' => (int)$pro->reject_count,
-                        'remaining' => 0,
+                        'remaining_rejects' => 0,
+                        'suspended' => true,
+                        'status' => 'suspended'
+                    ]);
+                }
+
+                // ❌ STEP 3: Block on 4th attempt (Check BEFORE incrementing)
+                if ((int)$pro->reject_count >= 3) {
+                    $pro->update([
+                        'is_suspended' => true,
+                        'status' => 'Suspended'
+                    ]);
+                    
+                    return $this->error('Account suspended due to excessive rejections.', 403, [
+                        'remaining_rejects' => 0,
+                        'suspended' => true,
                         'status' => 'suspended'
                     ]);
                 }
@@ -185,18 +201,7 @@ class BookingController extends BaseController
                 $pro->update(['last_reject_date' => $today]);
                 
                 $newCount = (int)$pro->reject_count;
-                $maxLimit = 3;
-                $remaining = max(0, $maxLimit - $newCount);
-                $isSuspended = ($newCount >= $maxLimit);
-
-                // 🔥 Suspension trigger
-                if ($isSuspended) {
-                    $pro->update([
-                        'is_suspended' => true,
-                        'status' => 'Suspended'
-                    ]);
-                    \Log::info("Professional #{$pro->id} suspended (limit reached).");
-                }
+                $remaining = max(0, 3 - $newCount);
 
                 // Update booking status
                 $booking->update([
@@ -205,11 +210,11 @@ class BookingController extends BaseController
                 ]);
 
                 return $this->success([
+                    'remaining_rejects' => $remaining,
+                    'suspended' => false,
                     'reject_count' => $newCount,
-                    'remaining' => $remaining,
-                    'status' => $isSuspended ? 'suspended' : 'active',
-                    'is_suspended' => $isSuspended,
-                    'message' => $isSuspended ? 'Account suspended.' : 'Booking rejected.'
+                    'status' => 'active',
+                    'message' => 'Booking rejected successfully.'
                 ], 'Booking request rejected.');
             });
 
