@@ -77,6 +77,35 @@ class Professional extends Authenticatable implements JWTSubject
                 $professional->referral_code = self::generateUniqueReferralCode($professional->name);
             }
         });
+
+        static::saving(function ($professional) {
+            $status = strtolower(trim($professional->status ?? ''));
+
+            // 🛡️ 1. Force Sync: status -> is_suspended
+            if ($status === 'active' && $professional->is_suspended !== false) {
+                $professional->is_suspended = false;
+            } else if ($status === 'suspended' && $professional->is_suspended !== true) {
+                $professional->is_suspended = true;
+            }
+
+            // 🛡️ 2. Force Sync: is_suspended -> status (Bidirectional)
+            if ($professional->isDirty('is_suspended')) {
+                $expectedStatus = $professional->is_suspended ? 'Suspended' : 'Active';
+                if (strtolower(trim($professional->status ?? '')) !== strtolower($expectedStatus)) {
+                    $professional->status = $expectedStatus;
+                }
+            }
+
+            // 📜 3. Audit Logging (Production Visibility)
+            if ($professional->isDirty(['status', 'is_suspended'])) {
+                $oldStatus = $professional->getOriginal('status') ?? 'N/A';
+                $newStatus = $professional->status;
+                $oldSuspended = $professional->getOriginal('is_suspended') ?? 'N/A';
+                $newSuspended = $professional->is_suspended;
+                
+                \Log::info("Professional #{$professional->id} consistency sync: status ({$oldStatus} -> {$newStatus}), is_suspended ({$oldSuspended} -> {$newSuspended})");
+            }
+        });
     }
 
     public static function generateUniqueReferralCode($name = null): string

@@ -254,7 +254,28 @@ class AuthController extends BaseController
      */
     public function verificationStatus(): JsonResponse
     {
-        $professional = $this->guard()->user();
+        $authUser = $this->guard()->user();
+
+        if (!$authUser) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        // 🔥 FORCE DIRECT DB READ
+        $professional = \App\Models\Professional::where('id', $authUser->id)->first();
+
+        if (!$professional) {
+            return $this->error('User not found', 404);
+        }
+
+        // 🔥 FORENSIC NORMALIZATION
+        $rawStatus = $professional->status ?? '';
+        $normalizedStatus = strtolower(trim($rawStatus));
+
+        // 🔥 BOOL NORMALIZATION (Handles 1, true, "1", etc. correctly)
+        $isSuspendedFlag = filter_var($professional->is_suspended, FILTER_VALIDATE_BOOLEAN);
+
+        // 🛡️ FINAL CONSOLIDATED DECISION
+        $isSuspended = $isSuspendedFlag || $normalizedStatus === 'suspended';
 
         $map = [
             'aadhaar_front',
@@ -279,10 +300,21 @@ class AuthController extends BaseController
 
         return $this->success([
             'verification' => $professional->verification,
-            'status' => $professional->status,
+            'status' => $isSuspended ? 'Suspended' : 'Active',
             'docs' => (bool)$professional->docs,
             'documents' => $documents,
-        ], 'Verification status retrieved.');
+
+            // 🔍 FORENSIC DEBUG PAYLOAD (Remove after verification)
+            'debug' => [
+                'raw_status' => $rawStatus,
+                'normalized_status' => $normalizedStatus,
+                'is_suspended_flag' => $professional->is_suspended,
+                'interpreted_suspended_bool' => $isSuspended,
+            ]
+        ], 'Verification status retrieved.')
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
     }
 
     private function getDocStatus($user, $column)
