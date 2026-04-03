@@ -28,6 +28,22 @@ class ProfessionalResource extends JsonResource
             'status'              => $this->status,
             'services'            => $this->services,
             'is_online'           => (bool) $this->is_online,
+
+            // Root-level documents for simpler UI logic
+            'aadhaar_front' => MediaPathNormalizer::url($this->aadhaar_front),
+            'aadhaar_back'  => MediaPathNormalizer::url($this->aadhaar_back),
+            'pan_card'      => MediaPathNormalizer::url($this->pan_img),
+            'pan_img'       => MediaPathNormalizer::url($this->pan_img), // Alias for consistency
+            'light_bill'    => MediaPathNormalizer::url($this->light_bill),
+            'bank_proof'    => MediaPathNormalizer::url($this->bank_proof),
+
+            // Document Statuses at root level
+            'aadhaar_front_status' => $this->aadhaar_status ?? 'pending',
+            'aadhaar_back_status'  => $this->aadhaar_status ?? 'pending',
+            'pan_card_status'      => $this->pan_status ?? 'pending',
+            'light_bill_status'    => $this->light_bill_status ?? 'pending',
+            'bank_proof_status'    => $this->bank_proof_status ?? 'pending',
+
             'documents'           => [
                 'aadhaar_front' => [
                     'url' => MediaPathNormalizer::url($this->aadhaar_front),

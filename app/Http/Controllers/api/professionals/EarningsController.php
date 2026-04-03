@@ -155,35 +155,21 @@ class EarningsController extends BaseController
                 ];
             });
 
-        $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 7);
-        $nextAllowed = $professional->last_withdrawal_at 
-            ? $professional->last_withdrawal_at->copy()->addDays($withdrawDelayDays) 
+        $cooldownDays = (int) (\App\Models\Setting::get('withdrawal_cooldown_days', 7));
+
+        $unlockDate = $professional->last_withdrawal_at 
+            ? $professional->last_withdrawal_at->copy()->addDays($cooldownDays) 
             : null;
+
+        $withdrawUnlocked = !$unlockDate || now()->greaterThanOrEqualTo($unlockDate);
+        $daysRemaining = $unlockDate ? (int) max(0, now()->diffInDays($unlockDate, false)) : 0;
+        $finalRemainingSeconds = $unlockDate ? (int) max(0, now()->diffInSeconds($unlockDate, false)) : 0;
 
         $totalCashBalancePaise = (int) $cashWallet->balance;
 
-        // --- Ground Truth Balance Logic ---
-        // 1. Matured Balance: Earnings credits that are older than X days.
-        $maturedBalancePaise = (int) $cashWallet->transactions()
-            ->where('source', 'earnings')
-            ->where('type', 'credit')
-            ->matured($withdrawDelayDays)
-            ->sum('amount');
-        
-        // 2. Locked Balance: Earnings credits created within the cooldown period.
-        $lockedBalancePaise = (int) $cashWallet->transactions()
-            ->where('source', 'earnings')
-            ->where('type', 'credit')
-            ->where('created_at', '>', now()->subDays($withdrawDelayDays))
-            ->sum('amount');
-
-        // 3. Deposit Balance: All manual top-ups/deposits (always available).
-        $depositBalancePaise = (int) $cashWallet->transactions()
-            ->where('source', 'deposit')
-            ->sum(DB::raw('CASE WHEN type = "credit" THEN amount ELSE -amount END'));
-        
-        // 4. Available to Withdraw: Deposit + Matured Earnings (capped by total balance).
-        $availableToWithdrawPaise = min($totalCashBalancePaise, max(0, $depositBalancePaise + $maturedBalancePaise));
+        // Simplified balance: everything in the cash wallet is withdrawable once the 7-day cooldown is met
+        // Simplified balance: everything in the cash wallet is withdrawable for professionals
+        $availableToWithdrawPaise = $totalCashBalancePaise;
 
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
@@ -208,25 +194,39 @@ class EarningsController extends BaseController
             ->get()
             ->sum(fn($b) => $b->price * $commissionRate);
 
+        $totalJobs = \App\Models\Booking::where('professional_id', $professional->id)
+            ->where('status', 'completed')
+            ->count();
+
         return $this->success([
-            'cash_balance' => $totalCashBalancePaise / 100,
-            'available_balance' => $availableToWithdrawPaise / 100,
-            'locked_balance' => $lockedBalancePaise / 100,
-            'deposit_balance' => max(0, $depositBalancePaise) / 100,
-            'earnings_balance' => ($totalCashBalancePaise - max(0, $depositBalancePaise)) / 100,
-            'total_balance' => $totalCashBalancePaise / 100,
-            'withdraw_delay_days' => $withdrawDelayDays,
-            'can_withdraw' => (!$nextAllowed || now()->gte($nextAllowed)) && ($availableToWithdrawPaise >= 10000), // Min ₹100
-            'next_withdrawal_at' => $nextAllowed ? $nextAllowed->toIso8601String() : null,
-            'remaining_seconds' => $nextAllowed ? max(0, now()->diffInSeconds($nextAllowed, false)) : 0,
+            'is_professional' => true, // Flag for APK UI role-handling
+            'server_time' => now()->toIso8601String(),
+            'cash_balance' => (float) max(0, $totalCashBalancePaise / 100),
+            'available_balance' => (float) max(0, $availableToWithdrawPaise / 100),
+            'locked_balance' => 0.0,
+            'deposit_balance' => 0.0,
+            'earnings_balance' => (float) ($totalCashBalancePaise / 100),
+            'total_balance' => (float) max(0, $totalCashBalancePaise / 100),
+            'withdraw_delay_days' => 0, // Bypass 7-day rule
+            'cooldown_days' => 0,
+            'withdraw_unlocked' => true,
+            'lock_reason' => null,
+            'unlock_date' => null,
+            'days_remaining' => 0,
+            'can_withdraw' => (bool) ($totalCashBalancePaise >= 10000), // Min ₹100
+            'next_withdrawal_at' => null,
+            'remaining_seconds' => 0,
             'coin_balance' => (int) $professional->coins_balance,
             'coins_balance' => (int) $professional->coins_balance,
-            'active_balance' => $type === 'coin' ? $professional->coins_balance : ($totalCashBalancePaise / 100),
+            'coins' => (int) $professional->coins_balance,
+            'total_jobs' => (int) $totalJobs,
+            'active_balance' => $type === 'coin' ? (int) $professional->coins_balance : (float) ($totalCashBalancePaise / 100),
             'transactions' => $transactions,
-            'today_earnings' => round($todayEarnings, 2),
-            'weekly_earnings' => round($weeklyEarnings, 2),
-            'monthly_earnings' => round($monthlyEarnings, 2),
-            'total_completed_jobs' => $professional->total_completed_jobs ?? 0,
+            'today_earnings' => (float) round($todayEarnings, 2),
+            'weekly_earnings' => (float) round($weeklyEarnings, 2),
+            'monthly_earnings' => (float) round($monthlyEarnings, 2),
+            'total_completed_jobs' => (int) $totalJobs,
+            'kits' => [],
             'kit_orders' => \App\Models\KitOrder::with('product')
                 ->where('professional_id', $professional->id)
                 ->orderBy('created_at', 'desc')
@@ -334,6 +334,9 @@ class EarningsController extends BaseController
                 $validated['razorpay_payment_id'],
                 'razorpay_payment'
             );
+
+            // Update last deposit timestamp for cooldown tracking
+            $professional->update(['last_deposit_at' => now()]);
 
             return $this->success([
                 'balance' => $wallet->balance / 100

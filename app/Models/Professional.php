@@ -28,6 +28,7 @@ class Professional extends Authenticatable implements JWTSubject
         'shift_end_time' => 'datetime',
         'shift_duration' => 'integer',
         'last_withdrawal_at' => 'datetime',
+        'last_deposit_at' => 'datetime',
         'reject_count' => 'integer',
         'last_reset_date' => 'date',
         'last_reject_date' => 'date',

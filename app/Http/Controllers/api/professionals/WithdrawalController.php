@@ -63,37 +63,44 @@ class WithdrawalController extends BaseController
                     return $this->error('Duplicate withdrawal request.', 422);
                 }
 
-                // STEP 3: Cooldown Check
-                $withdrawDelayDays = (int) (\App\Models\Setting::get('withdraw_delay_days') ?? 7);
-                if ($professional->last_withdrawal_at) {
-                    $nextAllowed = $professional->last_withdrawal_at->copy()->addDays($withdrawDelayDays);
-                    if (now()->lt($nextAllowed)) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "Withdrawal not allowed yet. Please wait for the cooldown.",
-                            'next_withdrawal_at' => $nextAllowed->toIso8601String(),
-                        ], 403);
-                    }
+                // STEP 3: Cooldown Check (Bypassed for Professionals as per new hardening policy)
+                /*
+                $cooldownDays = (int) (\App\Models\Setting::get('withdrawal_cooldown_days', 7));
+                $withdrawUnlock = $professional->last_withdrawal_at ? $professional->last_withdrawal_at->copy()->addDays($cooldownDays) : null;
+
+                if ($withdrawUnlock && now()->lt($withdrawUnlock)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Next withdrawal available in " . $withdrawUnlock->diffForHumans(['parts' => 2]),
+                        'unlock_date' => $withdrawUnlock->toIso8601String(),
+                        'lock_reason' => 'withdrawal_cooldown'
+                    ], 403);
+                }
+                */
+
+                // STEP 4: Fraud Protection (Daily Limit)
+                $withdrawalsToday = \App\Models\WithdrawalRequest::where('professional_id', $professional->id)
+                    ->whereDate('created_at', \Carbon\Carbon::today())
+                    ->count();
+                
+                if ($withdrawalsToday >= 3) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Daily withdrawal limit reached (Max 3/day). Please try again tomorrow.",
+                    ], 429);
                 }
 
-                // STEP 4: Balance Maturity Check (Ground Truth)
+                // STEP 5: Balance Check (Ground Truth)
                 $wallet = $professional->wallet;
                 if (!$wallet) return $this->error('Wallet not found.', 404);
 
-                $maturedBalancePaise = $wallet->transactions()
-                    ->where('source', 'earnings')
-                    ->where('type', 'credit')
-                    ->matured($withdrawDelayDays)
-                    ->sum('amount');
-                
-                // Also check total cash balance (sanity check)
-                $actualAvailablePaise = min((int)$wallet->balance, (int)$maturedBalancePaise);
+                $availablePaise = (int) $wallet->balance;
 
-                if ($amountInPaise > $actualAvailablePaise) {
+                if ($amountInPaise > $availablePaise) {
                     return response()->json([
                         'success' => false,
-                        'message' => "Insufficient matured balance. Only ₹" . ($actualAvailablePaise / 100) . " is available.",
-                        'available_balance' => $actualAvailablePaise / 100
+                        'message' => "Insufficient balance. Available: ₹" . ($availablePaise / 100),
+                        'available_balance' => $availablePaise / 100
                     ], 403);
                 }
 

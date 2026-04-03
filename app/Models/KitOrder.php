@@ -18,11 +18,12 @@ class KitOrder extends Model
         'razorpay_order_id',
         'payment_session_id',
         'payment_status',
-        'payment_method',
-        'order_status',
-        'status',
-        'assigned_at',
         'notes',
+    ];
+
+    protected $casts = [
+        'assigned_at' => 'datetime',
+        'received_at' => 'datetime',
     ];
 
     public function professional()

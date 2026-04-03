@@ -256,11 +256,44 @@ class AuthController extends BaseController
     {
         $professional = $this->guard()->user();
 
+        $map = [
+            'aadhaar_front',
+            'aadhaar_back',
+            'pan_card' => 'pan_img',
+            'light_bill',
+            'bank_proof',
+        ];
+
+        $documents = [];
+
+        foreach ($map as $key => $column) {
+            $apiKey = is_numeric($key) ? $column : $key;
+            $file = $professional->$column;
+
+            $documents[$apiKey] = [
+                'url' => \App\Support\MediaPathNormalizer::url($file),
+                'status' => $this->getDocStatus($professional, $column),
+                'type' => $file ? pathinfo($file, PATHINFO_EXTENSION) : null,
+            ];
+        }
+
         return $this->success([
             'verification' => $professional->verification,
             'status' => $professional->status,
             'docs' => (bool)$professional->docs,
+            'documents' => $documents,
         ], 'Verification status retrieved.');
+    }
+
+    private function getDocStatus($user, $column)
+    {
+        $statusField = $column . '_status';
+
+        if (!empty($user->$statusField)) {
+            return $user->$statusField; // approved / rejected / pending
+        }
+
+        return $user->$column ? 'pending' : 'not_uploaded';
     }
 
     /**
