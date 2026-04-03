@@ -41,6 +41,48 @@ class JobController extends BaseController
             throw new \Exception('Unauthorized access.', 403);
         }
     }
+
+    private function resolveBookingPayablePaise(\App\Models\Order $order, \App\Models\Booking $booking): int
+    {
+        $bookingAmountPaise = (int) round(((float) $booking->price) * 100);
+        $rawCandidates = [
+            $order->total_paise ?? null,
+            $order->final_payable_paise ?? null,
+        ];
+
+        foreach ($rawCandidates as $rawAmount) {
+            if ($rawAmount === null || $rawAmount === '') {
+                continue;
+            }
+
+            $numericAmount = (float) $rawAmount;
+            if ($numericAmount <= 0) {
+                continue;
+            }
+
+            $amountPaise = (int) round($numericAmount);
+            $looksLikeLegacyRupees = $booking->price > 0
+                && abs($numericAmount - (float) $booking->price) < 0.01
+                && abs($amountPaise - $bookingAmountPaise) > 1;
+
+            if ($looksLikeLegacyRupees) {
+                $normalizedAmount = (int) round($numericAmount * 100);
+                Log::warning('Normalized legacy rupee amount before collecting professional payment.', [
+                    'order_id' => $order->id,
+                    'booking_id' => $booking->id,
+                    'raw_amount' => $rawAmount,
+                    'normalized_amount_paise' => $normalizedAmount,
+                ]);
+
+                return $normalizedAmount;
+            }
+
+            return $amountPaise;
+        }
+
+        return max($bookingAmountPaise, 0);
+    }
+
     public function arrived(Request $request, $id): JsonResponse
     {
         try {
@@ -299,7 +341,7 @@ class JobController extends BaseController
                     'customer_id' => $order->customer_id,
                     'payment_method' => 'COD',
                     'gateway' => 'cash',
-                    'amount_paise' => $order->final_payable_paise,
+                    'amount_paise' => $this->resolveBookingPayablePaise($order, $booking),
                     'status' => 'SUCCESS',
                     'paid_at' => now(),
                     'meta_json' => [
@@ -348,7 +390,10 @@ class JobController extends BaseController
                     return $this->error('Payment is already SUCCESS for this order.', 400);
                 }
 
-                $amountPaise = $order->final_payable_paise ?? (int)round($booking->price * 100);
+                $amountPaise = $this->resolveBookingPayablePaise($order, $booking);
+                if ($amountPaise < 100) {
+                    return $this->error('Calculated payable amount is below Razorpay minimum.', 422);
+                }
 
                 if (config('services.razorpay.mock')) {
                     $mockOrderId = 'order_mock_' . strtolower(Str::random(14));

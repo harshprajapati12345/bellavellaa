@@ -10,6 +10,9 @@ class BookingResource extends JsonResource
     public function toArray(Request $request): array
     {
         $sellable = $this->sellable_item;
+        $resolvedTotalAmount = $this->order?->total_paise !== null
+            ? ((int) $this->order->total_paise) / 100
+            : (float) $this->price;
 
         return [
             'id' => $this->id,
@@ -46,7 +49,7 @@ class BookingResource extends JsonResource
             'service_name' => $this->service?->name ?? $this->service_name,
             'variant_name' => $this->variant?->name,
             'display_name' => $this->sellable_name,
-            'total_amount' => $this->price,
+            'total_amount' => $resolvedTotalAmount,
             'display_price' => data_get($this->meta, 'totals.final_total')
                 ?? optional($sellable)->display_price
                 ?? optional($sellable)->price
@@ -63,7 +66,7 @@ class BookingResource extends JsonResource
             'lng' => $this->lng,
             'slot' => $this->slot, // Used by Flutter model
             'date' => $this->date?->format('Y-m-d'), // Used by Flutter model
-            'price' => (float) $this->price, // Used by Flutter model
+            'price' => $resolvedTotalAmount, // Used by Flutter model
             'notes' => $this->notes,
             'meta' => $this->meta,
             'package_snapshot' => data_get($this->meta, 'package_snapshot'),

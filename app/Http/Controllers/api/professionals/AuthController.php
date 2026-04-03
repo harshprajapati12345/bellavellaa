@@ -54,7 +54,7 @@ class AuthController extends BaseController
                 ->latest()->first();
 
             if (!$alreadyVerified) {
-                return $this->error('Invalid or expired OTP.', 401);
+                return $this->error('Invalid or expired OTP.', 403);
             }
         }
 
@@ -137,7 +137,7 @@ class AuthController extends BaseController
             ->latest()->first();
 
         if (!$alreadyVerified) {
-            return $this->error('Please verify OTP before signing up.', 401);
+            return $this->error('Please verify OTP before signing up.', 403);
         }
 
         $professional = Professional::where('phone', $request->mobile)->first();

@@ -71,6 +71,12 @@ class MasterSeeder extends Seeder
         DB::table('customer_memberships')->truncate();
         DB::table('performance_targets')->truncate();
         DB::table('professional_target_assignments')->truncate();
+        DB::table('referrals')->truncate();
+        DB::table('reward_rules')->truncate();
+        DB::table('customer_app_feedback')->truncate();
+        DB::table('user_reviews')->truncate();
+        DB::table('verification_requests')->truncate();
+        DB::table('withdrawal_requests')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // ══════════════════════════════════════════════════════════════
@@ -78,6 +84,7 @@ class MasterSeeder extends Seeder
         // ══════════════════════════════════════════════════════════════
         $customers = [];
         $custNames = ['Priya Sharma', 'Rahul Verma', 'Sneha Patel', 'Amit Kumar', 'Neha Gupta'];
+        $cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad'];
         foreach ($custNames as $i => $name) {
             $customerId = DB::table('customers')->insertGetId([
                 'name' => $name,
@@ -90,6 +97,9 @@ class MasterSeeder extends Seeder
                 'status' => 'Active',
                 'bookings' => rand(0, 20),
                 'joined' => now()->subDays(rand(30, 365)),
+                'city' => $cities[$i],
+                'address' => 'Plot no.' . (200 + $i) . ', Sample Street, Near Landmark ' . ($i + 1),
+                'zip' => (string) rand(100000, 999999),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -366,7 +376,6 @@ class MasterSeeder extends Seeder
         // 7. PROFESSIONALS
         // ══════════════════════════════════════════════════════════════
         $proNames = ['Anjali Mehta', 'Kavita Singh', 'Pooja Reddy', 'Ritu Jain', 'Deepika Nair'];
-        $cities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad'];
         $proCats = ['Salon for Women', 'Spa for Women', 'Hair Studio for Women', 'Bridal', 'Salon for Women'];
         $proIds = [];
         foreach ($proNames as $i => $name) {
@@ -387,6 +396,11 @@ class MasterSeeder extends Seeder
                 'services' => json_encode(array_slice($serviceIds, 0, rand(2, 5))),
                 'docs' => $i < 3,
                 'rating' => round(rand(35, 50) / 10, 2),
+                'coins_balance' => 10000,
+                'referral_code' => strtoupper(Str::random(8)),
+                'certificate_img' => $i < 3 ? "certificates/professional_{$i}.pdf" : null,
+                'selfie' => $i < 3 ? "selfies/professional_{$i}.jpg" : null,
+                'fcm_token' => Str::random(152),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -624,7 +638,6 @@ class MasterSeeder extends Seeder
                 'scheduled_date' => now()->addDays(rand(1, 14)),
                 'scheduled_slot' => ['10:00-11:00', '11:00-12:00', '14:00-15:00', '16:00-17:00', '18:00-19:00'][$i],
                 'subtotal_paise' => $subtotal,
-                'discount_paise' => $discount,
                 'tax_paise' => $tax,
                 'total_paise' => $total,
                 'coins_used' => rand(0, 50),
@@ -767,7 +780,7 @@ class MasterSeeder extends Seeder
                 'holder_type' => 'customer',
                 'holder_id' => $cid,
                 'type' => 'coin',
-                'balance' => rand(50, 500),
+                'balance' => 10000,
                 'version' => 1,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -1156,6 +1169,119 @@ class MasterSeeder extends Seeder
             ]);
         }
         $this->command->info('✅ Memberships + Targets seeded');
+
+        // ══════════════════════════════════════════════════════════════
+        // NEW TABLES - Uncomment when migrations are run
+        // ══════════════════════════════════════════════════════════════
+        /*
+        // 48. REWARD RULES
+        $rewardRules = [
+            ['referral_signup', 'Referral Signup Reward', 'customer', 500, 'coins', 'active'],
+            ['referral_first_booking', 'First Booking Reward', 'customer', 200, 'coins', 'active'],
+            ['professional_referral', 'Professional Referral', 'professional', 1000, 'cash', 'active'],
+            ['review_reward', 'Review Submission', 'customer', 50, 'coins', 'active'],
+            ['booking_completion', 'Booking Completion', 'customer', 10, 'coins', 'active'],
+        ];
+        foreach ($rewardRules as $rule) {
+            DB::table('reward_rules')->insert([
+                'event_type' => $rule[0],
+                'name' => $rule[1],
+                'target_type' => $rule[2],
+                'reward_amount' => $rule[3],
+                'reward_type' => $rule[4],
+                'status' => $rule[5],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ Reward Rules seeded');
+
+        // 49. REFERRALS
+        for ($i = 0; $i < 5; $i++) {
+            DB::table('referrals')->insert([
+                'referrer_type' => 'customer',
+                'referrer_id' => $customers[$i],
+                'referred_type' => 'customer',
+                'referred_id' => $customers[($i + 1) % 5],
+                'referral_code' => strtoupper(Str::random(8)),
+                'status' => ['pending', 'completed', 'completed', 'pending', 'completed'][$i],
+                'reward_given' => $i < 3,
+                'reward_given_at' => $i < 3 ? now()->subDays(rand(1, 10)) : null,
+                'automated_reward' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ Referrals seeded');
+
+        // 50. CUSTOMER APP FEEDBACK
+        for ($i = 0; $i < 5; $i++) {
+            DB::table('customer_app_feedback')->insert([
+                'customer_id' => $customers[$i],
+                'rating' => rand(3, 5),
+                'feedback' => ['Great app!', 'Easy to use', 'Good service', 'Could be better', 'Excellent'][$i],
+                'app_version' => '2.' . rand(0, 5) . '.' . rand(0, 9),
+                'device_info' => json_encode(['os' => 'Android', 'model' => 'Samsung S23']),
+                'created_at' => now()->subDays(rand(1, 30)),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ Customer App Feedback seeded');
+
+        // 51. USER REVIEWS
+        for ($i = 0; $i < 5; $i++) {
+            DB::table('user_reviews')->insert([
+                'reviewer_type' => 'customer',
+                'reviewer_id' => $customers[$i],
+                'reviewee_type' => 'professional',
+                'reviewee_id' => $proIds[$i],
+                'booking_id' => $bookingIds[$i],
+                'rating' => rand(3, 5),
+                'review' => ['Professional service', 'Very good', 'Satisfied', 'Average', 'Outstanding'][$i],
+                'is_verified' => true,
+                'helpful_count' => rand(0, 10),
+                'created_at' => now()->subDays(rand(1, 30)),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ User Reviews seeded');
+
+        // 52. VERIFICATION REQUESTS
+        for ($i = 0; $i < 5; $i++) {
+            DB::table('verification_requests')->insert([
+                'professional_id' => $proIds[$i],
+                'request_type' => ['document', 'background', 'address', 'bank', 'identity'][$i],
+                'status' => ['pending', 'approved', 'rejected', 'pending', 'approved'][$i],
+                'submitted_data' => json_encode(['document' => 'aadhaar.pdf']),
+                'reviewer_notes' => $i === 2 ? 'Document unclear' : null,
+                'reviewed_by' => $i > 1 ? $admins[0] : null,
+                'reviewed_at' => $i > 1 ? now()->subDays(rand(1, 5)) : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ Verification Requests seeded');
+
+        // 53. WITHDRAWAL REQUESTS
+        for ($i = 0; $i < 5; $i++) {
+            DB::table('withdrawal_requests')->insert([
+                'professional_id' => $proIds[$i],
+                'amount_paise' => rand(100000, 500000),
+                'status' => ['pending', 'approved', 'rejected', 'pending', 'approved'][$i],
+                'bank_details' => json_encode([
+                    'account_holder' => $proNames[$i],
+                    'account_number' => rand(100000000000, 999999999999),
+                    'ifsc' => 'HDFC000' . rand(1000, 9999),
+                ]),
+                'processed_by' => $i > 0 ? $admins[0] : null,
+                'processed_at' => $i > 0 ? now()->subDays(rand(1, 5)) : null,
+                'request_id' => 'REQ' . rand(100000, 999999),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        $this->command->info('✅ Withdrawal Requests seeded');
+        */
 
         $this->command->info('');
         $this->command->info('🎉 ALL TABLES SEEDED — CUSTOMERS + ADMINS + OTP ARCHITECTURE!');

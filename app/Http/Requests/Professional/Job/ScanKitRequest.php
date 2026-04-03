@@ -11,7 +11,7 @@ class ScanKitRequest extends FormRequest
         return true;
     }
 
-    public function rules(): bool
+    public function rules(): array
     {
         return [
             // Add rules if needed, e.g., 'kit_id' => 'required'
