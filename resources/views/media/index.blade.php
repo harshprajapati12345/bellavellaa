@@ -105,9 +105,18 @@ $currentFilter = $filter ?? 'All';
                   data-created="{{ \Carbon\Carbon::parse($m->created_at)->format('d M Y') }}">
                 <td class="px-6 py-4 text-sm text-gray-400 font-medium">#{{ $m->id }}</td>
                 <td class="px-4 py-4">
-                  <div class="media-preview flex items-center justify-center bg-gray-100">
-                    @if(!empty($m->file_path) || !empty($m->url))
-                    <img src="{{ \App\Support\MediaPathNormalizer::url($m->file_path ?? $m->url) }}" class="w-full h-full object-cover rounded-xl" alt="">
+                  <div class="media-preview flex items-center justify-center bg-gray-100 overflow-hidden rounded-xl">
+                    @php
+                      $previewUrl = \App\Support\MediaPathNormalizer::url($m->file_path ?? $m->url);
+                    @endphp
+                    @if($previewUrl)
+                      @if($typeVal === 'video')
+                        <video class="w-full h-full object-cover rounded-xl" muted playsinline preload="metadata">
+                          <source src="{{ $previewUrl }}" type="video/mp4">
+                        </video>
+                      @else
+                        <img src="{{ $previewUrl }}" class="w-full h-full object-cover rounded-xl" alt="">
+                      @endif
                     @else
                     <i data-lucide="{{ $typeIcon }}" class="w-5 h-5 text-gray-400"></i>
                     @endif
@@ -191,3 +200,4 @@ $currentFilter = $filter ?? 'All';
   }
 </script>
 @endpush
+

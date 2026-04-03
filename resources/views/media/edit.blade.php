@@ -297,7 +297,7 @@
     document.getElementById('linked-section').addEventListener('change', updateMediaType);
     
     // Server-provided file URL to preview if available
-    const existingFileUrl = "{{ $media->url ?? $media->file_url ?? '' }}";
+    const existingFileUrl = @json(\App\Support\MediaPathNormalizer::url($media->url ?? $media->file_url));
     const existingFileType = "{{ $media->type }}"; // 'banner' or 'video'
 
     // Initialize on load if value exists
@@ -386,6 +386,8 @@
     }
   </script>
 @endpush
+
+
 
 
 
