@@ -24,7 +24,7 @@ class KitProductResource extends JsonResource
             'id'              => $this->id,
             'sku'             => $this->sku,
             'name'            => $this->name,
-            'price'           => $this->price,
+            'price'           => (float) ($this->price / 100),
             'min_stock'       => $this->min_stock,
             'total_stock'     => $this->total_stock,
             'available_stock' => $this->available_stock,

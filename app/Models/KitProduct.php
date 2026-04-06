@@ -11,6 +11,13 @@ class KitProduct extends Model
         'total_stock', 'min_stock', 'expiry_date', 'status', 'last_restocked'
     ];
 
+    protected $casts = [
+        'price'        => 'integer',
+        'total_stock'  => 'integer',
+        'min_stock'    => 'integer',
+        'expiry_date'  => 'date',
+    ];
+
     protected $appends = ['image_url'];
 
     public function getImageUrlAttribute()   

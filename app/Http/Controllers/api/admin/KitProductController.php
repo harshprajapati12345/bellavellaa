@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Models\KitProduct;
 use App\Http\Resources\Api\KitProductResource;
 use App\Http\Requests\Api\Admin\StoreKitProductRequest;
+use App\Http\Requests\Api\Admin\UpdateKitProductRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -49,10 +50,9 @@ class KitProductController extends BaseController
     /**
      * Update the specified kit product.
      */
-    public function update(Request $request, KitProduct $kit_product): JsonResponse
+    public function update(UpdateKitProductRequest $request, KitProduct $kit_product): JsonResponse
     {
-        // Simple update since we're using generic request or specific one
-        $kit_product->update($request->all());
+        $kit_product->update($request->validated());
         return $this->success(new KitProductResource($kit_product), 'Kit product updated.');
     }
 

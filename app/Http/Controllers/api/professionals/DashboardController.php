@@ -61,10 +61,7 @@ class DashboardController extends BaseController
 
         $recentBookingsResource = \App\Http\Resources\Api\BookingResource::collection($recentBookings);
 
-        $cashWallet = Wallet::where('holder_type', 'professional')
-            ->where('holder_id', $professional->id)
-            ->where('type', 'cash')
-            ->first();
+        $cashWallet = $professional->cashWallet()->first();
         $totalBalancePaise = $cashWallet ? $cashWallet->balance : 0;
 
         // Calculate Withdrawal Delay Logic (Hardened)

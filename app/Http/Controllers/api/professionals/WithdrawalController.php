@@ -7,6 +7,9 @@ use App\Models\WithdrawalRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use App\Services\WalletService;
 use Illuminate\Validation\Rule;
 
 class WithdrawalController extends BaseController
@@ -52,91 +55,85 @@ class WithdrawalController extends BaseController
             $amountInPaise = (int)($amount * 100);
             $requestId = $request->request_id; // Frontend UUID
 
-            return DB::transaction(function () use ($professional, $amount, $amountInPaise, $request, $requestId) {
-                // 🔒 STEP 1: Lock Professional FIRST
-                $professional = \App\Models\Professional::where('id', $professional->id)
-                    ->lockForUpdate()
-                    ->first();
+            // 🔒 STRATEGY: Distributed Lock + DB Transaction
+            $lockKey = 'withdrawal_pro_' . $professional->id;
+            return Cache::lock($lockKey, 15)->block(10, function () use ($professional, $amount, $amountInPaise, $request, $requestId) {
+                return DB::transaction(function () use ($professional, $amount, $amountInPaise, $request, $requestId) {
+                    // 🔓 STEP 1: Row-level Lock
+                    $professional = \App\Models\Professional::where('id', $professional->id)
+                        ->lockForUpdate()
+                        ->first();
 
-                // 🔑 STEP 2: Idempotency Check
-                if ($requestId && \App\Models\WithdrawalRequest::where('request_id', $requestId)->exists()) {
-                    return $this->error('Duplicate withdrawal request.', 422);
-                }
+                    // 🔑 STEP 2: Idempotency Check
+                    if ($requestId && \App\Models\WithdrawalRequest::where('request_id', $requestId)->exists()) {
+                        return $this->error('Duplicate withdrawal request.', 422);
+                    }
 
-                // STEP 3: Cooldown Check (Enforced to prevent spam)
-                $cooldownDays = (int) (\App\Models\Setting::get('withdraw_cooldown_days', 7));
-                $lastWithdrawal = $professional->last_withdrawal_at;
+                    // STEP 3: Cooldown Check
+                    $cooldownDays = (int) (\App\Models\Setting::get('withdraw_cooldown_days', 7));
+                    $lastWithdrawal = $professional->last_withdrawal_at;
 
-                \Illuminate\Support\Facades\Log::info('Withdrawal cooldown check', [
-                    'pro_id' => $professional->id,
-                    'last_withdrawal' => $lastWithdrawal ? $lastWithdrawal->toDateTimeString() : 'NULL',
-                    'now' => now()->toDateTimeString(),
-                    'cooldown_days' => $cooldownDays
-                ]);
+                    if ($lastWithdrawal) {
+                        $unlockDate = $lastWithdrawal->copy()->addDays($cooldownDays);
+                        if (now()->lt($unlockDate)) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => "Withdraw allowed only once every $cooldownDays days",
+                                'remaining_seconds' => max(0, $unlockDate->timestamp - now()->timestamp),
+                                'lock_reason' => 'withdrawal_cooldown'
+                            ], 403);
+                        }
+                    }
 
-                if ($lastWithdrawal) {
-                    $unlockDate = $lastWithdrawal->copy()->addDays($cooldownDays);
-
-                    if (now()->lt($unlockDate)) {
+                    // STEP 4: Daily Limit
+                    $withdrawalsToday = \App\Models\WithdrawalRequest::where('professional_id', $professional->id)
+                        ->whereDate('created_at', \Carbon\Carbon::today())
+                        ->count();
+                    
+                    if ($withdrawalsToday >= 3) {
                         return response()->json([
                             'success' => false,
-                            'message' => "Withdraw allowed only once every $cooldownDays days",
-                            'remaining_seconds' => max(0, $unlockDate->timestamp - now()->timestamp),
-                            'unlock_date' => $unlockDate->toIso8601String(),
-                            'lock_reason' => 'withdrawal_cooldown'
+                            'message' => "Daily withdrawal limit reached. Please try again tomorrow.",
+                        ], 429);
+                    }
+
+                    // STEP 5: Balance Check (via cashWallet relationship)
+                    $wallet = $professional->cashWallet()->lockForUpdate()->first();
+                    if (!$wallet) return $this->error('Cash wallet not found.', 404);
+
+                    $availablePaise = (int) $wallet->balance;
+                    if ($amountInPaise > $availablePaise) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Insufficient balance.",
                         ], 403);
                     }
-                }
 
-                // STEP 4: Fraud Protection (Daily Limit)
-                $withdrawalsToday = \App\Models\WithdrawalRequest::where('professional_id', $professional->id)
-                    ->whereDate('created_at', \Carbon\Carbon::today())
-                    ->count();
-                
-                if ($withdrawalsToday >= 3) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Daily withdrawal limit reached (Max 3/day). Please try again tomorrow.",
-                    ], 429);
-                }
+                    // STEP 6: Create withdrawal record
+                    $withdrawal = WithdrawalRequest::create([
+                        'professional_id' => $professional->id,
+                        'amount' => $amountInPaise,
+                        'method' => $request->input('method', 'direct'),
+                        'status' => WithdrawalRequest::STATUS_PENDING,
+                        'request_id' => $requestId,
+                        'transaction_reference' => 'WDR-' . strtoupper(bin2hex(random_bytes(4))),
+                    ]);
 
-                // STEP 5: Balance Check (Ground Truth)
-                $wallet = $professional->wallet;
-                if (!$wallet) return $this->error('Wallet not found.', 404);
+                    // 💸 STEP 7: Audit-safe Deduction
+                    WalletService::deduct(
+                        $wallet,
+                        $amountInPaise,
+                        'withdrawal_request',
+                        "Withdrawal of ₹{$amount}",
+                        $withdrawal->id,
+                        WithdrawalRequest::class
+                    );
 
-                $availablePaise = (int) $wallet->balance;
+                    // Update cooldown
+                    $professional->update(['last_withdrawal_at' => now()]);
 
-                if ($amountInPaise > $availablePaise) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Insufficient balance. Available: ₹" . ($availablePaise / 100),
-                        'available_balance' => $availablePaise / 100
-                    ], 403);
-                }
-
-                // STEP 5: Create withdrawal record
-                $withdrawal = WithdrawalRequest::create([
-                    'professional_id' => $professional->id,
-                    'amount' => $amountInPaise,
-                    'method' => $request->input('method', 'direct'),
-                    'status' => WithdrawalRequest::STATUS_PENDING,
-                    'request_id' => $requestId,
-                    'transaction_reference' => 'WDR-' . strtoupper(bin2hex(random_bytes(4))),
-                ]);
-
-                // Debit the wallet
-                $wallet->debit(
-                    $amountInPaise,
-                    'withdrawal_request',
-                    "Withdrawal of ₹{$amount}",
-                    $withdrawal->id,
-                    WithdrawalRequest::class
-                );
-
-                // Update cooldown
-                $professional->update(['last_withdrawal_at' => now()]);
-
-                return $this->success($withdrawal, 'Withdrawal request submitted.');
+                    return $this->success($withdrawal, 'Withdrawal request submitted.');
+                });
             });
 
         }

@@ -11,6 +11,19 @@ class StoreKitProductRequest extends ApiFormRequest
         return true;
     }
 
+    /**
+     * Prepare the data for validation.
+     * Converts empty strings to null for nullable fields like expiry_date.
+     */
+    protected function prepareForValidation()
+    {
+        if ($this->has('expiry_date') && empty($this->expiry_date)) {
+            $this->merge([
+                'expiry_date' => null,
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -22,5 +35,19 @@ class StoreKitProductRequest extends ApiFormRequest
             'available_stock' => ['nullable', 'integer', 'min:0'],
             'status'          => ['nullable', 'in:Active,Inactive'],
         ];
+    }
+
+    /**
+     * Get the validated data and convert price to paise.
+     */
+    public function validated($key = null, $default = null): array
+    {
+        $data = parent::validated($key, $default);
+
+        if (isset($data['price'])) {
+            $data['price'] = (int) round($data['price'] * 100);
+        }
+
+        return $data;
     }
 }

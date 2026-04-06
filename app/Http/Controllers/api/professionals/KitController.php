@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use App\Services\WalletService;
 
 class KitController extends BaseController
 {
@@ -38,8 +40,7 @@ class KitController extends BaseController
         ]);
 
         $product     = KitProduct::findOrFail($validated['kit_product_id']);
-        $totalAmount = $product->price * $validated['quantity'];
-        $amountPaise = (int) round($totalAmount * 100); // Razorpay uses paise
+        $amountPaise = $product->price * $validated['quantity'];
 
         // Create Razorpay Order server-side for security
         try {
@@ -47,7 +48,7 @@ class KitController extends BaseController
                 return $this->success([
                     'order_id'     => 'order_mock_' . strtolower(Str::random(14)),
                     'amount'       => $amountPaise,
-                    'amount_inr'   => $totalAmount,
+                    'amount_inr'   => (float)($amountPaise / 100),
                     'currency'     => 'INR',
                     'product_name' => $product->name,
                     'receipt'      => 'kit_mock_' . Str::random(8),
@@ -69,7 +70,7 @@ class KitController extends BaseController
             return $this->success([
                 'order_id'     => $order['id'],
                 'amount'       => $amountPaise,
-                'amount_inr'   => $totalAmount,
+                'amount_inr'   => (float)($amountPaise / 100),
                 'currency'     => 'INR',
                 'product_name' => $product->name,
                 'receipt'      => $order['receipt'],
@@ -124,7 +125,8 @@ class KitController extends BaseController
         return Cache::lock($lockKey, 15)->block(5, function () use ($professional, $validated, $idempotencyKey, $requestHash) {
             
             $product = KitProduct::findOrFail($validated['kit_product_id']);
-            $totalAmount = $product->price * $validated['quantity'];
+            $quantity = max(1, (int) $validated['quantity']);
+            $amountPaise = $product->price * $quantity;
 
             // 3. Secure Signature Verification
             try {
@@ -142,7 +144,7 @@ class KitController extends BaseController
             }
 
             try {
-                return DB::transaction(function () use ($professional, $product, $validated, $totalAmount, $idempotencyKey, $requestHash) {
+                return DB::transaction(function () use ($professional, $product, $validated, $amountPaise, $quantity, $idempotencyKey, $requestHash) {
                     
                     // 4. Double check payment_id uniqueness inside transaction
                     if (KitOrder::where('payment_id', $validated['razorpay_payment_id'])->exists()) {
@@ -151,10 +153,10 @@ class KitController extends BaseController
 
                     // 5. Atomic Stock Check & Decrement
                     $product = KitProduct::where('id', $product->id)->lockForUpdate()->first();
-                    if ($product->total_stock < $validated['quantity']) {
+                    if ($product->total_stock < $quantity) {
                         throw new \Exception('Insufficient stock for this product.');
                     }
-                    $product->decrement('total_stock', $validated['quantity']);
+                    $product->decrement('total_stock', $quantity);
 
                     // 6. Create Order with Idempotency Data
                     $order = KitOrder::create([
@@ -162,8 +164,8 @@ class KitController extends BaseController
                         'idempotency_hash'  => $requestHash,
                         'professional_id'   => $professional->id,
                         'kit_product_id'    => $validated['kit_product_id'],
-                        'quantity'          => $validated['quantity'],
-                        'total_amount'      => $totalAmount,
+                        'quantity'          => $quantity,
+                        'total_amount'      => $amountPaise,
                         'payment_id'        => $validated['razorpay_payment_id'],
                         'razorpay_order_id' => $validated['razorpay_order_id'],
                         'payment_status'    => 'Paid',
@@ -175,7 +177,7 @@ class KitController extends BaseController
                     ]);
 
                     // 7. Update Professional Inventory
-                    $professional->increment('kits', $validated['quantity']);
+                    $professional->increment('kits', $quantity);
                     $professional->update(['kit_purchased' => true]);
 
                     $responseData = [
@@ -187,7 +189,6 @@ class KitController extends BaseController
                     // 8. Store Idempotency Response for Replay
                     $order->update(['idempotency_response' => json_encode($responseData)]);
 
-                    return response()->json($responseData);
                 });
             } catch (\Exception $e) {
                 return $this->error($e->getMessage(), 400);
@@ -206,6 +207,12 @@ class KitController extends BaseController
             'kit_product_id' => 'required|exists:kit_products,id',
             'quantity'       => 'required|integer|min:1',
             'notes'          => 'nullable|string',
+        ]);
+
+        Log::info('📦 Kit Wallet Purchase: Starting', [
+            'professional_id' => $professional->id,
+            'request' => $request->all(),
+            'idempotency_key' => $request->header('Idempotency-Key') ?? $request->input('idempotency_key')
         ]);
 
         // 1. Idempotency Check
@@ -232,18 +239,36 @@ class KitController extends BaseController
         return Cache::lock($lockKey, 10)->block(3, function () use ($professional, $validated, $idempotencyKey, $requestHash) {
             
             $product = KitProduct::findOrFail($validated['kit_product_id']);
-            $totalAmount = $product->price * $validated['quantity'];
-            $amountPaise = (int)($totalAmount * 100);
+            $quantity = max(1, (int) $validated['quantity']);
+
+            Log::info('💰 MONEY TRACE [START]:', [
+                'kit_product_id' => $product->id,
+                'name'           => $product->name,
+                'price_paise'    => $product->price,
+                'quantity'       => $quantity,
+                'total_paise'    => $product->price * $quantity
+            ]);
+
+            $amountPaise = $product->price * $quantity;
 
             try {
-                return DB::transaction(function () use ($professional, $product, $validated, $totalAmount, $amountPaise, $idempotencyKey, $requestHash) {
+                return DB::transaction(function () use ($professional, $product, $validated, $amountPaise, $quantity, $idempotencyKey, $requestHash) {
                     
                     // 3. Wallet Lock & Check
-                    $wallet = \App\Models\Wallet::where('holder_type', get_class($professional))
-                        ->where('holder_id', $professional->id)
-                        ->where('type', 'cash')
+                    $wallet = $professional->cashWallet()
                         ->lockForUpdate()
                         ->first();
+
+                    if (!$wallet) {
+                        throw new \Exception('Cash wallet not found for this professional.');
+                    }
+
+                    Log::info('📦 Kit Wallet Purchase: Wallet Found', [
+                        'wallet_id' => $wallet?->id,
+                        'current_balance' => $wallet?->balance,
+                        'required_paise' => $amountPaise,
+                        'has_funds' => $wallet ? ($wallet->balance >= $amountPaise) : false
+                    ]);
 
                     if (!$wallet || $wallet->balance < $amountPaise) {
                         throw new \Exception('Insufficient wallet balance.');
@@ -251,21 +276,31 @@ class KitController extends BaseController
 
                     // 4. Product Lock & Check
                     $product = KitProduct::where('id', $product->id)->lockForUpdate()->first();
-                    if ($product->total_stock < $validated['quantity']) {
+                    if ($product->total_stock < $quantity) {
                         throw new \Exception('Insufficient stock for this product.');
                     }
 
                     // 5. Atomic Execution
-                    $wallet->debit($amountPaise, 'kit_purchase', "Purchase of " . $product->name, null, 'kit_order');
-                    $product->decrement('total_stock', $validated['quantity']);
+                    Log::info('📦 Kit Wallet Purchase: Deducting from wallet via WalletService...');
+                    WalletService::deduct(
+                        $wallet, 
+                        $amountPaise, 
+                        'kit_purchase', 
+                        "Purchase of " . $product->name, 
+                        null, 
+                        'kit_order'
+                    );
+                    
+                    Log::info('📦 Kit Wallet Purchase: Wallet deducted. Decrementing stock...');
+                    $product->decrement('total_stock', $quantity);
 
                     $order = KitOrder::create([
                         'idempotency_key'   => $idempotencyKey,
                         'idempotency_hash'  => $requestHash,
                         'professional_id'   => $professional->id,
                         'kit_product_id'    => $product->id,
-                        'quantity'          => $validated['quantity'],
-                        'total_amount'      => $totalAmount,
+                        'quantity'          => $quantity,
+                        'total_amount'      => $amountPaise, 
                         'status'            => 'Assigned',
                         'order_status'      => 'Processing',
                         'payment_status'    => 'Paid',
@@ -275,7 +310,7 @@ class KitController extends BaseController
                     ]);
 
                     // Update Professional Inventory
-                    $professional->increment('kits', $validated['quantity']);
+                    $professional->increment('kits', $quantity);
                     $professional->update(['kit_purchased' => true]);
 
                     $responseData = [

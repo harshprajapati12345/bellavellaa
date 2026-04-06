@@ -49,6 +49,7 @@ class Professional extends Authenticatable implements JWTSubject
     // ── Relationships ──────────────────────────────────────────────
     public function bookings() { return $this->hasMany(Booking::class); }
     public function wallet() { return $this->morphOne(Wallet::class, 'holder'); }
+    public function cashWallet() { return $this->wallet()->where('type', 'cash'); }
 
     public function kitOrders()
     {
