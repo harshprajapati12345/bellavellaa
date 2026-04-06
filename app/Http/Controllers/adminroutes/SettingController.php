@@ -128,4 +128,23 @@ class SettingController extends Controller
             'background_color' => '#F6F7F9',
         ]);
     }
+
+    public function updateRewards(Request $request)
+    {
+        $request->validate([
+            'rules' => 'required|array',
+            'rules.*.status' => 'required|in:0,1',
+            'rules.*.coins' => 'required|integer|min:0|max:99999',
+        ]);
+
+        foreach ($request->rules as $id => $data) {
+            $rule = \App\Models\RewardRule::findOrFail($id);
+            $rule->update([
+                'status' => $data['status'],
+                'coins' => $data['coins'],
+            ]);
+        }
+
+        return redirect()->route('referrals.index')->with('success', 'Reward rules updated successfully!');
+    }
 }
