@@ -101,4 +101,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('professionals:clear-stuck-jobs')->everyTenMinutes();
+    })
     ->create();

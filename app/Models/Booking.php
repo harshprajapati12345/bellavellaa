@@ -3,9 +3,20 @@
 namespace App\Models;
 
 use App\Support\BookingLifecycle;
+use App\Events\BookingStatusChanged;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property \Carbon\Carbon|null $date
+ * @property \Carbon\Carbon|null $assigned_at
+ * @property \Carbon\Carbon|null $accepted_at
+ * @property \Carbon\Carbon|null $on_the_way_at
+ * @property \Carbon\Carbon|null $arrived_at
+ * @property \Carbon\Carbon|null $service_started_at
+ * @property \Carbon\Carbon|null $completed_at
+ * @property \Carbon\Carbon|null $cancelled_at
+ */
 class Booking extends Model
 {
     protected $guarded = [];
@@ -109,8 +120,30 @@ class Booking extends Model
         return true;
     }
 
+    public function canTransitionTo(string $next): bool
+    {
+        $map = config('booking.transitions');
+        return in_array($next, $map[$this->status] ?? []);
+    }
+
     public function applyStatusTransition(string $status, array $attributes = []): void
     {
+        // 🚀 ELITE IDEMPOTENCY: If already in desired status, return early (safe re-entry).
+        if ($this->status === $status) {
+            return;
+        }
+
+        // 🛡️ STATE MACHINE ENFORCEMENT
+        if (!$this->canTransitionTo($status)) {
+            throw new \Exception("Invalid status transition from '{$this->status}' to '{$status}'.");
+        }
+
+        // 🛡️ TIMESTAMP INTEGRITY GUARD: First-write-wins for critical metrics.
+        if ($status === 'in_progress' && $this->service_started_at) {
+            return; 
+        }
+
+        $fromStatus = $this->status;
         $attributes['status'] = $status;
 
         $step = BookingLifecycle::stepForStatus($status);
@@ -125,6 +158,18 @@ class Booking extends Model
 
         $this->fill($attributes);
         $this->save();
+
+        // 🚀 DECOUPLED SIDE EFFECTS: Move non-core logic (notifications, analytics) to listeners.
+        event(new BookingStatusChanged($this, $fromStatus, $status));
+
+        // 📊 AUDIT LOGGING: Full observability.
+        \Log::info('Booking status updated (Elite)', [
+            'booking_id' => $this->id,
+            'from' => $fromStatus,
+            'to' => $status,
+            'user_id' => auth()->id() ?? 'system/webhook',
+            'request_ip' => request()->ip()
+        ]);
     }
 
     public function scheduledAt(): ?Carbon
@@ -134,7 +179,9 @@ class Booking extends Model
         }
 
         try {
-            return Carbon::parse($this->date->format('Y-m-d') . ' ' . trim((string) $this->slot));
+            /** @var Carbon $date */
+            $date = $this->date;
+            return Carbon::parse($date->format('Y-m-d') . ' ' . trim((string) $this->slot));
         } catch (\Throwable) {
             return null;
         }
@@ -142,7 +189,9 @@ class Booking extends Model
 
     public function trackingWindowStartsAt(): ?Carbon
     {
-        return $this->date ? $this->date->copy()->startOfDay() : null;
+        /** @var Carbon $date */
+        $date = $this->date;
+        return $date ? $date->copy()->startOfDay() : null;
     }
 
     public function rescheduleCutoffAt(): ?Carbon
@@ -209,5 +258,19 @@ class Booking extends Model
     {
         return !in_array($this->status, ['completed', 'cancelled'], true)
             && $this->canReschedule();
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($booking) {
+            if ($booking->professional_id) {
+                $pro = $booking->professional;
+                if ($pro && (int)$pro->active_request_id === (int)$booking->id) {
+                    $pro->update(['active_request_id' => null]);
+                    $pro->refresh();
+                    broadcast(new \App\Events\ProfessionalStatusUpdated($pro))->toOthers();
+                }
+            }
+        });
     }
 }

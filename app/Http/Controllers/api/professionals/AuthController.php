@@ -67,7 +67,7 @@ class AuthController extends BaseController
             ], 'OTP verified. Please complete signup.');
         }
 
-        if ($professional->status === 'Suspended') {
+        if ($professional->is_suspended) {
             return $this->error('Your account has been suspended. Please contact support.', 403);
         }
 
@@ -166,7 +166,6 @@ class AuthController extends BaseController
             'account_number' => $request->account_number,
             'ifsc_code' => $request->ifsc_code,
             'upi_id' => $request->upi_id,
-            'status' => 'Active',
             'verification' => 'Pending',
             'joined' => now()->toDateString(),
         ];
@@ -235,7 +234,7 @@ class AuthController extends BaseController
                 'id' => $professional->id,
                 'name' => $professional->name,
                 'verification' => $professional->verification,
-                'status' => $professional->status,
+                'status' => $professional->status, // Uses model accessor
             ],
         ], 'Registration successful.');
     }
@@ -267,16 +266,6 @@ class AuthController extends BaseController
             return $this->error('User not found', 404);
         }
 
-        // 🔥 FORENSIC NORMALIZATION
-        $rawStatus = $professional->status ?? '';
-        $normalizedStatus = strtolower(trim($rawStatus));
-
-        // 🔥 BOOL NORMALIZATION (Handles 1, true, "1", etc. correctly)
-        $isSuspendedFlag = filter_var($professional->is_suspended, FILTER_VALIDATE_BOOLEAN);
-
-        // 🛡️ FINAL CONSOLIDATED DECISION
-        $isSuspended = $isSuspendedFlag || $normalizedStatus === 'suspended';
-
         $map = [
             'aadhaar_front',
             'aadhaar_back',
@@ -300,17 +289,9 @@ class AuthController extends BaseController
 
         return $this->success([
             'verification' => $professional->verification,
-            'status' => $isSuspended ? 'Suspended' : 'Active',
+            'status' => $professional->status,
             'docs' => (bool)$professional->docs,
             'documents' => $documents,
-
-            // 🔍 FORENSIC DEBUG PAYLOAD (Remove after verification)
-            'debug' => [
-                'raw_status' => $rawStatus,
-                'normalized_status' => $normalizedStatus,
-                'is_suspended_flag' => $professional->is_suspended,
-                'interpreted_suspended_bool' => $isSuspended,
-            ]
         ], 'Verification status retrieved.')
         ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         ->header('Pragma', 'no-cache')

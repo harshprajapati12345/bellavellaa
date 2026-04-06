@@ -13,6 +13,7 @@ use App\Services\FirebaseService;
 use Illuminate\Support\Str;
 use App\Events\JobUpdate;
 use App\Models\Payment;
+use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\PaymentService;
@@ -39,6 +40,13 @@ class JobController extends BaseController
     {
         if ($booking->professional_id !== $request->user('professional-api')->id) {
             throw new \Exception('Unauthorized access.', 403);
+        }
+
+        // 🛡️ ELITE STALE-WRITE PROTECTION (Optimistic Locking)
+        // If the client sends a version header, ensure it matches the server's record.
+        $clientVersion = $request->header('X-Booking-Version');
+        if ($clientVersion && (int)$clientVersion !== $booking->updated_at->timestamp) {
+            throw new \Exception('Booking was updated on another device. Please refresh.', 409);
         }
     }
 
@@ -85,29 +93,30 @@ class JobController extends BaseController
 
     public function arrived(Request $request, $id): JsonResponse
     {
+        \Log::withContext([
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
+            'booking_id' => $id,
+        ]);
+
         try {
-            $booking = \App\Models\Booking::find($id);
-            if (!$booking) {
-                return $this->error('Booking not found.', 404);
-            }
+            return retry(3, function () use ($id, $request) {
+                return DB::transaction(function () use ($id, $request) {
+                    $booking = \App\Models\Booking::lockForUpdate()->find($id);
+                    if (!$booking) {
+                        return $this->error('Booking not found.', 404);
+                    }
 
-            // ✅ OWNERSHIP CHECK
-            $this->validateOwnership($booking, $request);
+                    // ✅ OWNERSHIP CHECK
+                    $this->validateOwnership($booking, $request);
 
-            // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'arrived')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to arrived.', 400);
-            }
+                    // ✅ PERSIST STATE (using centralized lifecycle with model-level enforcement)
+                    $booking->applyStatusTransition('arrived');
 
-            // ✅ PERSIST STATE
-            $booking->update([
-                'status' => 'arrived',
-                'current_step' => 'kit_scan',
-            ]);
+                    $this->sendDashboardUpdate($booking);
 
-            $this->sendDashboardUpdate($booking);
-            
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
+                    return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Arrival marked successfully.');
+                });
+            }, 100);
         } catch (\Throwable $e) {
             \Log::error('JobController::arrived error: ' . $e->getMessage());
             $code = $e->getCode();
@@ -123,29 +132,30 @@ class JobController extends BaseController
      */
     public function startJourney(Request $request, $id): JsonResponse
     {
+        \Log::withContext([
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
+            'booking_id' => $id,
+        ]);
+
         try {
-            $booking = \App\Models\Booking::find($id);
-            if (!$booking) {
-                return $this->error('Booking not found.', 404);
-            }
+            return retry(3, function () use ($id, $request) {
+                return DB::transaction(function () use ($id, $request) {
+                    $booking = \App\Models\Booking::lockForUpdate()->find($id);
+                    if (!$booking) {
+                        return $this->error('Booking not found.', 404);
+                    }
 
-            // ✅ OWNERSHIP CHECK
-            $this->validateOwnership($booking, $request);
+                    // ✅ OWNERSHIP CHECK
+                    $this->validateOwnership($booking, $request);
 
-            // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'on_the_way')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to on_the_way.', 400);
-            }
+                    // ✅ PERSIST STATE (using centralized lifecycle with model-level enforcement)
+                    $booking->applyStatusTransition('on_the_way');
 
-            // ✅ PERSIST STATE
-            $booking->update([
-                'status' => 'on_the_way',
-                'current_step' => 'journey',
-            ]);
+                    $this->sendDashboardUpdate($booking);
 
-            $this->sendDashboardUpdate($booking);
-
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started successfully.');
+                    return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Journey started successfully.');
+                });
+            }, 100);
         } catch (\Throwable $e) {
             \Log::error('JobController::startJourney error: ' . $e->getMessage());
             $code = $e->getCode();
@@ -158,29 +168,30 @@ class JobController extends BaseController
 
     public function startService(Request $request, $id): JsonResponse
     {
+        \Log::withContext([
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
+            'booking_id' => $id,
+        ]);
+
         try {
-            $booking = \App\Models\Booking::find($id);
-            if (!$booking) {
-                return $this->error('Booking not found.', 404);
-            }
+            return retry(3, function () use ($id, $request) {
+                return DB::transaction(function () use ($id, $request) {
+                    $booking = \App\Models\Booking::lockForUpdate()->find($id);
+                    if (!$booking) {
+                        return $this->error('Booking not found.', 404);
+                    }
 
-            // ✅ OWNERSHIP CHECK
-            $this->validateOwnership($booking, $request);
+                    // ✅ OWNERSHIP CHECK
+                    $this->validateOwnership($booking, $request);
 
-            // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'in_progress')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to in_progress.', 400);
-            }
+                    // ✅ PERSIST STATE (using centralized lifecycle with model-level enforcement)
+                    $booking->applyStatusTransition('in_progress');
 
-            // ✅ PERSIST STATE
-            $booking->update([
-                'status' => 'in_progress',
-                'current_step' => 'service',
-            ]);
+                    $this->sendDashboardUpdate($booking);
 
-            $this->sendDashboardUpdate($booking);
-
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
+                    return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service started.');
+                });
+            }, 100);
         } catch (\Throwable $e) {
             Log::error('JobController::startService error: ' . $e->getMessage());
             $code = $e->getCode();
@@ -193,29 +204,41 @@ class JobController extends BaseController
 
     public function finishService(Request $request, $id): JsonResponse
     {
+        \Log::withContext([
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
+            'booking_id' => $id,
+        ]);
+
         try {
-            $booking = \App\Models\Booking::find($id);
-            if (!$booking) {
-                return $this->error('Booking not found.', 404);
-            }
+            return retry(3, function () use ($id, $request) {
+                return DB::transaction(function () use ($id, $request) {
+                    $booking = \App\Models\Booking::lockForUpdate()->find($id);
+                    if (!$booking) {
+                        return $this->error('Booking not found.', 404);
+                    }
 
-            // ✅ OWNERSHIP CHECK
-            $this->validateOwnership($booking, $request);
+                    // ✅ OWNERSHIP CHECK
+                    $this->validateOwnership($booking, $request);
 
-            // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'payment_pending')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to payment_pending.', 400);
-            }
+                    // ✅ IDEMPOTENCY CHECK handled by applyStatusTransition()
 
-            // ✅ PERSIST STATE
-            $booking->update([
-                'status' => 'payment_pending',
-                'current_step' => 'payment',
-            ]);
+                    // 🛡️ FRONTEND FALLBACK / AUTO-FIX: Auto-start if missing
+                    if (!$booking->service_started_at) {
+                        \Log::info("Auto-fixing state: Auto-starting service before finish for booking #{$booking->id}");
+                        $booking->applyStatusTransition('in_progress');
+                    }
 
-            $this->sendDashboardUpdate($booking);
+                    // ✅ ENSURE ORDER EXISTS (Idempotent firstOrCreate)
+                    $this->ensureOrderExists($booking);
 
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
+                    // ✅ PERSIST STATE (using centralized lifecycle with model-level enforcement)
+                    $booking->applyStatusTransition('payment_pending');
+
+                    $this->sendDashboardUpdate($booking);
+
+                    return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Service finished, awaiting payment.');
+                });
+            }, 100);
         } catch (\Throwable $e) {
             Log::error('JobController::finishService error: ' . $e->getMessage());
             $code = $e->getCode();
@@ -231,29 +254,30 @@ class JobController extends BaseController
      */
     public function scanKit(ScanKitRequest $request, $id): JsonResponse
     {
+        \Log::withContext([
+            'request_id' => (string) \Illuminate\Support\Str::uuid(),
+            'booking_id' => $id,
+        ]);
+
         try {
-            $booking = \App\Models\Booking::find($id);
-            if (!$booking) {
-                return $this->error('Booking not found.', 404);
-            }
+            return retry(3, function () use ($id, $request) {
+                return DB::transaction(function () use ($id, $request) {
+                    $booking = \App\Models\Booking::lockForUpdate()->find($id);
+                    if (!$booking) {
+                        return $this->error('Booking not found.', 404);
+                    }
 
-            // ✅ OWNERSHIP CHECK
-            $this->validateOwnership($booking, $request);
+                    // ✅ OWNERSHIP CHECK
+                    $this->validateOwnership($booking, $request);
 
-            // ✅ STATE VALIDATION (Strict Transition)
-            if (!$this->canTransition($booking->status, 'scan_kit')) {
-                return $this->error('Invalid state transition from ' . $booking->status . ' to scan_kit.', 400);
-            }
+                    // ✅ PERSIST STATE (using centralized lifecycle with model-level enforcement)
+                    $booking->applyStatusTransition('scan_kit');
 
-            // ✅ PERSIST STATE
-            $booking->update([
-                'status' => 'scan_kit',
-                'current_step' => 'kit_scan',
-            ]);
+                    $this->sendDashboardUpdate($booking);
 
-            $this->sendDashboardUpdate($booking);
-
-            return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');
+                    return $this->success(new \App\Http\Resources\Api\BookingResource($booking->fresh()), 'Kit scanned and verified.');
+                });
+            }, 100);
         } catch (\Throwable $e) {
             Log::error('JobController::scanKit error: ' . $e->getMessage());
             $code = $e->getCode();
@@ -320,10 +344,8 @@ class JobController extends BaseController
 
                 $this->validateOwnership($booking, $request);
 
-                $order = $booking->order;
-                if (!$order) {
-                    return $this->error('Order not found for this booking.', 404);
-                }
+                // 🛡️ ENTERPRISE HARDENING: PROACTIVE ORDER CREATION (Self-Healing Fallback)
+                $order = $this->ensureOrderExists($booking);
 
                 // Step 7.1 & 8.1: ENFORCE PAID STATUS
                 if ($order->payment_status === 'SUCCESS') {
@@ -381,10 +403,8 @@ class JobController extends BaseController
 
                 $this->validateOwnership($booking, $request);
 
-                $order = $booking->order;
-                if (!$order) {
-                    return $this->error('Order not found for this booking.', 404);
-                }
+                // 🛡️ ENTERPRISE HARDENING: PROACTIVE ORDER CREATION (Self-Healing Fallback)
+                $order = $this->ensureOrderExists($booking);
 
                 if ($order->payment_status === 'SUCCESS') {
                     return $this->error('Payment is already SUCCESS for this order.', 400);
@@ -530,33 +550,74 @@ class JobController extends BaseController
 
     protected function sendDashboardUpdate($booking)
     {
-        // 1. Broadcast via WebSockets (Real-Time Architecture)
-        broadcast(new JobUpdate($booking));
+        try {
+            // 1. Broadcast via WebSockets (Real-Time Architecture)
+            $booking->professional?->refresh();
+            broadcast(new JobUpdate($booking))->toOthers();
 
-        // 2. Send Push Notification (FCM)
-        $professional = $booking->professional;
-        if ($professional && $professional->fcm_token) {
-            $this->firebase->sendPushNotification(
-                $professional->fcm_token,
-                'Job Update',
-                "Job status updated to {$booking->status}",
-                [
-                    'type' => 'job_status_updated',
-                    'booking_id' => (string)$booking->id,
-                    'status' => $booking->status,
-                    'current_step' => $booking->current_step,
-                ]
-            );
+            // 2. Send Push Notification (FCM)
+            $professional = $booking->professional;
+            if ($professional && $professional->fcm_token) {
+                $this->firebase->sendPushNotification(
+                    $professional->fcm_token,
+                    'Job Update',
+                    "Job status updated to {$booking->status}",
+                    [
+                        'type' => 'job_status_updated',
+                        'booking_id' => (string)$booking->id,
+                        'status' => $booking->status,
+                        'current_step' => $booking->current_step,
+                    ]
+                );
+            }
+
+            // 3. Sync Firestore as well manually
+            $this->firebase->pushJobToFirestore([
+                'professional_id' => $booking->professional_id,
+                'booking_id'      => (string)$booking->id,
+                'status'          => $booking->status,
+                'current_step'    => $booking->current_step,
+                'isActive'        => true,
+                'updated_at'      => time(),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error("Elite Circuit Breaker: External sync failed for booking #{$booking->id}: " . $e->getMessage());
         }
+    }
+    protected function ensureOrderExists(\App\Models\Booking $booking)
+    {
+        if (!$booking->order_id) {
+            \Log::info("Self-healing/Idempotency: Ensuring order exists for booking #{$booking->id}");
+            
+            try {
+                $order = \App\Models\Order::create([
+                    'booking_id' => $booking->id, // UNIQUE constraint source of truth
+                    'order_number' => \App\Models\Order::generateOrderNumber(),
+                    'customer_id' => $booking->customer_id,
+                    'professional_id' => $booking->professional_id,
+                    'status' => 'pending',
+                    'payment_status' => 'PENDING',
+                    'total_paise' => (int)($booking->price * 100),
+                    'subtotal_paise' => (int)($booking->price * 100),
+                    'address' => $booking->address ?? 'N/A',
+                    'scheduled_date' => $booking->date ? \Carbon\Carbon::parse($booking->date) : now(),
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // 🚀 ABSOLUTE IDEMPOTENCY: DB unique constraint is the ultimate source of truth.
+                // If create fails due to duplicate booking_id, we fetch the existing order.
+                $order = \App\Models\Order::where('booking_id', $booking->id)->first();
+                if (!$order) throw $e; // Rethrow if it was a different query error
+                
+                \Log::info("Idempotency: Concurrent order creation detected for booking #{$booking->id}, recovered existing order.");
+            }
 
-        // 3. Sync Firestore as well manually
-        $this->firebase->pushJobToFirestore([
-            'professional_id' => $booking->professional_id,
-            'booking_id'      => (string)$booking->id,
-            'status'          => $booking->status,
-            'current_step'    => $booking->current_step,
-            'isActive'        => true,
-            'updated_at'      => time(),
-        ]);
+            if ($booking->order_id !== $order->id) {
+                $booking->update(['order_id' => $order->id]);
+                $booking->refresh();
+            }
+
+            return $order;
+        }
+        return $booking->order;
     }
 }

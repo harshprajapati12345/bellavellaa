@@ -45,6 +45,12 @@ class BookingService
             if ($booking->customer) {
                 ReferralService::processFirstBookingCompletion($booking->customer);
             }
+
+            // Sync: Reset BUSY status in professional record
+            if ($booking->professional) {
+                $booking->professional->update(['active_request_id' => null]);
+                broadcast(new \App\Events\ProfessionalStatusUpdated($booking->professional));
+            }
         });
     }
 

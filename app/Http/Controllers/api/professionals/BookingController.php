@@ -143,8 +143,10 @@ class BookingController extends BaseController
                 // Atomic lock for professional record
                 $pro = Professional::lockForUpdate()->find($professional->id);
 
-                // ✅ Reset daily rejection count if it's a new day (String-safe comparison)
-                $lastDate = $pro->last_reject_date ? $pro->last_reject_date->format('Y-m-d') : null;
+                // ✅ Reset daily rejection count if it's a new day
+                /** @var \Carbon\Carbon|null $lastRejectDate */
+                $lastRejectDate = $pro->last_reject_date;
+                $lastDate = $lastRejectDate ? $lastRejectDate->format('Y-m-d') : null;
                 
                 if ($lastDate !== $today) {
                     $pro->update([
@@ -153,9 +155,6 @@ class BookingController extends BaseController
                         'is_suspended' => false,
                     ]);
                     
-                    if (strtolower($pro->status) === 'suspended') {
-                        $pro->update(['status' => 'Active']);
-                    }
                     $pro->refresh();
                 }
 
@@ -172,7 +171,6 @@ class BookingController extends BaseController
                 if ((int)$pro->reject_count >= 3) {
                     $pro->update([
                         'is_suspended' => true,
-                        'status' => 'Suspended'
                     ]);
                     
                     return $this->error('Account suspended due to excessive rejections.', 403, [
@@ -203,11 +201,18 @@ class BookingController extends BaseController
                 $newCount = (int)$pro->reject_count;
                 $remaining = max(0, 3 - $newCount);
 
+                // Clear professional's BUSY status
+                $pro->update(['active_request_id' => null]);
+
                 // Update booking status
                 $booking->update([
                     'status' => 'rejected',
                     'professional_id' => null,
                 ]);
+
+                // ✅ Unified Status Broadcast (Inside Transaction)
+                $pro->refresh();
+                broadcast(new \App\Events\ProfessionalStatusUpdated($pro))->toOthers();
 
                 return $this->success([
                     'remaining_rejects' => $remaining,
@@ -254,12 +259,19 @@ class BookingController extends BaseController
                 \App\Services\BookingService::completeJob($booking);
             }
 
+            // Reset BUSY status for terminal states
+            if (in_array($validated['status'], ['completed', 'cancelled', 'rejected'])) {
+                $professional->update(['active_request_id' => null]);
+                $professional->refresh();
+                broadcast(new \App\Events\ProfessionalStatusUpdated($professional))->toOthers();
+            }
+
             DB::commit();
+
+            return $this->success(new \App\Http\Resources\Api\BookingResource($booking), 'Booking status updated.');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to update booking status: ' . $e->getMessage(), 500);
         }
-
-        return $this->success(new \App\Http\Resources\Api\BookingResource($booking), 'Booking status updated.');
     }
 }

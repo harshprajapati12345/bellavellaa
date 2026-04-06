@@ -6,6 +6,7 @@ use App\Http\Resources\Api\KitOrderResource;
 use App\Http\Resources\Api\KitProductResource;
 use App\Models\KitOrder;
 use App\Models\KitProduct;
+use App\Models\ProfessionalKit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,9 +14,80 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use App\Services\WalletService;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class KitController extends BaseController
 {
+    /**
+     * GET /api/professional/kits
+     */
+    public function kits(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+
+        $inventory = ProfessionalKit::with('product')
+            ->where('professional_id', $professional->id)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->product ? $item->product->id : $item->product_id,
+                    'name' => $item->product ? $item->product->name : 'Unknown Kit',
+                    'qty' => $item->qty,
+                    'image' => $item->product ? $item->product->image : null,
+                ];
+            });
+
+        return $this->success($inventory, 'Professional kits inventory retrieved.');
+    }
+
+    /**
+     * POST /api/professional/kits/repair - Self-healing inventory endpoint
+     */
+    public function repairInventory(Request $request): JsonResponse
+    {
+        $professional = $request->user('professional-api');
+        
+        $orders = KitOrder::where('professional_id', $professional->id)->get();
+        // Group amounts and set total quantity directly to avoid infinite incrementing if run twice.
+        $totals = [];
+        foreach ($orders as $order) {
+            $pid = $order->kit_product_id;
+            if (!isset($totals[$pid])) {
+                $totals[$pid] = 0;
+            }
+            $totals[$pid] += $order->quantity;
+        }
+
+        foreach ($totals as $pid => $totalQty) {
+            ProfessionalKit::updateOrCreate(
+                [
+                    'professional_id' => $professional->id,
+                    'product_id' => $pid
+                ],
+                [
+                    'qty' => $totalQty
+                ]
+            );
+        }
+
+        return $this->success(null, 'Inventory successfully repaired from transaction log.');
+    }
+
+    /**
+     * POST /api/professional/save-fcm-token
+     */
+    public function saveFcmToken(Request $request): JsonResponse
+    {
+        $request->validate(['token' => 'required|string']);
+        $professional = $request->user('professional-api');
+        
+        $professional->update(['fcm_token' => $request->token]);
+        
+        return $this->success(null, 'FCM token saved successfully.');
+    }
+
     /**
      * GET /api/professional/kit-products
      */
@@ -180,6 +252,17 @@ class KitController extends BaseController
                     $professional->increment('kits', $quantity);
                     $professional->update(['kit_purchased' => true]);
 
+                    $inventory = ProfessionalKit::firstOrCreate(
+                        [
+                            'professional_id' => $professional->id,
+                            'product_id' => $product->id
+                        ],
+                        [
+                            'qty' => 0
+                        ]
+                    );
+                    $inventory->increment('qty', $quantity);
+
                     $responseData = [
                         'success' => true,
                         'message' => 'Payment verified. Kit order placed.',
@@ -188,6 +271,30 @@ class KitController extends BaseController
                     
                     // 8. Store Idempotency Response for Replay
                     $order->update(['idempotency_response' => json_encode($responseData)]);
+
+                    // Notification Trigger
+                    try {
+                        if ($professional->fcm_token) {
+                            $factory = (new Factory)->withServiceAccount(config('firebase.credentials') ?? config('services.firebase.credentials') ?? storage_path('firebase-credentials.json'));
+                            $messaging = $factory->createMessaging();
+
+                            $message = CloudMessage::withTarget('token', $professional->fcm_token)
+                                ->withNotification(Notification::create(
+                                    'Kit Purchased ✅',
+                                    $product->name . ' added to your inventory'
+                                ))
+                                ->withData([
+                                    'type' => 'kit_updated',
+                                    'screen' => 'wallet',
+                                    'product_name' => $product->name,
+                                    'qty' => (string)$inventory->qty
+                                ]);
+
+                            $messaging->send($message);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('FCM Notification Failed: ' . $e->getMessage());
+                    }
 
                 });
             } catch (\Exception $e) {
@@ -313,12 +420,47 @@ class KitController extends BaseController
                     $professional->increment('kits', $quantity);
                     $professional->update(['kit_purchased' => true]);
 
+                    $inventory = ProfessionalKit::firstOrCreate(
+                        [
+                            'professional_id' => $professional->id,
+                            'product_id' => $product->id
+                        ],
+                        [
+                            'qty' => 0
+                        ]
+                    );
+                    $inventory->increment('qty', $quantity);
+
                     $responseData = [
                         'success' => true,
                         'message' => 'Kit purchased successfully via Wallet.',
                         'data'    => new KitOrderResource($order->load('product'))
                     ];
                     $order->update(['idempotency_response' => json_encode($responseData)]);
+
+                    // Notification Trigger
+                    try {
+                        if ($professional->fcm_token) {
+                            $factory = (new Factory)->withServiceAccount(config('firebase.credentials') ?? config('services.firebase.credentials') ?? storage_path('firebase-credentials.json'));
+                            $messaging = $factory->createMessaging();
+
+                            $message = CloudMessage::withTarget('token', $professional->fcm_token)
+                                ->withNotification(Notification::create(
+                                    'Kit Purchased ✅',
+                                    $product->name . ' added to your inventory'
+                                ))
+                                ->withData([
+                                    'type' => 'kit_updated',
+                                    'screen' => 'wallet',
+                                    'product_name' => $product->name,
+                                    'qty' => (string)$inventory->qty
+                                ]);
+
+                            $messaging->send($message);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('FCM Notification Failed: ' . $e->getMessage());
+                    }
 
                     return response()->json($responseData);
                 });

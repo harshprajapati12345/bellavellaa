@@ -33,7 +33,12 @@ class Professional extends Authenticatable implements JWTSubject
         'last_reset_date' => 'date',
         'last_reject_date' => 'date',
         'is_suspended' => 'boolean',
+        'active_request_id' => 'integer',
     ];
+
+    protected $hidden = ['status'];
+
+    protected $appends = ['status'];
 
     // ── JWT ────────────────────────────────────────────────────────
     public function getJWTIdentifier()
@@ -48,6 +53,7 @@ class Professional extends Authenticatable implements JWTSubject
 
     // ── Relationships ──────────────────────────────────────────────
     public function bookings() { return $this->hasMany(Booking::class); }
+    public function activeBooking() { return $this->hasOne(Booking::class, 'id', 'active_request_id'); }
     public function wallet() { return $this->morphOne(Wallet::class, 'holder'); }
     public function cashWallet() { return $this->wallet()->where('type', 'cash'); }
 
@@ -80,33 +86,25 @@ class Professional extends Authenticatable implements JWTSubject
         });
 
         static::saving(function ($professional) {
-            $status = strtolower(trim($professional->status ?? ''));
-
-            // 🛡️ 1. Force Sync: status -> is_suspended
-            if ($status === 'active' && $professional->is_suspended !== false) {
-                $professional->is_suspended = false;
-            } else if ($status === 'suspended' && $professional->is_suspended !== true) {
-                $professional->is_suspended = true;
-            }
-
-            // 🛡️ 2. Force Sync: is_suspended -> status (Bidirectional)
-            if ($professional->isDirty('is_suspended')) {
-                $expectedStatus = $professional->is_suspended ? 'Suspended' : 'Active';
-                if (strtolower(trim($professional->status ?? '')) !== strtolower($expectedStatus)) {
-                    $professional->status = $expectedStatus;
-                }
-            }
-
-            // 📜 3. Audit Logging (Production Visibility)
-            if ($professional->isDirty(['status', 'is_suspended'])) {
-                $oldStatus = $professional->getOriginal('status') ?? 'N/A';
-                $newStatus = $professional->status;
-                $oldSuspended = $professional->getOriginal('is_suspended') ?? 'N/A';
-                $newSuspended = $professional->is_suspended;
-                
-                \Log::info("Professional #{$professional->id} consistency sync: status ({$oldStatus} -> {$newStatus}), is_suspended ({$oldSuspended} -> {$newSuspended})");
+            // 🛡️ Data Integrity Rule: Suspended professionals cannot have active job requests
+            if ($professional->is_suspended) {
+                $professional->active_request_id = null;
             }
         });
+
+        // 🛡️ REMOVED: Manual status column management.
+        // Availability is now purely computed based on is_suspended and active_request_id.
+    }
+
+    public function getStatusAttribute()
+    {
+        // 1. Account Level Check (Offline)
+        if ($this->is_suspended) {
+            return 'offline';
+        }
+
+        // 2. Task Level Check (Busy)
+        return $this->active_request_id ? 'busy' : 'online';
     }
 
     public static function generateUniqueReferralCode($name = null): string

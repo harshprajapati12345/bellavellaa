@@ -10,7 +10,8 @@
 return [
     'transitions' => [
         'pending'         => ['accepted', 'cancelled'],
-        'accepted'        => ['on_the_way', 'cancelled'],
+        'assigned'        => ['accepted', 'on_the_way', 'cancelled', 'rejected'],
+        'accepted'        => ['on_the_way', 'cancelled', 'rejected'],
         'on_the_way'      => ['arrived', 'cancelled'],
         'arrived'         => ['scan_kit', 'in_progress', 'cancelled'],
         'scan_kit'        => ['in_progress', 'cancelled'],

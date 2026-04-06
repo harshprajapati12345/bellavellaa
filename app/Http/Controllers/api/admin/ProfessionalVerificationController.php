@@ -37,10 +37,14 @@ class ProfessionalVerificationController extends BaseController
             'verification' => $request->status,
         ]);
 
+        // ✅ Unified Status Broadcast (Real-Time Architecture)
+        $professional->refresh();
+        broadcast(new \App\Events\ProfessionalStatusUpdated($professional))->toOthers();
+
         if ($request->status === 'Verified') {
             // Profile verification reward decommissioned
         }
 
-        return $this->success(new ProfessionalResource($professional), "Professional status updated to {$request->status}.");
+        return $this->success(new ProfessionalResource($professional), "Professional verification status updated to {$request->status}.");
     }
 }

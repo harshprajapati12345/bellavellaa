@@ -230,6 +230,9 @@ $registerApiRoutes = function (): void {
 
                 // Kit Store / Orders
                 Route::get('kit-products', [\App\Http\Controllers\Api\Professionals\KitController::class , 'products']);
+                Route::get('kits', [\App\Http\Controllers\Api\Professionals\KitController::class , 'kits']);
+                Route::post('kits/repair', [\App\Http\Controllers\Api\Professionals\KitController::class , 'repairInventory']);
+                Route::post('save-fcm-token', [\App\Http\Controllers\Api\Professionals\KitController::class , 'saveFcmToken']);
                 Route::post('orders', [\App\Http\Controllers\Api\Professionals\KitController::class , 'order']);
                 Route::get('orders', [\App\Http\Controllers\Api\Professionals\KitController::class , 'orders']);
                 Route::get('orders/{id}', [\App\Http\Controllers\Api\Professionals\KitController::class , 'showOrder']);
