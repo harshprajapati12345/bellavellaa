@@ -96,6 +96,19 @@ class Professional extends Authenticatable implements JWTSubject
         // Availability is now purely computed based on is_suspended and active_request_id.
     }
 
+    public function getAvatarAttribute($value)
+    {
+        if (empty($value)) {
+            return asset('assets/images/default-avatar.png');
+        }
+        
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        return asset('storage/' . $value);
+    }
+
     public function getStatusAttribute()
     {
         // 1. Account Level Check (Offline)

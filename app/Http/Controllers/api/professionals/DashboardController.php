@@ -121,6 +121,7 @@ class DashboardController extends BaseController
                 'remaining_seconds' => max(0, $remainingSeconds),
                 'is_active' => $isWithinShift,
                 'progress' => round($shiftProgress, 4),
+                'online_started_at' => $professional->is_online ? ($professional->shift_start_time ? $professional->shift_start_time->toIso8601String() : null) : null,
             ]
         ], 'Dashboard summary retrieved.');
     }
@@ -175,7 +176,7 @@ class DashboardController extends BaseController
 
             // Set new shift session
             $professional->session_id = (string) \Illuminate\Support\Str::uuid();
-            $professional->shift_start_time = $shiftStart;
+            $professional->shift_start_time = now(); // Use actual time they went online
             $professional->shift_end_time = $shiftEnd;
         } else {
             // Going offline manually
@@ -189,6 +190,7 @@ class DashboardController extends BaseController
         return $this->success([
             'is_online'      => (bool) $professional->is_online,
             'shift_end_time' => $professional->shift_end_time ? $professional->shift_end_time->toIso8601String() : null,
+            'online_started_at' => $professional->is_online ? $professional->shift_start_time->toIso8601String() : null,
         ], 'Availability status updated.');
     }
 
@@ -248,8 +250,9 @@ class DashboardController extends BaseController
                 'id' => $pro->id,
                 'name' => $pro->name,
                 'role' => $pro->category ?? 'Professional',
-                'image' => $pro->avatar ?? asset('assets/images/default-avatar.png'),
+                'image' => $pro->avatar, // Uses new accessor
                 'completed_jobs_count' => (int) $pro->completed_jobs_count,
+                'updated_at' => $pro->updated_at?->toIso8601String(),
                 'rank' => $index + 1,
             ];
         });
