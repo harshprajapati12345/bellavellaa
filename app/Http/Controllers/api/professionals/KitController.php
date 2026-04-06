@@ -255,7 +255,9 @@ class KitController extends BaseController
                 return DB::transaction(function () use ($professional, $product, $validated, $amountPaise, $quantity, $idempotencyKey, $requestHash) {
                     
                     // 3. Wallet Lock & Check
-                    $wallet = $professional->cashWallet()
+                    $wallet = \App\Models\Wallet::where('holder_type', get_class($professional))
+                        ->where('holder_id', $professional->id)
+                        ->where('type', 'coin')
                         ->lockForUpdate()
                         ->first();
 

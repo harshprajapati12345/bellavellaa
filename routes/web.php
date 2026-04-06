@@ -164,6 +164,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('settings/update', [SettingController::class , 'update'])->name('settings.update');
     Route::post('settings/theme/save', [SettingController::class , 'saveTheme'])->name('settings.theme.save');
     Route::post('settings/theme/reset', [SettingController::class , 'resetTheme'])->name('settings.theme.reset');
+    Route::post('settings/rewards/update', [SettingController::class , 'updateRewards'])->name('settings.rewards.update');
     Route::resource('settings', SettingController::class)->except(['update']);
 
     Route::post('homepage/reorder', [HomepageController::class , 'reorder'])->name('homepage.reorder');
