@@ -90,8 +90,16 @@ class BookingController extends BaseController
         }
 
         if (strtolower($professional->status) !== 'active') {
-            return $this->error('Your account is currently suspended. (Status: ' . $professional->status . ')', 403);
+            return $this->error('Your account is currently suspended.', 403);
         }
+
+        // 🛡️ Safety Net
+        try {
+            $professional->ensureActive();
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 403);
+        }
+
 
         $booking = Booking::find($id);
 
@@ -152,14 +160,14 @@ class BookingController extends BaseController
                     $pro->update([
                         'reject_count' => 0,
                         'last_reject_date' => $today,
-                        'is_suspended' => false,
+                        'status' => 'active',
                     ]);
                     
                     $pro->refresh();
                 }
 
                 // ❌ STEP 2: Already suspended check
-                if ($pro->is_suspended || strtolower($pro->status) === 'suspended') {
+                if ($pro->status === 'suspended') {
                     return $this->error('Account suspended for today.', 403, [
                         'remaining_rejects' => 0,
                         'suspended' => true,
@@ -170,7 +178,7 @@ class BookingController extends BaseController
                 // ❌ STEP 3: Block on 4th attempt (Check BEFORE incrementing)
                 if ((int)$pro->reject_count >= 3) {
                     $pro->update([
-                        'is_suspended' => true,
+                        'status' => 'suspended',
                     ]);
                     
                     return $this->error('Account suspended due to excessive rejections.', 403, [
@@ -179,6 +187,7 @@ class BookingController extends BaseController
                         'status' => 'suspended'
                     ]);
                 }
+
 
                 // 🔒 Security: Ensure professional owns this booking
                 $booking = Booking::where('id', $id)
@@ -245,6 +254,14 @@ class BookingController extends BaseController
         if ((int)$booking->professional_id !== (int)$professional->id) {
             return $this->error('Unauthorized access.', 403);
         }
+
+        // 🛡️ Safety Net
+        try {
+            $professional->ensureActive();
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 403);
+        }
+
 
         $originalStatus = $booking->status;
         DB::beginTransaction();

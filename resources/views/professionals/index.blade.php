@@ -8,7 +8,8 @@ $total     = $professionals->count();
 $verified  = $professionals->where('verification', 'Verified')->count();
 $online    = $online ?? $professionals->where('last_seen', '>=', now()->subMinutes(2))->count();
 $pending   = $professionals->where('verification', 'Pending')->count();
-$suspended = $professionals->where('status', 'Suspended')->count();
+$suspended = $professionals->where('status', 'suspended')->count();
+
 @endphp
 
     <div class="flex flex-col gap-6">
@@ -143,12 +144,13 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                   </div>
                 </td>
                 <td class="px-5 py-4">
-                  @if(($pro->status ?? 'Active') === 'Active')
+                  @if(($pro->status ?? 'active') === 'active')
                   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Active</span>
                   @else
                   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-500"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Suspended</span>
                   @endif
                 </td>
+
                 <td class="px-5 py-4">
                   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full {{ $vClass }}">
                     <i data-lucide="{{ $vIcon }}" class="w-3 h-3"></i>{{ $pro->verification ?? 'Pending' }}
@@ -165,10 +167,11 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                       class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
                       <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     </a>
-                    <button onclick="toggleSuspend({{ $pro->id }}, '{{ $pro->status }}')" title="{{ ($pro->status ?? 'Active') === 'Active' ? 'Suspend' : 'Activate' }}"
-                      class="w-8 h-8 rounded-lg border {{ ($pro->status ?? 'Active') === 'Active' ? 'border-amber-100 text-amber-500 hover:bg-amber-500' : 'border-emerald-100 text-emerald-500 hover:bg-emerald-500' }} hover:text-white transition-all flex items-center justify-center">
-                      <i data-lucide="{{ ($pro->status ?? 'Active') === 'Active' ? 'pause-circle' : 'play-circle' }}" class="w-3.5 h-3.5"></i>
+                    <button onclick="toggleSuspend({{ $pro->id }}, '{{ $pro->status }}')" title="{{ ($pro->status ?? 'active') === 'active' ? 'Suspend' : 'Activate' }}"
+                      class="w-8 h-8 rounded-lg border {{ ($pro->status ?? 'active') === 'active' ? 'border-amber-100 text-amber-500 hover:bg-amber-500' : 'border-emerald-100 text-emerald-500 hover:bg-emerald-500' }} hover:text-white transition-all flex items-center justify-center">
+                      <i data-lucide="{{ ($pro->status ?? 'active') === 'active' ? 'pause-circle' : 'play-circle' }}" class="w-3.5 h-3.5"></i>
                     </button>
+
                     <button onclick="deletePro({{ $pro->id }})" title="Delete"
                       class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -205,8 +208,9 @@ $suspended = $professionals->where('status', 'Suspended')->count();
 @push('scripts')
 <script>
   function toggleSuspend(id, currentStatus) {
-    const action = currentStatus === 'Active' ? 'suspend' : 'activate';
-    const actionText = currentStatus === 'Active' ? 'Suspend' : 'Activate';
+    const action = currentStatus === 'active' ? 'suspend' : 'activate';
+    const actionText = currentStatus === 'active' ? 'Suspend' : 'Activate';
+
     
     Swal.fire({ 
       title: `${actionText} Professional?`, 

@@ -21,14 +21,17 @@ class ProfileController extends BaseController
      */
     public function show(Request $request): JsonResponse
     {
-        $professional = $this->resolveProfessional($request);
-        \Illuminate\Support\Facades\Log::info("Profile Fetch for Pro ID: " . ($professional ? $professional->id : 'NULL'));
+        // Avoid stale auth model
+        $professional = Professional::find($request->user('professional-api')->id);
 
         if (!$professional) {
             return $this->error('Unauthenticated.', 401);
         }
 
-        return $this->success(new ProfessionalResource($professional), 'Profile retrieved successfully.');
+        return $this->success([
+            'user' => new ProfessionalResource($professional),
+            'is_suspended' => $professional->status === 'suspended',
+        ], 'Profile retrieved successfully.');
     }
 
     /**

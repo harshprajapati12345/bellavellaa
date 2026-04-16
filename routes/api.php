@@ -311,7 +311,8 @@ $registerApiRoutes = function (): void {
 
             // Professionals Management
             Route::apiResource('professionals', App\Http\Controllers\Api\Admin\ProfessionalController::class);
-            Route::post('professionals/{id}/reactivate', [App\Http\Controllers\Api\Admin\ProfessionalController::class, 'reactivate']);
+            Route::post('professionals/{id}/suspend', [App\Http\Controllers\Api\Admin\ProfessionalController::class, 'suspend']);
+            Route::post('professionals/{id}/unsuspend', [App\Http\Controllers\Api\Admin\ProfessionalController::class, 'unsuspend']);
             Route::get('professionals-verification', [
                 App\Http\Controllers\Api\Admin\ProfessionalVerificationController::class ,
                 'index'

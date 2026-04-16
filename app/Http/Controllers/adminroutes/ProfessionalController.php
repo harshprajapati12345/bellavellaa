@@ -285,18 +285,30 @@ class ProfessionalController extends Controller
     public function suspend($id)
     {
         $pro = Professional::findOrFail($id);
-        $pro->update(['status' => 'Suspended']);
+        $pro->update([
+            'status' => 'suspended',
+        ]);
 
         return back()->with('success', 'Professional suspended.');
     }
 
+
+
     public function activate($id)
     {
         $pro = Professional::findOrFail($id);
-        $pro->update(['status' => 'Active']);
+        $pro->update([
+            'status' => 'active',
+        ]);
+
+        // 🔥 Real-time Broadcast for instant Flutter refresh
+        $pro->refresh();
+        broadcast(new \App\Events\ProfessionalStatusUpdated($pro))->toOthers();
 
         return back()->with('success', 'Professional activated.');
     }
+
+
 
     public function leaderboard()
     {

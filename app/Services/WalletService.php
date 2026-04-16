@@ -22,6 +22,11 @@ class WalletService
      */
     public static function deduct(Wallet $wallet, int $amountPaise, string $source, string $description, $referenceId = null, $referenceType = null): bool
     {
+        // Model-level guard to prevent suspended professionals from performing outgoing transactions
+        if ($wallet->holder instanceof \App\Models\Professional) {
+            $wallet->holder->ensureActive();
+        }
+
         return DB::transaction(function () use ($wallet, $amountPaise, $source, $description, $referenceId, $referenceType) {
             try {
                 // Ensure sufficient balance at the query level before attempt (redundant but safe)

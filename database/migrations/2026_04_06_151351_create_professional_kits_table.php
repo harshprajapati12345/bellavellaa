@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::dropIfExists('professional_kits');
         Schema::create('professional_kits', function (Blueprint $table) {
             $table->id();
-            $table->uuid('professional_id');
+            $table->unsignedBigInteger('professional_id');
             $table->unsignedBigInteger('product_id')->nullable();
             $table->integer('qty')->default(0);
             $table->timestamps();

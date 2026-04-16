@@ -67,18 +67,12 @@ class AuthController extends BaseController
             ], 'OTP verified. Please complete signup.');
         }
 
-        if ($professional->is_suspended) {
-            return $this->error('Your account has been suspended. Please contact support.', 403);
-        }
-
         try {
             $token = $this->guard()->login($professional);
         }
         catch (JWTException $e) {
             return $this->error('Could not create token.', 500);
         }
-
-        // Login reward decommissioned
 
         return $this->success([
             'access_token' => $token,
@@ -89,6 +83,9 @@ class AuthController extends BaseController
                 'name' => $professional->name,
                 'verification' => $professional->verification,
                 'status' => $professional->status,
+                'is_suspended' => $professional->status === 'suspended',
+
+                'status_version' => (int)$professional->status_version,
             ],
             'is_new_user' => false,
         ], 'Login successful.');

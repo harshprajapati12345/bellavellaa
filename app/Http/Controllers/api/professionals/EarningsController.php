@@ -165,8 +165,6 @@ class EarningsController extends BaseController
         $daysRemaining = $unlockDate ? (int) max(0, now()->diffInDays($unlockDate, false)) : 0;
         $finalRemainingSeconds = $unlockDate ? (int) max(0, now()->diffInSeconds($unlockDate, false)) : 0;
 
-        $totalCashBalancePaise = (int) $cashWallet->balance;
-        $availableToWithdrawPaise = $totalCashBalancePaise;
 
         $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
@@ -195,33 +193,76 @@ class EarningsController extends BaseController
             ->where('status', 'completed')
             ->count();
 
+        // ── Wallet composition — computed purely from transactions, NEVER from wallets.balance ──
+        // Source values found in DB: credit/job_earning, credit/deposit, debit/withdrawal_request, debit/kit_purchase
+
+        $allCredits = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('type', 'credit')
+            ->get();
+
+        $allDebits = WalletTransaction::where('wallet_id', $cashWallet->id)
+            ->where('type', 'debit')
+            ->get();
+
+        // Earnings = all credit transactions that are NOT deposits
+        $totalDepositsPaise = (int) $allCredits
+            ->where('source', 'deposit')
+            ->sum('amount');
+
+        $totalCreditsPaise = (int) $allCredits->sum('amount');
+        $totalDebitsPaise  = (int) $allDebits->sum('amount');
+
+        // Everything credited that isn't a manual deposit = earnings from jobs
+        $totalEarningsPaise = $totalCreditsPaise - $totalDepositsPaise;
+
+        // Withdrawals only (exclude kit purchases and other debits from "withdrawn" shown to user)
+        $totalWithdrawnPaise = (int) $allDebits
+            ->whereIn('source', ['withdrawal', 'withdrawal_request', 'withdraw'])
+            ->sum('amount');
+
+        // The ONLY source of truth for balance: credits - debits from transactions
+        $computedBalancePaise = max(0, $totalCreditsPaise - $totalDebitsPaise);
+
+        // Sync the wallet balance column to the correct computed value (auto-heal drift)
+        if ($cashWallet->balance !== $computedBalancePaise) {
+            $cashWallet->balance = $computedBalancePaise;
+            $cashWallet->save();
+        }
+
         return $this->success([
             'is_professional' => true,
             'server_time' => now()->toIso8601String(),
-            'cash_balance' => (float) max(0, $totalCashBalancePaise / 100),
-            'available_balance' => (float) max(0, $availableToWithdrawPaise / 100),
-            'locked_balance' => 0.0,
-            'deposit_balance' => 0.0,
-            'earnings_balance' => (float) ($totalCashBalancePaise / 100),
-            'total_balance' => (float) max(0, $totalCashBalancePaise / 100),
-            'withdraw_delay_days' => (int) $cooldownDays, 
-            'cooldown_days' => (int) $cooldownDays,
+            // ── All balances computed from transactions — never from wallets.balance ──
+            'cash_balance'      => (float) ($computedBalancePaise / 100),
+            'available_balance' => (float) ($computedBalancePaise / 100),
+            'earnings_balance'  => (float) ($computedBalancePaise / 100),
+            'total_balance'     => (float) ($computedBalancePaise / 100),
+            'locked_balance'    => 0.0,
+            'deposit_balance'   => 0.0,
+            // ── Breakdown (earnings + deposits - withdrawn = available  ✅) ──
+            'total_earnings'    => (float) round($totalEarningsPaise / 100, 2),
+            'total_deposits'    => (float) round($totalDepositsPaise / 100, 2),
+            'total_withdrawn'   => (float) round($totalWithdrawnPaise / 100, 2),
+            'pending_balance'   => 0.0,
+            // ─────────────────────────────────────────────────────────────────
+            'withdraw_delay_days' => (int) $cooldownDays,
+            'cooldown_days'     => (int) $cooldownDays,
             'withdraw_unlocked' => (bool) $withdrawUnlocked,
-            'lock_reason' => $withdrawUnlocked ? null : "Withdrawal locked for $cooldownDays days cooldown",
-            'unlock_date' => $unlockDate ? $unlockDate->toIso8601String() : null,
-            'days_remaining' => (int) $daysRemaining,
-            'can_withdraw' => (bool) ($withdrawUnlocked && $totalCashBalancePaise >= 10000), 
+            'lock_reason'       => $withdrawUnlocked ? null : "Withdrawal locked for {$cooldownDays} days cooldown",
+            'unlock_date'       => $unlockDate ? $unlockDate->toIso8601String() : null,
+            'days_remaining'    => (int) $daysRemaining,
+            'can_withdraw'      => (bool) ($withdrawUnlocked && $computedBalancePaise >= 10000),
             'next_withdrawal_at' => $unlockDate ? $unlockDate->toIso8601String() : null,
             'remaining_seconds' => (int) $finalRemainingSeconds,
-            'coin_balance' => (int) $professional->coins_balance,
-            'coins_balance' => (int) $professional->coins_balance,
-            'coins' => (int) $professional->coins_balance,
-            'total_jobs' => (int) $totalJobs,
-            'active_balance' => $type === 'coin' ? (int) $professional->coins_balance : (float) ($totalCashBalancePaise / 100),
-            'transactions' => $transactions,
-            'today_earnings' => (float) round($todayEarnings, 2),
-            'weekly_earnings' => (float) round($weeklyEarnings, 2),
-            'monthly_earnings' => (float) round($monthlyEarnings, 2),
+            'coin_balance'      => (int) $professional->coins_balance,
+            'coins_balance'     => (int) $professional->coins_balance,
+            'coins'             => (int) $professional->coins_balance,
+            'total_jobs'        => (int) $totalJobs,
+            'active_balance'    => $type === 'coin' ? (int) $professional->coins_balance : (float) ($computedBalancePaise / 100),
+            'transactions'      => $transactions,
+            'today_earnings'    => (float) round($todayEarnings, 2),
+            'weekly_earnings'   => (float) round($weeklyEarnings, 2),
+            'monthly_earnings'  => (float) round($monthlyEarnings, 2),
             'total_completed_jobs' => (int) $totalJobs,
             'kits' => [],
             'kit_orders' => \App\Models\KitOrder::with('product')

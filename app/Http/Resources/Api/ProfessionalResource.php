@@ -73,7 +73,7 @@ class ProfessionalResource extends JsonResource
             'last_seen'           => $this->last_seen?->toIso8601String(),
             'reject_count'        => (int) ($this->reject_count ?? 0),
             'last_reject_date'    => $this->last_reject_date,
-            'is_suspended'        => (bool) ($this->is_suspended ?? false),
+            'is_suspended'        => $this->status === 'suspended',
             'created_at'          => $this->created_at?->toIso8601String(),
             'updated_at'          => $this->updated_at?->toIso8601String(),
         ];
