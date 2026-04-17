@@ -22,11 +22,6 @@ class BookingService
             return;
         }
 
-        // Model-level guard to prevent suspended professionals from processing jobs
-        if ($booking->professional) {
-            $booking->professional->ensureActive();
-        }
-
         DB::transaction(function () use ($booking) {
             $booking->update([
                 'status' => 'completed',

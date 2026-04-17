@@ -32,18 +32,13 @@ class Professional extends Authenticatable implements JWTSubject
         'reject_count' => 'integer',
         'last_reset_date' => 'date',
         'last_reject_date' => 'date',
-        'rating' => 'decimal:1',
-        'joined' => 'date',
+        'is_suspended' => 'boolean',
         'active_request_id' => 'integer',
-        'status_version' => 'integer',
-        'suspension_type' => 'string',
-        'suspension_reason' => 'string',
     ];
 
-    // protected $hidden = ['status'];
+    protected $hidden = ['status'];
 
-    // protected $appends = ['status'];
-
+    protected $appends = ['status'];
 
     // ── JWT ────────────────────────────────────────────────────────
     public function getJWTIdentifier()
@@ -92,17 +87,10 @@ class Professional extends Authenticatable implements JWTSubject
 
         static::saving(function ($professional) {
             // 🛡️ Data Integrity Rule: Suspended professionals cannot have active job requests
-            if ($professional->status === 'suspended') {
+            if ($professional->is_suspended) {
                 $professional->active_request_id = null;
             }
-
-            // 🔄 Increment version so mobile app forces a sync
-            if ($professional->isDirty('status')) {
-                $professional->status_version = ($professional->status_version ?? 0) + 1;
-            }
         });
-
-
 
         // 🛡️ REMOVED: Manual status column management.
         // Availability is now purely computed based on is_suspended and active_request_id.
@@ -121,31 +109,18 @@ class Professional extends Authenticatable implements JWTSubject
         return asset('storage/' . $value);
     }
 
-    public function isSuspended()
+    public function getStatusAttribute()
     {
-        return $this->status === 'suspended';
-    }
-
-    /**
-     * 🛡️ Backend Safety Net: Ensures professional is active for critical operations.
-     */
-    public function ensureActive()
-    {
-        if ($this->status === 'suspended') {
-            throw new \Exception('Your account is currently suspended.');
+        // 1. Account Level Check (Offline)
+        if ($this->is_suspended) {
+            return 'offline';
         }
 
-        if (strtolower($this->verification) !== 'verified' && strtolower($this->verification) !== 'approved' && strtolower($this->verification) !== 'pending') {
-            throw new \Exception('Your account is not verified.');
-        }
-
-        return true;
+        // 2. Task Level Check (Busy)
+        return $this->active_request_id ? 'busy' : 'online';
     }
-
-
 
     public static function generateUniqueReferralCode($name = null): string
-
     {
         $namePart = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name ?? 'PRO'), 0, 5));
         if (empty($namePart)) $namePart = 'PRO';

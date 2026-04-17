@@ -17,12 +17,12 @@ class CheckSuspendedProfessional
     {
         $user = $request->user('professional-api');
 
-        if ($user && $user->status === 'suspended') {
+        if ($user && $user->is_suspended) {
             return response()->json([
                 'success' => false,
                 'is_suspended' => true,
                 'status' => 'suspended',
-                'message' => 'Your account has been suspended.',
+                'message' => 'Your account has been suspended due to excessive rejections. It will reset tomorrow.',
             ], 403);
         }
 

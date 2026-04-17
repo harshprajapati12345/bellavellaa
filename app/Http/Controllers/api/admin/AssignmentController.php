@@ -46,7 +46,7 @@ class AssignmentController extends BaseController
             ->get();
 
         $professionals = Professional::useWritePdo()
-            ->where('status', 'active')
+            ->where('is_suspended', false)
             ->where('is_online', 1)
             ->whereNull('active_request_id')
             ->where('last_seen', '>=', now()->subMinutes(30))

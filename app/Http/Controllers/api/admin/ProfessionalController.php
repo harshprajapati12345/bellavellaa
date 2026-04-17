@@ -83,53 +83,19 @@ class ProfessionalController extends BaseController
     }
 
     /**
-     * Suspend a professional.
-     */
-    public function suspend(Request $request, $id): JsonResponse
-    {
-        $professional = Professional::findOrFail($id);
-        
-        \Illuminate\Support\Facades\DB::transaction(function () use ($professional) {
-            $professional->update([
-                'status' => 'suspended',
-                'is_online' => false,
-            ]);
-
-
-            // Atomic Booking Handover
-            \App\Models\Booking::where('professional_id', $professional->id)
-                ->whereIn('status', ['assigned', 'in_progress'])
-                ->update([
-                    'status' => 'cancelled',
-                    'cancel_reason' => 'professional_suspended'
-                ]);
-        });
-
-        return $this->success(new ProfessionalResource($professional->fresh()), 'Professional suspended and active bookings cancelled.');
-    }
-
-
-    /**
      * Reactivate a suspended professional.
      */
-    public function unsuspend(Request $request, $id): JsonResponse
+    public function reactivate(Request $request, $id): JsonResponse
     {
         $professional = Professional::findOrFail($id);
         
-        \Illuminate\Support\Facades\DB::transaction(function () use ($professional) {
-            $professional->update([
-                'status' => 'active',
-                'reject_count' => 0,
-                'last_reset_date' => now()->toDateString(),
-            ]);
+        $professional->update([
+            'is_suspended' => false,
+            'reject_count' => 0,
+            'status' => 'Active',
+            'last_reset_date' => now()->toDateString(),
+        ]);
 
-            // 🔥 Real-time Broadcast for instant Flutter refresh
-            $professional->refresh();
-            broadcast(new \App\Events\ProfessionalStatusUpdated($professional))->toOthers();
-        });
-
-
-        return $this->success(new ProfessionalResource($professional->fresh()), 'Professional reactivated successfully.');
+        return $this->success(new ProfessionalResource($professional), 'Professional reactivated successfully.');
     }
-
 }
