@@ -152,14 +152,17 @@ class BookingController extends BaseController
                     $pro->update([
                         'reject_count' => 0,
                         'last_reject_date' => $today,
-                        'is_suspended' => false,
                     ]);
+                    
+                    if (strtolower($pro->status) === 'suspended') {
+                        $pro->update(['status' => 'active']);
+                    }
                     
                     $pro->refresh();
                 }
 
                 // ❌ STEP 2: Already suspended check
-                if ($pro->is_suspended || strtolower($pro->status) === 'suspended') {
+                if (strtolower($pro->status) === 'suspended' || $pro->status !== 'active') {
                     return $this->error('Account suspended for today.', 403, [
                         'remaining_rejects' => 0,
                         'suspended' => true,
@@ -170,7 +173,7 @@ class BookingController extends BaseController
                 // ❌ STEP 3: Block on 4th attempt (Check BEFORE incrementing)
                 if ((int)$pro->reject_count >= 3) {
                     $pro->update([
-                        'is_suspended' => true,
+                        'status' => 'suspended',
                     ]);
                     
                     return $this->error('Account suspended due to excessive rejections.', 403, [

@@ -11,7 +11,7 @@ class ProfessionalController extends Controller
     {
         $professionals = Professional::all();
         $total = $professionals->count();
-        $active = $professionals->where('status', 'Active')->count();
+        $active = $professionals->where('status', 'active')->count();
         $online = $professionals->where('last_seen', '>=', now()->subMinutes(30))->count();
         $topPro = $professionals->sortByDesc('bookings_count')->first();
 
@@ -42,7 +42,7 @@ class ProfessionalController extends Controller
             'bio' => $request->bio,
             'experience' => $request->experience ?? '0 years',
             'rating' => $request->rating ?? 0,
-            'status' => $request->has('status') ? 'Active' : 'Suspended',
+            'status' => $request->has('status') ? 'active' : 'suspended',
             'avatar' => $avatarPath,
             'joined' => now(),
         ]);
@@ -90,7 +90,7 @@ class ProfessionalController extends Controller
             'bio' => $request->bio,
             'experience' => $request->experience ?? $professional->experience,
             'rating' => $request->rating ?? $professional->rating,
-            'status' => $request->has('status') ? 'Active' : 'Suspended',
+            'status' => $request->has('status') ? 'active' : 'suspended',
             'avatar' => $avatarPath,
         ]);
 
@@ -285,15 +285,46 @@ class ProfessionalController extends Controller
     public function suspend($id)
     {
         $pro = Professional::findOrFail($id);
-        $pro->update(['status' => 'Suspended']);
+        $wasOnline = $pro->is_online;
+        $pro->update([
+            'status' => 'suspended',
+            'is_online' => false,
+            'session_id' => null
+        ]);
 
-        return back()->with('success', 'Professional suspended.');
+        try {
+            broadcast(new \App\Events\StatusUpdated($pro));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Broadcast failed: " . $e->getMessage());
+        }
+        \Illuminate\Support\Facades\Log::info("EVENT FIRED", [
+          'id' => $pro->id,
+          'status' => $pro->status
+        ]);
+
+        \Illuminate\Support\Facades\Log::info("Professional suspended by Admin", [
+            'id' => $pro->id,
+            'was_online' => $wasOnline
+        ]);
+
+        return back()->with('success', 'Professional suspended and forced offline.');
     }
 
     public function activate($id)
     {
         $pro = Professional::findOrFail($id);
-        $pro->update(['status' => 'Active']);
+        $pro->update(['status' => 'active']);
+
+        try {
+            broadcast(new \App\Events\StatusUpdated($pro));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Broadcast failed: " . $e->getMessage());
+        }
+
+        \Illuminate\Support\Facades\Log::info("ADMIN ACTIVATING", [
+            'id' => $pro->id,
+            'status' => 'active'
+        ]);
 
         return back()->with('success', 'Professional activated.');
     }
@@ -304,7 +335,7 @@ class ProfessionalController extends Controller
             ->withCount(['bookings as completed_jobs_count' => function ($query) {
                 $query->where('status', 'completed');
             }])
-            ->where('status', 'Active')
+            ->where('status', 'active')
             ->orderByDesc('completed_jobs_count')
             ->take(3)
             ->get();

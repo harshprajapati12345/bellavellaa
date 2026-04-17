@@ -90,9 +90,8 @@ class ProfessionalController extends BaseController
         $professional = Professional::findOrFail($id);
         
         $professional->update([
-            'is_suspended' => false,
             'reject_count' => 0,
-            'status' => 'Active',
+            'status' => 'active',
             'last_reset_date' => now()->toDateString(),
         ]);
 

@@ -22,7 +22,11 @@ class ProfileController extends BaseController
     public function show(Request $request): JsonResponse
     {
         $professional = $this->resolveProfessional($request);
-        \Illuminate\Support\Facades\Log::info("Profile Fetch for Pro ID: " . ($professional ? $professional->id : 'NULL'));
+        
+        \Illuminate\Support\Facades\Log::info("API FETCH USER", [
+            'id' => $professional ? $professional->id : 'NULL',
+            'status' => $professional ? $professional->status : 'NULL',
+        ]);
 
         if (!$professional) {
             return $this->error('Unauthenticated.', 401);

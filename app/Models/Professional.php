@@ -32,13 +32,10 @@ class Professional extends Authenticatable implements JWTSubject
         'reject_count' => 'integer',
         'last_reset_date' => 'date',
         'last_reject_date' => 'date',
-        'is_suspended' => 'boolean',
         'active_request_id' => 'integer',
     ];
 
-    protected $hidden = ['status'];
-
-    protected $appends = ['status'];
+    protected $appends = ['availability_status'];
 
     // ── JWT ────────────────────────────────────────────────────────
     public function getJWTIdentifier()
@@ -87,13 +84,12 @@ class Professional extends Authenticatable implements JWTSubject
 
         static::saving(function ($professional) {
             // 🛡️ Data Integrity Rule: Suspended professionals cannot have active job requests
-            if ($professional->is_suspended) {
+            if ($professional->status === 'suspended') {
                 $professional->active_request_id = null;
             }
         });
 
         // 🛡️ REMOVED: Manual status column management.
-        // Availability is now purely computed based on is_suspended and active_request_id.
     }
 
     public function getAvatarAttribute($value)
@@ -109,15 +105,19 @@ class Professional extends Authenticatable implements JWTSubject
         return asset('storage/' . $value);
     }
 
-    public function getStatusAttribute()
+    public function getAvailabilityStatusAttribute()
     {
         // 1. Account Level Check (Offline)
-        if ($this->is_suspended) {
+        if ($this->status !== 'active') {
             return 'offline';
         }
 
         // 2. Task Level Check (Busy)
-        return $this->active_request_id ? 'busy' : 'online';
+        if ($this->active_request_id) {
+            return 'busy';
+        }
+        
+        return $this->is_online ? 'online' : 'offline';
     }
 
     public static function generateUniqueReferralCode($name = null): string

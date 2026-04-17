@@ -191,8 +191,11 @@ $registerApiRoutes = function (): void {
                 // Dashboard
                 Route::get('dashboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'index']);
                 Route::get('active-job', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'activeJob']);
-                Route::post('toggle-availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'toggleAvailability']);
-                Route::post('update-online-status', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'updateOnlineStatus']);
+                // Rate Limited Endpoints
+                Route::post('toggle-availability', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'toggleAvailability'])
+                    ->middleware('throttle:10,1');
+                Route::post('update-online-status', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'updateOnlineStatus'])
+                    ->middleware('throttle:15,1');
                 Route::get('leaderboard', [\App\Http\Controllers\Api\Professionals\DashboardController::class , 'leaderboard']);
 
                 // Booking Requests

@@ -46,6 +46,12 @@ class DashboardController extends BaseController
             }
         }
 
+        // Heartbeat Optimization Timeout: Auto-Offline
+        if ($professional->is_online && $professional->last_seen && now()->diffInMinutes($professional->last_seen) > 2) {
+            $professional->update(['is_online' => false, 'session_id' => null]);
+            $isOnlineAuthoritative = false;
+        }
+
         $totalDurationSeconds = $shiftDuration * 60;
         $elapsedSeconds = $shiftStart->diffInSeconds(now());
         $shiftProgress = $totalDurationSeconds > 0 ? ($elapsedSeconds / $totalDurationSeconds) : 0;
@@ -158,6 +164,11 @@ class DashboardController extends BaseController
         ]);
 
         if ($validated['is_online']) {
+            // Check account status first
+            if ($professional->status !== 'active') {
+                return $this->error('Account ' . $professional->status, 403);
+            }
+
             // Check global shift settings
             $shiftStartTime = Setting::get('shift_start_time', '09:00');
             $shiftDuration = (int) Setting::get('shift_duration', 480);
@@ -187,6 +198,17 @@ class DashboardController extends BaseController
         $professional->is_online = $validated['is_online'];
         $professional->save();
 
+        try {
+            broadcast(new \App\Events\StatusUpdated($professional));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Broadcast failed: " . $e->getMessage());
+        }
+        
+        \Illuminate\Support\Facades\Log::info("EVENT FIRED", [
+          'id' => $professional->id,
+          'status' => $professional->status
+        ]);
+
         return $this->success([
             'is_online'      => (bool) $professional->is_online,
             'shift_end_time' => $professional->shift_end_time ? $professional->shift_end_time->toIso8601String() : null,
@@ -201,6 +223,11 @@ class DashboardController extends BaseController
     {
         $professional = $request->user('professional-api');
         
+        // Session validation to prevent hijacking or stale sessions
+        if ($request->has('session_id') && $professional->session_id && $request->session_id !== $professional->session_id) {
+            return $this->error('Invalid or expired session. Logged in from another device.', 401);
+        }
+
         // Auto-offline check
         $shiftStartTime = Setting::get('shift_start_time', '09:00');
         $shiftDuration = (int) Setting::get('shift_duration', 480);
@@ -208,7 +235,7 @@ class DashboardController extends BaseController
         $shiftEnd = $shiftStart->copy()->addMinutes($shiftDuration);
         if ($shiftEnd->lt($shiftStart)) $shiftEnd->addDay();
 
-        if (!now()->between($shiftStart, $shiftEnd)) {
+        if (!now()->between($shiftStart, $shiftEnd) || $professional->status !== 'active') {
             if ($professional->is_online) {
                 $professional->is_online = false;
                 $professional->session_id = null;

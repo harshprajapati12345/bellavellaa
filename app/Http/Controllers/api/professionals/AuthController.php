@@ -67,7 +67,7 @@ class AuthController extends BaseController
             ], 'OTP verified. Please complete signup.');
         }
 
-        if ($professional->is_suspended) {
+        if ($professional->status === 'suspended') {
             return $this->error('Your account has been suspended. Please contact support.', 403);
         }
 

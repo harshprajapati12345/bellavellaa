@@ -33,7 +33,7 @@ class JobUpdate implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('professionals.'.$this->booking->professional_id),
+            new Channel('professional.'.$this->booking->professional_id),
         ];
     }
 
