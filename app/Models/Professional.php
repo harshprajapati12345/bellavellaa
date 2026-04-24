@@ -33,6 +33,9 @@ class Professional extends Authenticatable implements JWTSubject
         'last_reset_date' => 'date',
         'last_reject_date' => 'date',
         'active_request_id' => 'integer',
+        'accumulated_seconds_today' => 'integer',
+        'last_online_at' => 'datetime',
+        'last_reset_at' => 'datetime',
     ];
 
     protected $appends = ['availability_status'];
@@ -131,5 +134,50 @@ class Professional extends Authenticatable implements JWTSubject
 
         return $code;
     }
+
+    public function getQuotaSeconds()
+    {
+        // Prioritize admin global setting if shift_duration matches the old default (480) or is null
+        $quotaInMinutes = $this->shift_duration;
+        
+        // If the pro has the old default or null, we check the global setting
+        if (!$quotaInMinutes || $quotaInMinutes == 480) {
+            $quotaInMinutes = (int) Setting::get('shift_duration', 480);
+        }
+
+        return $quotaInMinutes * 60;
+    }
+
+    public function getResetThreshold()
+    {
+        $now = now();
+        // Shift reset threshold is 6 AM of the current day.
+        $resetThreshold = now()->startOfDay()->addHours(6);
+
+        // If it's currently before 6 AM, the threshold belongs to "yesterday's" 6 AM cycle.
+        if ($now->lt($resetThreshold)) {
+            $resetThreshold->subDay();
+        }
+
+        return $resetThreshold;
+    }
+
+    public function getRemainingSecondsTodayAttribute()
+    {
+        $totalQuotaSeconds = $this->getQuotaSeconds();
+
+        $currentTime = now();
+        $sessionSeconds = ($this->is_online && $this->last_online_at) 
+            ? $currentTime->diffInSeconds($this->last_online_at) 
+            : 0;
+
+        return max(0, $totalQuotaSeconds - ($this->accumulated_seconds_today + $sessionSeconds));
+    }
+
+    public function shouldResetShift()
+    {
+        return !$this->last_reset_at || $this->last_reset_at->lt($this->getResetThreshold());
+    }
 }
+
 

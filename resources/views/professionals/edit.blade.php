@@ -104,7 +104,7 @@
               <div class="flex items-center justify-between mb-2">
                 <p class="text-sm font-medium text-gray-900">Active Account</p>
                 <label class="toggle-switch">
-                  <input type="checkbox" name="status" {{ $professional->status === 'Active' ? 'checked' : '' }}>
+                  <input type="checkbox" name="status" {{ strtolower((string) $professional->status) === 'active' ? 'checked' : '' }}>
                   <span class="toggle-slider"></span>
                 </label>
               </div>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Professionals;
 use App\Models\Booking;
 use App\Models\Wallet;
 use App\Models\Setting;
+use App\Models\Professional;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -21,41 +23,16 @@ class DashboardController extends BaseController
         $professional = $request->user('professional-api');
         $today = Carbon::today()->toDateString();
         
-        // ─── Global Shift Logic (Admin Controlled) ───────────────────
-        $shiftStartTime = Setting::get('shift_start_time', '09:00');
-        $shiftDuration = (int) Setting::get('shift_duration', 480);
+        // ─── Robust Shift Management ──────────────────────────────────
+        $this->syncShiftState($professional);
+        $remainingSeconds = $professional->remaining_seconds_today;
 
-        $shiftStart = Carbon::today()->setTimeFromTimeString($shiftStartTime);
-        $shiftEnd = $shiftStart->copy()->addMinutes($shiftDuration);
-
-        // Handle overnight shift (e.g., 10 PM to 6 AM)
-        if ($shiftEnd->lt($shiftStart)) {
-            $shiftEnd->addDay();
-        }
-
-        $isWithinShift = now()->between($shiftStart, $shiftEnd);
-        $remainingSeconds = now()->diffInSeconds($shiftEnd, false);
-        $isOnlineAuthoritative = false;
-
-        if ($isWithinShift) {
-            $isOnlineAuthoritative = (bool) $professional->is_online;
-        } else {
-            // Hard lock offline if outside shift hours
-            if ($professional->is_online) {
-                $professional->update(['is_online' => false, 'session_id' => null]);
-            }
-        }
-
-        // Heartbeat Optimization Timeout: Auto-Offline
-        if ($professional->is_online && $professional->last_seen && now()->diffInMinutes($professional->last_seen) > 2) {
-            $professional->update(['is_online' => false, 'session_id' => null]);
-            $isOnlineAuthoritative = false;
-        }
-
-        $totalDurationSeconds = $shiftDuration * 60;
-        $elapsedSeconds = $shiftStart->diffInSeconds(now());
-        $shiftProgress = $totalDurationSeconds > 0 ? ($elapsedSeconds / $totalDurationSeconds) : 0;
-        $shiftProgress = max(0, min(1, $shiftProgress)); // Clamp between 0 and 1
+        // Visual Progress Calculation (for Dashboard UI)
+        $quotaInMinutes = $professional->shift_duration ?: Setting::get('shift_duration', 480);
+        $totalQuotaSeconds = $quotaInMinutes * 60;
+        $elapsedSeconds = $totalQuotaSeconds - $remainingSeconds;
+        $shiftProgress = $totalQuotaSeconds > 0 ? ($elapsedSeconds / $totalQuotaSeconds) : 0;
+        $shiftProgress = max(0, min(1, $shiftProgress)); // Clamp
 
         $recentBookings = Booking::with(['customer', 'service', 'package'])
             ->where('professional_id', $professional->id)
@@ -115,19 +92,17 @@ class DashboardController extends BaseController
             'total_orders'      => $professional->orders,
             'kit_count'         => \App\Models\KitOrder::where('professional_id', $professional->id)->sum('quantity'),
             'rating'            => $professional->rating,
-            'is_online'         => $isOnlineAuthoritative,
+            'is_online'         => (bool) $professional->is_online,
             'total_balance'     => (float) ($totalBalancePaise / 100),
             'available_balance' => (float) ($availableBalancePaise / 100),
             'pending_balance'   => (float) ($pendingBalancePaise / 100),
             'withdraw_delay_days' => $withdrawDelayDays,
             'session_id'        => $professional->session_id,
             'shift_info' => [
-                'start_time' => $shiftStart->toIso8601String(),
-                'end_time' => $shiftEnd->toIso8601String(),
-                'remaining_seconds' => max(0, $remainingSeconds),
-                'is_active' => $isWithinShift,
+                'remaining_seconds' => (int) $remainingSeconds,
+                'is_active' => $remainingSeconds > 0,
                 'progress' => round($shiftProgress, 4),
-                'online_started_at' => $professional->is_online ? ($professional->shift_start_time ? $professional->shift_start_time->toIso8601String() : null) : null,
+                'online_started_at' => $professional->last_online_at ? $professional->last_online_at->toIso8601String() : null,
             ]
         ], 'Dashboard summary retrieved.');
     }
@@ -169,6 +144,11 @@ class DashboardController extends BaseController
                 return $this->error('Account ' . $professional->status, 403);
             }
 
+            // [NEW] Exhaustion Block: Prevent online if quota already used up
+            if ($professional->remaining_seconds_today <= 0) {
+                return $this->error('You have exhausted your daily shift quota.', 403);
+            }
+
             // Check global shift settings
             $shiftStartTime = Setting::get('shift_start_time', '09:00');
             $shiftDuration = (int) Setting::get('shift_duration', 480);
@@ -185,18 +165,28 @@ class DashboardController extends BaseController
                 return $this->error('Minimum 5 kits required to go online.', 422);
             }
 
-            // Set new shift session
-            $professional->session_id = (string) \Illuminate\Support\Str::uuid();
-            $professional->shift_start_time = now(); // Use actual time they went online
-            $professional->shift_end_time = $shiftEnd;
+            DB::transaction(function() use ($professional) {
+                $p = Professional::lockForUpdate()->find($professional->id);
+                $p->session_id = (string) \Illuminate\Support\Str::uuid();
+                $p->last_online_at = now();
+                $p->is_online = true;
+                $p->save();
+            });
         } else {
             // Going offline manually
-            $professional->shift_end_time = null;
-            $professional->session_id = null;
+            DB::transaction(function() use ($professional) {
+                $p = Professional::lockForUpdate()->find($professional->id);
+                if ($p->is_online && $p->last_online_at) {
+                    $elapsed = now()->diffInSeconds($p->last_online_at);
+                    $p->accumulated_seconds_today += $elapsed;
+                    $p->accumulated_seconds_today = min($p->accumulated_seconds_today, $p->getQuotaSeconds());
+                }
+                $p->last_online_at = null;
+                $p->session_id = null;
+                $p->is_online = false;
+                $p->save();
+            });
         }
-
-        $professional->is_online = $validated['is_online'];
-        $professional->save();
 
         try {
             broadcast(new \App\Events\StatusUpdated($professional));
@@ -210,9 +200,11 @@ class DashboardController extends BaseController
         ]);
 
         return $this->success([
+            'status'         => $professional->status,
             'is_online'      => (bool) $professional->is_online,
-            'shift_end_time' => $professional->shift_end_time ? $professional->shift_end_time->toIso8601String() : null,
-            'online_started_at' => $professional->is_online ? $professional->shift_start_time->toIso8601String() : null,
+            'availability_status' => $professional->availability_status,
+            'remaining_seconds' => $professional->remaining_seconds_today,
+            'online_started_at' => $professional->last_online_at ? $professional->last_online_at->toIso8601String() : null,
         ], 'Availability status updated.');
     }
 
@@ -223,39 +215,98 @@ class DashboardController extends BaseController
     {
         $professional = $request->user('professional-api');
         
-        // Session validation to prevent hijacking or stale sessions
-        if ($request->has('session_id') && $professional->session_id && $request->session_id !== $professional->session_id) {
-            return $this->error('Invalid or expired session. Logged in from another device.', 401);
-        }
-
-        // Auto-offline check
-        $shiftStartTime = Setting::get('shift_start_time', '09:00');
-        $shiftDuration = (int) Setting::get('shift_duration', 480);
-        $shiftStart = Carbon::today()->setTimeFromTimeString($shiftStartTime);
-        $shiftEnd = $shiftStart->copy()->addMinutes($shiftDuration);
-        if ($shiftEnd->lt($shiftStart)) $shiftEnd->addDay();
-
-        if (!now()->between($shiftStart, $shiftEnd) || $professional->status !== 'active') {
-            if ($professional->is_online) {
-                $professional->is_online = false;
-                $professional->session_id = null;
-                $professional->save();
-            }
-        }
-
+        // Update last_seen FIRST for accurate recovery window
         $professional->last_seen = now();
         $professional->save();
 
-        $isOnlineAuthoritative = $professional->is_online && now()->between($shiftStart, $shiftEnd);
+        $this->syncShiftState($professional);
+
+        // Fetch fresh state after sync (which might have force-offline'd the pro)
+        $professional->refresh();
+
+        if ($professional->is_online && ($professional->remaining_seconds_today <= 0 || $professional->status !== 'active')) {
+            DB::transaction(function() use ($professional) {
+                $p = Professional::lockForUpdate()->find($professional->id);
+                if ($p->is_online) {
+                     if ($p->last_online_at) {
+                        $elapsed = now()->diffInSeconds($p->last_online_at);
+                        $p->accumulated_seconds_today += $elapsed;
+                        $p->accumulated_seconds_today = min($p->accumulated_seconds_today, $p->getQuotaSeconds());
+                    }
+                    $p->is_online = false;
+                    $p->last_online_at = null;
+                    $p->session_id = null;
+                    $p->save();
+                }
+            });
+        }
 
         return $this->success([
             'status'            => 'updated',
-            'is_online'         => $isOnlineAuthoritative,
+            'is_online'         => (bool) $professional->is_online,
             'last_seen'         => $professional->last_seen,
-            'remaining_seconds' => $isOnlineAuthoritative 
-                                    ? max(0, now()->diffInSeconds($shiftEnd, false)) 
-                                    : 0
+            'remaining_seconds' => $professional->remaining_seconds_today
         ], 'Heartbeat received.');
+    }
+
+    /**
+     * ─── Shift State Synchronization ──────────────────────────────────
+     * Centralized logic to:
+     * 1. Handle 6 AM daily reset of accumulated time.
+     * 2. Close "stale" sessions if the pro was online but missed heartbeats.
+     * 3. Sync accumulated seconds to DB when sessions end.
+     */
+    private function syncShiftState($professional): void
+    {
+        DB::transaction(function() use ($professional) {
+            $p = Professional::lockForUpdate()->find($professional->id);
+            $now = now();
+            $quota = $p->getQuotaSeconds();
+            $resetThreshold = $p->getResetThreshold();
+            $grace = 120; // 2 minute grace period for disconnects
+
+            // 1. Daily Reset with Atomic Split
+            if (!$p->last_reset_at || $p->last_reset_at->lt($resetThreshold)) {
+                if ($p->is_online && $p->last_online_at && $p->last_online_at->lt($resetThreshold)) {
+                    // Close the previous day's session exactly at 6 AM
+                    $effectiveEnd = min($resetThreshold, ($p->last_seen ? $p->last_seen->addSeconds($grace) : $resetThreshold));
+                    $duration = max(0, $effectiveEnd->diffInSeconds($p->last_online_at));
+                    
+                    $p->accumulated_seconds_today += $duration;
+                    $p->accumulated_seconds_today = min($p->accumulated_seconds_today, $quota);
+                    
+                    // Note: Here we'd typically log the finalized daily time to a reports table.
+                }
+                
+                // Reset for the new cycle (starts fresh at 0)
+                $p->accumulated_seconds_today = 0;
+                $p->last_reset_at = $now;
+                if ($p->is_online) {
+                    $p->last_online_at = $resetThreshold; // New session starts at exactly 6:00:00 AM
+                }
+                $p->save();
+            }
+
+            // 2. Stale Session Recovery (Missed Heartbeats)
+            if ($p->is_online && $p->last_online_at && $p->last_seen) {
+                if ($now->diffInMinutes($p->last_seen) > 3) {
+                    $effectiveEnd = min($now, $p->last_seen->addSeconds($grace));
+                    if ($effectiveEnd->gt($p->last_online_at)) {
+                        $duration = $effectiveEnd->diffInSeconds($p->last_online_at);
+                        $p->accumulated_seconds_today += $duration;
+                        $p->accumulated_seconds_today = min($p->accumulated_seconds_today, $quota);
+                        $p->last_online_at = $effectiveEnd; // 🛡️ Double-recovery Guard
+                    }
+                    
+                    $p->is_online = false;
+                    $p->last_online_at = null;
+                    $p->session_id = null;
+                    $p->save();
+                    
+                    \Illuminate\Support\Facades\Log::info("Professional #{$p->id} force-offline (stale). Mode: Atomic Recovery.");
+                }
+            }
+        });
     }
 
     /**

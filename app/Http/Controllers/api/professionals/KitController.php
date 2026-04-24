@@ -296,6 +296,7 @@ class KitController extends BaseController
                         Log::error('FCM Notification Failed: ' . $e->getMessage());
                     }
 
+                    return $this->success(new KitOrderResource($order->load('product')), 'Payment verified. Kit order placed.');
                 });
             } catch (\Exception $e) {
                 return $this->error($e->getMessage(), 400);

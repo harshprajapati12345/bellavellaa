@@ -8,7 +8,7 @@ $total     = $professionals->count();
 $verified  = $professionals->where('verification', 'Verified')->count();
 $online    = $online ?? $professionals->where('last_seen', '>=', now()->subMinutes(2))->count();
 $pending   = $professionals->where('verification', 'Pending')->count();
-$suspended = $professionals->where('status', 'Suspended')->count();
+$suspended = $professionals->filter(fn ($pro) => strtolower((string) ($pro->status ?? 'active')) === 'suspended')->count();
 @endphp
 
     <div class="flex flex-col gap-6">
@@ -94,6 +94,7 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                 $vClass = match($pro->verification ?? '') { 'Verified' => 'bg-emerald-50 text-emerald-600', 'Pending' => 'bg-amber-50 text-amber-600', default => 'bg-red-50 text-red-500' };
                 $vIcon = match($pro->verification ?? '') { 'Verified' => 'badge-check', 'Pending' => 'clock', default => 'x-circle' };
                 $services = is_array($pro->services) ? $pro->services : (is_string($pro->services) ? json_decode($pro->services, true) ?? [] : []);
+                $normalizedStatus = strtolower((string) ($pro->status ?? 'active'));
               @endphp
               <tr class="table-row border-b border-gray-50"
                   data-id="{{ $pro->id }}"
@@ -143,7 +144,7 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                   </div>
                 </td>
                 <td class="px-5 py-4">
-                  @if(($pro->status ?? 'Active') === 'Active')
+                  @if($normalizedStatus === 'active')
                   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Active</span>
                   @else
                   <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-500"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Suspended</span>
@@ -165,9 +166,9 @@ $suspended = $professionals->where('status', 'Suspended')->count();
                       class="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-black hover:text-white hover:border-black transition-all flex items-center justify-center">
                       <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                     </a>
-                    <button onclick="toggleSuspend({{ $pro->id }}, '{{ $pro->status }}')" title="{{ ($pro->status ?? 'Active') === 'Active' ? 'Suspend' : 'Activate' }}"
-                      class="w-8 h-8 rounded-lg border {{ ($pro->status ?? 'Active') === 'Active' ? 'border-amber-100 text-amber-500 hover:bg-amber-500' : 'border-emerald-100 text-emerald-500 hover:bg-emerald-500' }} hover:text-white transition-all flex items-center justify-center">
-                      <i data-lucide="{{ ($pro->status ?? 'Active') === 'Active' ? 'pause-circle' : 'play-circle' }}" class="w-3.5 h-3.5"></i>
+                    <button onclick="toggleSuspend({{ $pro->id }}, '{{ $normalizedStatus }}')" title="{{ $normalizedStatus === 'active' ? 'Suspend' : 'Activate' }}"
+                      class="w-8 h-8 rounded-lg border {{ $normalizedStatus === 'active' ? 'border-amber-100 text-amber-500 hover:bg-amber-500' : 'border-emerald-100 text-emerald-500 hover:bg-emerald-500' }} hover:text-white transition-all flex items-center justify-center">
+                      <i data-lucide="{{ $normalizedStatus === 'active' ? 'pause-circle' : 'play-circle' }}" class="w-3.5 h-3.5"></i>
                     </button>
                     <button onclick="deletePro({{ $pro->id }})" title="Delete"
                       class="w-8 h-8 rounded-lg border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center">
@@ -205,15 +206,16 @@ $suspended = $professionals->where('status', 'Suspended')->count();
 @push('scripts')
 <script>
   function toggleSuspend(id, currentStatus) {
-    const action = currentStatus === 'Active' ? 'suspend' : 'activate';
-    const actionText = currentStatus === 'Active' ? 'Suspend' : 'Activate';
+    const normalizedStatus = (currentStatus || 'active').toLowerCase();
+    const action = normalizedStatus === 'active' ? 'suspend' : 'activate';
+    const actionText = normalizedStatus === 'active' ? 'Suspend' : 'Activate';
     
     Swal.fire({ 
       title: `${actionText} Professional?`, 
       text: `Are you sure you want to ${actionText.toLowerCase()} this professional?`,
       icon: 'question', 
       showCancelButton: true, 
-      confirmButtonColor: currentStatus === 'Active' ? '#f59e0b' : '#10b981', 
+      confirmButtonColor: normalizedStatus === 'active' ? '#f59e0b' : '#10b981', 
       cancelButtonColor: '#9ca3af', 
       confirmButtonText: `Yes, ${actionText}` 
     }).then(r => { 
