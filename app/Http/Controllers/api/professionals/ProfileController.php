@@ -59,6 +59,14 @@ class ProfileController extends BaseController
             'aadhaar_front' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
             'aadhaar_back' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
             'pan_img' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:5120',
+
+            // New Address Fields
+            'pincode' => 'nullable|string|digits:6',
+            'state' => 'nullable|string',
+            'permanent_address' => 'nullable|string',
+            'permanent_state' => 'nullable|string',
+            'permanent_city' => 'nullable|string|max:100',
+            'permanent_pincode' => 'nullable|string|digits:6',
         ]);
 
         $updateData = [];
@@ -66,7 +74,8 @@ class ProfileController extends BaseController
         // Direct text fields
         $fields = [
             'name', 'email', 'phone', 'city', 'category', 'experience', 'bio',
-            'gender', 'dob', 'service_area', 'service_radius', 'aadhaar', 'pan'
+            'gender', 'dob', 'service_area', 'service_radius', 'aadhaar', 'pan',
+            'pincode', 'state', 'permanent_address', 'permanent_state', 'permanent_city', 'permanent_pincode'
         ];
         foreach ($fields as $field) {
             if ($request->has($field)) {
@@ -191,6 +200,8 @@ class ProfileController extends BaseController
             'aadhaar_back' => 'nullable|file|max:5120',
             'pan_img' => 'nullable|file|max:5120',
             'certificate_img' => 'nullable|file|max:5120',
+            'light_bill' => 'nullable|file|max:5120',
+            'permanent_light_bill' => 'nullable|file|max:5120',
             'selfie' => 'nullable|file|max:5120',
         ]);
 
@@ -200,6 +211,8 @@ class ProfileController extends BaseController
             'aadhaar_back' => 'documents/aadhaar',
             'pan_img' => 'documents/pan',
             'certificate_img' => 'documents/certificate',
+            'light_bill' => 'documents/light-bills',
+            'permanent_light_bill' => 'documents/light-bills',
             'selfie' => 'documents/selfies'
         ];
 

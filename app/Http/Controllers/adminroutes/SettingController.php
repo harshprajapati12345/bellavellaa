@@ -50,6 +50,25 @@ class SettingController extends Controller
         return redirect()->route('settings.discounts')->with('success', 'Checkout discount settings updated successfully!');
     }
 
+    public function tip()
+    {
+        $tipEnabled = (bool) Setting::get('tip_enabled', '0');
+        $tipAmounts = Setting::get('tip_amounts', '50,75,100');
+
+        return view('settings.tip', compact('tipEnabled', 'tipAmounts'));
+    }
+
+    public function updateTip(Request $request)
+    {
+        Setting::set('tip_enabled', $request->has('tip_enabled') ? '1' : '0');
+        
+        if ($request->has('tip_amounts')) {
+            Setting::set('tip_amounts', $request->tip_amounts);
+        }
+
+        return redirect()->route('settings.tip')->with('success', 'Tip settings updated successfully!');
+    }
+
     public function update(Request $request)
     {
         $data = $request->validate([

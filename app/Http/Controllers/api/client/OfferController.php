@@ -64,6 +64,7 @@ class OfferController extends BaseController
             'offer_id' => $offer->id,
             'code' => $offer->code,
             'discount_paise' => $discount,
+            'offer' => (new ClientOfferResource($offer))->resolve(),
             'message' => 'Coupon applied successfully.',
         ];
 

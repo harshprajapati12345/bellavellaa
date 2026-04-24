@@ -29,6 +29,13 @@ class ProfessionalResource extends JsonResource
             'availability_status' => $this->availability_status,
             'services'            => $this->services,
             'is_online'           => (bool) $this->is_online,
+            'pincode'             => $this->pincode,
+            'state'               => $this->state,
+            'service_area'        => $this->service_area,
+            'permanent_address'   => $this->permanent_address,
+            'permanent_state'     => $this->permanent_state,
+            'permanent_city'      => $this->permanent_city,
+            'permanent_pincode'   => $this->permanent_pincode,
 
             // Root-level documents for simpler UI logic
             'aadhaar_front' => MediaPathNormalizer::url($this->aadhaar_front),
@@ -36,6 +43,7 @@ class ProfessionalResource extends JsonResource
             'pan_card'      => MediaPathNormalizer::url($this->pan_img),
             'pan_img'       => MediaPathNormalizer::url($this->pan_img), // Alias for consistency
             'light_bill'    => MediaPathNormalizer::url($this->light_bill),
+            'permanent_light_bill' => MediaPathNormalizer::url($this->permanent_light_bill),
             'bank_proof'    => MediaPathNormalizer::url($this->bank_proof),
 
             // Document Statuses at root level
@@ -43,6 +51,7 @@ class ProfessionalResource extends JsonResource
             'aadhaar_back_status'  => $this->aadhaar_status ?? 'pending',
             'pan_card_status'      => $this->pan_status ?? 'pending',
             'light_bill_status'    => $this->light_bill_status ?? 'pending',
+            'permanent_light_bill_status' => $this->permanent_light_bill_status ?? 'pending',
             'bank_proof_status'    => $this->bank_proof_status ?? 'pending',
 
             'documents'           => [
@@ -61,6 +70,10 @@ class ProfessionalResource extends JsonResource
                 'light_bill' => [
                     'url' => MediaPathNormalizer::url($this->light_bill),
                     'status' => $this->light_bill_status ?? 'pending',
+                ],
+                'permanent_light_bill' => [
+                    'url' => MediaPathNormalizer::url($this->permanent_light_bill),
+                    'status' => $this->permanent_light_bill_status ?? 'pending',
                 ],
                 'bank_proof' => [
                     'url' => MediaPathNormalizer::url($this->bank_proof),

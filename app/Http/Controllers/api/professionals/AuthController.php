@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Professionals;
 use App\Http\Requests\Api\SendOtpRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Models\Professional;
+use App\Models\ProfessionalDocument;
 use App\Models\Otp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -112,13 +113,20 @@ class AuthController extends BaseController
             'address' => 'nullable|string',
             'pincode' => 'nullable|string|digits:6',
             'state' => 'nullable|string',
+            'permanent_address' => 'nullable|string',
+            'permanent_state' => 'nullable|string',
+            'permanent_city' => 'nullable|string|max:100',
+            'permanent_pincode' => 'nullable|string|digits:6',
             'aadhar' => 'nullable|string|digits:12',
             'pan' => 'nullable|string|size:10',
             'aadhar_front' => 'nullable|image|max:2048',
             'aadhar_back' => 'nullable|image|max:2048',
             'pan_photo' => 'nullable|image|max:2048',
             'certificate' => 'nullable|image|max:2048',
+            'certificates' => 'nullable|array',
+            'certificates.*' => 'nullable|image|max:2048',
             'light_bill' => 'nullable|image|max:2048',
+            'permanent_light_bill' => 'nullable|image|max:2048',
             'selfie' => 'nullable|image|max:2048',
             'referral_code' => 'nullable|string|exists:professionals,referral_code',
             // Banking Details
@@ -159,6 +167,10 @@ class AuthController extends BaseController
             'service_area' => $request->address,
             'pincode' => $request->pincode,
             'state' => $request->state,
+            'permanent_address' => $request->permanent_address,
+            'permanent_state' => $request->permanent_state,
+            'permanent_city' => $request->permanent_city,
+            'permanent_pincode' => $request->permanent_pincode,
             'aadhaar' => $request->aadhar,
             'pan' => $request->pan,
             'account_holder_name' => $request->account_holder_name,
@@ -196,13 +208,32 @@ class AuthController extends BaseController
             $path = $request->file('pan_photo')->store('documents/pan', 'public');
             $data['pan_img'] = '/storage/' . $path;
         }
+        $certificatePaths = [];
+
         if ($request->hasFile('certificate')) {
             $path = $request->file('certificate')->store('documents/certificates', 'public');
-            $data['certificate_img'] = '/storage/' . $path;
+            $certificatePaths[] = '/storage/' . $path;
+        }
+
+        foreach ((array) $request->file('certificates', []) as $certificateFile) {
+            if (!$certificateFile) {
+                continue;
+            }
+
+            $path = $certificateFile->store('documents/certificates', 'public');
+            $certificatePaths[] = '/storage/' . $path;
+        }
+
+        if (!empty($certificatePaths)) {
+            $data['certificate_img'] = $certificatePaths[0];
         }
         if ($request->hasFile('light_bill')) {
             $path = $request->file('light_bill')->store('documents/light-bills', 'public');
             $data['light_bill'] = '/storage/' . $path;
+        }
+        if ($request->hasFile('permanent_light_bill')) {
+            $path = $request->file('permanent_light_bill')->store('documents/light-bills', 'public');
+            $data['permanent_light_bill'] = '/storage/' . $path;
         }
         if ($request->hasFile('selfie')) {
             $path = $request->file('selfie')->store('avatars', 'public');
@@ -216,6 +247,15 @@ class AuthController extends BaseController
         }
 
         $professional = Professional::create($data);
+
+        foreach ($certificatePaths as $certificatePath) {
+            ProfessionalDocument::create([
+                'professional_id' => $professional->id,
+                'type' => 'certificate',
+                'file_path' => $certificatePath,
+                'status' => 'pending',
+            ]);
+        }
 
         // Referral reward system decommissioned (handled on first job completion if active)
 
@@ -271,6 +311,7 @@ class AuthController extends BaseController
             'aadhaar_back',
             'pan_card' => 'pan_img',
             'light_bill',
+            'permanent_light_bill',
             'bank_proof',
         ];
 

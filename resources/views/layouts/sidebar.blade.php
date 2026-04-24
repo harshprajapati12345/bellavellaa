@@ -27,6 +27,7 @@ elseif (str_starts_with($routeName, 'scratch-cards')) $section = 'scratch-cards'
 elseif (str_starts_with($routeName, 'settings.discounts')) $section = 'settings.discounts';
 
 elseif (str_starts_with($routeName, 'settings.shifts')) $section = 'settings.shifts';
+elseif (str_starts_with($routeName, 'settings.tip')) $section = 'settings.tip';
 else $section = 'settings.index';
 
 $isProActive = ($section === 'professionals');
@@ -422,6 +423,11 @@ try { $pendingUserReviewsCount = \App\Models\UserReview::where('status', 'Pendin
                 class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.shifts' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
                 <i data-lucide="clock" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
                 <span class="font-normal text-sm text-black">Shift Management</span>
+              </a>
+              <a href="{{ route('settings.tip') }}"
+                class="flex items-center gap-3 px-4 py-2.5 {{ $routeName === 'settings.tip' ? 'bg-white text-black shadow-sm ring-1 ring-gray-200' : 'hover:bg-white text-black' }} rounded-xl transition-all group sidebar-item-hover">
+                <i data-lucide="heart" class="w-4 h-4 text-black opacity-70 group-hover:opacity-100"></i>
+                <span class="font-normal text-sm text-black">Tip Settings</span>
               </a>
             </div>
           </div>

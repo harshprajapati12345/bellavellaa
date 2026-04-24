@@ -60,6 +60,7 @@ $registerApiRoutes = function (): void {
     Route::prefix('client')->group(function () {
         // Public Routes
         Route::get('homepage', [HomepageController::class , 'index']);
+        Route::get('settings', [\App\Http\Controllers\Api\Client\SettingController::class, 'index']);
 
         // Categories
         Route::get('categories', [\App\Http\Controllers\api\client\ClientCategoryController::class , 'index']);
