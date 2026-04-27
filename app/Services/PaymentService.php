@@ -52,9 +52,28 @@ class PaymentService
 
             $order = $payment->order;
             if ($order) {
+                // IDEMPOTENCY & RACE PROTECTION
+                if ($order->payment_status === 'paid') {
+                    \Illuminate\Support\Facades\Log::info('PaymentService::processCapture : Order already paid, skipping.', ['order_id' => $order->id]);
+                    return true;
+                }
+
                 $order->update([
-                    'payment_status' => 'SUCCESS',
+                    'payment_status' => 'paid',
+                    'payment_source' => 'razorpay',
+                    'payment_id' => $razorpayPaymentId,
+                    'paid_at' => now(),
                     'status' => 'confirmed'
+                ]);
+
+                // LOG AUDIT TRAIL
+                \App\Models\PaymentLog::create([
+                    'order_id' => $order->id,
+                    'status' => 'paid',
+                    'method' => $order->payment_method,
+                    'source' => 'razorpay',
+                    'transaction_id' => $razorpayPaymentId,
+                    'message' => 'Online payment captured via Razorpay'
                 ]);
 
                 if ($order->customer) {
@@ -105,7 +124,15 @@ class PaymentService
             ]);
 
             if ($payment->order) {
-                $payment->order->update(['payment_status' => 'FAILED']);
+                $payment->order->update(['payment_status' => 'failed']);
+
+                \App\Models\PaymentLog::create([
+                    'order_id' => $payment->order->id,
+                    'status' => 'failed',
+                    'method' => $payment->order->payment_method,
+                    'source' => 'razorpay',
+                    'message' => 'Payment failed or cancelled'
+                ]);
             }
 
             return true;

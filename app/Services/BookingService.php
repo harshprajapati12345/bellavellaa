@@ -28,9 +28,9 @@ class BookingService
                 'current_step' => 'completed',
             ]);
 
-            // Step 8: Only distribute earnings if the order is SUCCESS
+            // Step 8: Only distribute earnings if the order is paid
             $order = $booking->order;
-            if ($order && $order->payment_status === 'SUCCESS') {
+            if ($order && $order->payment_status === 'paid') {
                 if ($booking->professional) {
                     self::distributeEarnings($booking, $booking->professional);
                 }

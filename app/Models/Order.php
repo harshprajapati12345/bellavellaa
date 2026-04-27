@@ -35,7 +35,10 @@ class Order extends Model
         'coins_used',
         'status',
         'payment_status',
+        'payment_source',
         'payment_method',
+        'payment_id',
+        'paid_at',
         'offer_id',
         'coupon_code',
         'customer_notes',
@@ -57,6 +60,7 @@ class Order extends Model
         'tax_paise' => 'integer',
         'total_paise' => 'integer',
         'coins_used' => 'integer',
+        'paid_at' => 'datetime',
         'completed_at' => 'datetime',
         'cancelled_at' => 'datetime',
     ];
@@ -109,6 +113,10 @@ class Order extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(OrderAssignment::class);
+    }
+    public function paymentLogs(): HasMany
+    {
+        return $this->hasMany(PaymentLog::class);
     }
     public function otps(): HasMany
     {

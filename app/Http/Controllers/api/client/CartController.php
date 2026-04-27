@@ -538,7 +538,8 @@ class CartController extends BaseController
                 'payment_method'          => $validated['payment_method'],
                 'coupon_code'             => $validated['coupon_code'] ?? null,
                 'status'                  => $initialStatus,
-                'payment_status'          => ($initialStatus === 'confirmed') ? 'captured' : 'pending',
+                'payment_status'          => ($initialStatus === 'confirmed') ? 'paid' : 'pending',
+                'payment_source'          => ($initialStatus === 'confirmed') ? 'manual_cash' : null,
                 'customer_notes'          => $tipAmountPaise > 0 ? 'Tip included: Rs ' . ($tipAmountPaise / 100) : null,
             ];
 
@@ -666,7 +667,18 @@ class CartController extends BaseController
                 }
             }
 
-            if ($order->payment_status === 'SUCCESS' || $finalPayablePaise === 0) {
+            if ($order->payment_status === 'paid' || $finalPayablePaise === 0) {
+                // LOG AUDIT IF ZERO PAYABLE
+                if ($finalPayablePaise === 0 && $order->payment_status !== 'paid') {
+                    $order->update(['payment_status' => 'paid', 'payment_source' => 'wallet']);
+                    \App\Models\PaymentLog::create([
+                        'order_id' => $order->id,
+                        'status' => 'paid',
+                        'method' => 'wallet',
+                        'source' => 'wallet',
+                        'message' => 'Full payment covered by wallet/discount'
+                    ]);
+                }
                 $customer->carts()->delete();
             }
 
@@ -715,10 +727,28 @@ class CartController extends BaseController
                     ]);
                 }
 
+                // IDEMPOTENCY CHECK
+                if ($order->payment_status === 'paid') {
+                    return $this->success(['order_id' => $order->id], 'Payment already verified.');
+                }
+
                 // Update Order
                 $order->update([
                     'status' => 'confirmed',
-                    'payment_status' => 'SUCCESS',
+                    'payment_status' => 'paid',
+                    'payment_source' => 'razorpay',
+                    'payment_id' => $validated['razorpay_payment_id'],
+                    'paid_at' => now(),
+                ]);
+
+                // LOG AUDIT
+                \App\Models\PaymentLog::create([
+                    'order_id' => $order->id,
+                    'status' => 'paid',
+                    'method' => 'online',
+                    'source' => 'razorpay',
+                    'transaction_id' => $validated['razorpay_payment_id'],
+                    'message' => 'Online payment verified from client app'
                 ]);
 
                 $order->customer->carts()->delete();

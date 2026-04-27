@@ -347,13 +347,13 @@ class JobController extends BaseController
                 // 🛡️ ENTERPRISE HARDENING: PROACTIVE ORDER CREATION (Self-Healing Fallback)
                 $order = $this->ensureOrderExists($booking);
 
-                // Step 7.1 & 8.1: ENFORCE PAID STATUS
-                if ($order->payment_status === 'SUCCESS') {
-                    return $this->error('Payment is already SUCCESS for this order.', 400);
+                // Step 7.1 & 8.1: ENFORCE PAID STATUS (RACE PROTECTION)
+                if ($order->payment_status === 'paid') {
+                    return $this->error('Payment already completed via ' . ($order->payment_source ?? $order->payment_method), 400);
                 }
 
-                // SECURITY GUARD: Only COD orders allowed
-                if ($order->payment_method !== 'cod') {
+                // SECURITY GUARD: Only cash orders allowed
+                if ($order->payment_method !== 'cash') {
                     return $this->error('Invalid payment method for cash collection.', 400);
                 }
 
@@ -375,8 +375,19 @@ class JobController extends BaseController
 
                 // Step 7.3: Update Order
                 $order->update([
-                    'payment_status' => 'SUCCESS',
+                    'payment_status' => 'paid',
+                    'payment_source' => 'manual_cash',
+                    'paid_at' => now(),
                     'status' => 'confirmed'
+                ]);
+
+                // AUDIT LOG
+                \App\Models\PaymentLog::create([
+                    'order_id' => $order->id,
+                    'status' => 'paid',
+                    'method' => 'cash',
+                    'source' => 'manual_cash',
+                    'message' => 'Professional collected cash manually'
                 ]);
 
                 // Optional: Progress the booking step
@@ -406,8 +417,8 @@ class JobController extends BaseController
                 // 🛡️ ENTERPRISE HARDENING: PROACTIVE ORDER CREATION (Self-Healing Fallback)
                 $order = $this->ensureOrderExists($booking);
 
-                if ($order->payment_status === 'SUCCESS') {
-                    return $this->error('Payment is already SUCCESS for this order.', 400);
+                if ($order->payment_status === 'paid') {
+                    return $this->error('Payment already completed via ' . ($order->payment_source ?? $order->payment_method), 400);
                 }
 
                 $amountPaise = $this->resolveBookingPayablePaise($order, $booking);
@@ -497,7 +508,7 @@ class JobController extends BaseController
             }
 
             // Step 8.1: ENFORCE PAID STATUS (Check backend truth)
-            if ($order->payment_status === 'SUCCESS' || $booking->status === 'completed') {
+            if ($order->payment_status === 'paid' || $booking->status === 'completed') {
                 return $this->success(null, 'Payment verified or job already completed.');
             }
             
@@ -596,7 +607,9 @@ class JobController extends BaseController
                     'customer_id' => $booking->customer_id,
                     'professional_id' => $booking->professional_id,
                     'status' => 'pending',
-                    'payment_status' => 'PENDING',
+                    'payment_status' => 'pending',
+                    'payment_method' => $booking->payment_method ?: 'cash',
+                    'payment_source' => $booking->payment_method === 'cash' ? 'manual_cash' : null,
                     'total_paise' => (int)($booking->price * 100),
                     'subtotal_paise' => (int)($booking->price * 100),
                     'address' => $booking->address ?? 'N/A',

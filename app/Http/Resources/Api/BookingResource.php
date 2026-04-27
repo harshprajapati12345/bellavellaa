@@ -61,6 +61,7 @@ class BookingResource extends JsonResource
                 ?? null,
             'address' => $this->order?->address,
             'payment_status' => $this->order?->payment_status,
+            'payment_method' => $this->order?->payment_method,
             'city' => $this->city, // Fallback for address in model
             'lat' => $this->lat,
             'lng' => $this->lng,

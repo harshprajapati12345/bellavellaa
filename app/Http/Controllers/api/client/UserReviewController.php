@@ -22,6 +22,7 @@ class UserReviewController extends BaseController
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
             'video' => 'nullable|file|mimes:mp4,mov,avi,wmv,webm|max:20480',
+            'consent_given' => 'nullable|boolean',
         ]);
 
         $customerId = $this->guard()->id();
@@ -55,6 +56,7 @@ class UserReviewController extends BaseController
             'content_type' => $videoPath ? 'video' : 'text',
             'video_path' => $videoPath,
             'status' => 'Pending',
+            'consent_given' => $request->boolean('consent_given'),
         ]);
 
         return $this->success($review, 'Professional review submitted successfully.', 201);
